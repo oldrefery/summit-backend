@@ -7,9 +7,9 @@ export function usePeople() {
   const peopleQuery = useQuery({
     queryKey: ['people'],
     queryFn: async () => {
-      console.log('Fetching people...');
       const data = await api.people.getAll();
-      console.log('Fetched data:', data);
+      console.log('People data:', data);
+
       return data;
     },
   });
@@ -37,7 +37,11 @@ export function usePeople() {
   const deletePerson = useMutation({
     mutationFn: api.people.delete,
     onSuccess: () => {
+      console.log('Delete mutation successful'); // для отладки
       queryClient.invalidateQueries({ queryKey: ['people'] });
+    },
+    onError: error => {
+      console.error('Delete mutation error:', error);
     },
   });
 

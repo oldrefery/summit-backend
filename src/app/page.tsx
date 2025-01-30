@@ -14,22 +14,44 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function PeoplePage() {
-  const { data: people, isLoading, error } = usePeople();
+  const { data: people, isLoading, deletePerson } = usePeople();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [selectedPerson, setSelectedPerson] = useState<
     Partial<Person> | undefined
   >();
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
 
   const filteredPeople = selectedRole
     ? people.filter(person => person.role === selectedRole)
     : people;
 
-  console.log('Loading:', isLoading);
-  console.log('Error:', error);
-  console.log('People data:', people);
+  const handleDelete = async () => {
+    if (personToDelete?.id) {
+      try {
+        console.log('Starting delete for person:', personToDelete.id);
+        await deletePerson.mutateAsync(personToDelete.id);
+        console.log('Delete successful');
+        setDeleteDialogOpen(false);
+        setPersonToDelete(null);
+      } catch (error) {
+        console.error('Error deleting person:', error);
+      }
+    }
+  };
 
   return (
     <div className="p-8">
@@ -103,7 +125,14 @@ export default function PeoplePage() {
                         >
                           Edit
                         </Button>
-                        <Button variant="destructive" size="sm">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            setPersonToDelete(person);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
                           Delete
                         </Button>
                       </div>
@@ -121,6 +150,34 @@ export default function PeoplePage() {
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="bg-white text-black">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-black">
+              Are you sure?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600">
+              This action cannot be undone. This will permanently delete{' '}
+              <span className="font-medium">{personToDelete?.name}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setDeleteDialogOpen(false)}
+              className="bg-gray-100 hover:bg-gray-200"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

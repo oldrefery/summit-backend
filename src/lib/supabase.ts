@@ -85,7 +85,11 @@ export const api = {
         .select('*')
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Get all error:', error);
+        throw error;
+      }
+
       return data;
     },
 
@@ -103,11 +107,15 @@ export const api = {
     async create(person: Omit<Person, 'id' | 'created_at'>) {
       const { data, error } = await supabase
         .from('people')
-        .insert(person)
+        .insert([person])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Create error:', error);
+        throw error;
+      }
+
       return data;
     },
 
@@ -115,6 +123,8 @@ export const api = {
       id: number,
       updates: Partial<Omit<Person, 'id' | 'created_at'>>
     ) {
+      console.log('Updating with data:', { id, updates }); // для отладки
+
       const { data, error } = await supabase
         .from('people')
         .update(updates)
@@ -122,14 +132,22 @@ export const api = {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
+
       return data;
     },
 
-    async delete(id: number) {
+    delete: async (id: number) => {
+      console.log('Deleting:', id);
       const { error } = await supabase.from('people').delete().eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
     },
   },
 
