@@ -1,16 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, Person } from '@/lib/supabase';
+import { useToastContext } from '@/components/providers/toast-provider';
 
 export function usePeople() {
   const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToastContext();
 
   const peopleQuery = useQuery({
     queryKey: ['people'],
     queryFn: async () => {
-      const data = await api.people.getAll();
-      console.log('People data:', data);
+      try {
+        const data = await api.people.getAll();
 
-      return data;
+        return data;
+      } catch (error) {
+        showError(error);
+        throw error;
+      }
     },
   });
 
@@ -18,6 +24,10 @@ export function usePeople() {
     mutationFn: api.people.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['people'] });
+      showSuccess('Person created successfully');
+    },
+    onError: error => {
+      showError(error);
     },
   });
 
@@ -31,17 +41,21 @@ export function usePeople() {
     }) => api.people.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['people'] });
+      showSuccess('Person updated successfully');
+    },
+    onError: error => {
+      showError(error);
     },
   });
 
   const deletePerson = useMutation({
     mutationFn: api.people.delete,
     onSuccess: () => {
-      console.log('Delete mutation successful'); // для отладки
       queryClient.invalidateQueries({ queryKey: ['people'] });
+      showSuccess('Person deleted successfully');
     },
     onError: error => {
-      console.error('Delete mutation error:', error);
+      showError(error);
     },
   });
 
@@ -56,9 +70,20 @@ export function usePeople() {
 }
 
 export function useEvents() {
+  const { showError } = useToastContext();
+
   const eventsQuery = useQuery({
     queryKey: ['events'],
-    queryFn: () => api.events.getAll(),
+    queryFn: async () => {
+      try {
+        const data = await api.events.getAll();
+
+        return data;
+      } catch (error) {
+        showError(error);
+        throw error;
+      }
+    },
   });
 
   return {
@@ -67,5 +92,3 @@ export function useEvents() {
     error: eventsQuery.error,
   };
 }
-
-// Добавим другие хуки по мере необходимости

@@ -1,11 +1,12 @@
+// src/app/people/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { usePeople } from '@/hooks/use-query';
 import { Person } from '@/lib/supabase';
 import { PersonForm } from '@/components/people/person-form';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -37,20 +38,21 @@ export default function PeoplePage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilters, setActiveFilters] = useState<{
-    name?: string;
-    role?: string;
-    company?: string;
-    country?: string;
-  }>({});
+
+  const handleFormOpenChange = useCallback((open: boolean) => {
+    setIsFormOpen(open);
+    if (!open) {
+      setSelectedPerson(undefined);
+    }
+  }, []);
 
   const filteredPeople = people.filter(person => {
-    // Фильтр по роли
+    // Role filter
     if (selectedRole && person.role !== selectedRole) {
       return false;
     }
 
-    // Поиск по всем полям
+    // All fields search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
@@ -72,9 +74,7 @@ export default function PeoplePage() {
   const handleDelete = async () => {
     if (personToDelete?.id) {
       try {
-        console.log('Starting delete for person:', personToDelete.id);
         await deletePerson.mutateAsync(personToDelete.id);
-        console.log('Delete successful');
         setDeleteDialogOpen(false);
         setPersonToDelete(null);
       } catch (error) {
@@ -88,14 +88,7 @@ export default function PeoplePage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>People</CardTitle>
-          <Button
-            onClick={() => {
-              setSelectedPerson(undefined);
-              setIsFormOpen(true);
-            }}
-          >
-            Add Person
-          </Button>
+          <Button onClick={() => handleFormOpenChange(true)}>Add Person</Button>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
@@ -163,7 +156,7 @@ export default function PeoplePage() {
                           size="sm"
                           onClick={() => {
                             setSelectedPerson(person);
-                            setIsFormOpen(true);
+                            handleFormOpenChange(true);
                           }}
                         >
                           Edit
@@ -191,7 +184,7 @@ export default function PeoplePage() {
       <PersonForm
         person={selectedPerson}
         open={isFormOpen}
-        onOpenChange={setIsFormOpen}
+        onOpenChangeAction={handleFormOpenChange}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

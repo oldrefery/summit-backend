@@ -1,12 +1,19 @@
 // src/components/people/person-form.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import {
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useState,
+  useCallback,
+} from 'react';
 import { usePeople } from '@/hooks/use-query';
 import { Person } from '@/lib/supabase';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { useToastContext } from '@/components/providers/toast-provider';
 import {
   Dialog,
   DialogContent,
@@ -19,17 +26,19 @@ import {
 interface PersonFormProps {
   person?: Partial<Person>;
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
 export function PersonForm({
   person,
   open,
-  onOpenChange,
+  onOpenChangeAction,
   onSuccess,
 }: PersonFormProps) {
   const { createPerson, updatePerson } = usePeople();
+  const { showError } = useToastContext();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     title: '',
@@ -40,6 +49,14 @@ export function PersonForm({
     mobile: '',
     bio: '',
   });
+  const [emailError, setEmailError] = useState('');
+
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      onOpenChangeAction(open);
+    },
+    [onOpenChangeAction]
+  );
 
   useEffect(() => {
     if (person) {
@@ -54,7 +71,6 @@ export function PersonForm({
         bio: person.bio || '',
       });
     } else {
-      // Reset the form when create a new person
       setFormData({
         name: '',
         title: '',
@@ -68,54 +84,49 @@ export function PersonForm({
     }
   }, [person]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
     try {
       if (person?.id) {
-        console.log('Updating person:', { id: person.id, data: formData }); // Для отладки
         await updatePerson.mutateAsync({
           id: person.id,
-          data: {
-            name: formData.name,
-            title: formData.title,
-            company: formData.company,
-            role: formData.role,
-            country: formData.country,
-            email: formData.email,
-            mobile: formData.mobile,
-            bio: formData.bio,
-          },
+          data: formData,
         });
       } else {
-        await createPerson.mutateAsync({
-          name: formData.name,
-          title: formData.title,
-          company: formData.company,
-          role: formData.role,
-          country: formData.country,
-          email: formData.email,
-          mobile: formData.mobile,
-          bio: formData.bio,
-        });
+        await createPerson.mutateAsync(formData);
       }
-      onOpenChange(false);
+      handleOpenChange(false);
       onSuccess?.();
     } catch (error) {
-      console.error('Error saving person:', error);
+      showError(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const validateEmail = (email: string): boolean => {
+    return email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const email = e.target.value;
+    setFormData({ ...formData, email });
+
+    if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+    } else {
+      setEmailError('');
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="bg-white text-black"
-        aria-describedby="dialog-description"
-      >
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="bg-white text-black">
         <DialogHeader>
-          <DialogTitle className="text-black">
-            {person?.id ? 'Edit Person' : 'Add Person'}
-          </DialogTitle>
-          <DialogDescription id="dialog-description" className="text-gray-600">
+          <DialogTitle>{person?.id ? 'Edit Person' : 'Add Person'}</DialogTitle>
+          <DialogDescription className="text-gray-600">
             {person?.id
               ? 'Edit person details below.'
               : 'Add new person details below.'}
@@ -124,7 +135,9 @@ export function PersonForm({
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">
+                Name <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -138,7 +151,7 @@ export function PersonForm({
               <Label htmlFor="role">Role</Label>
               <select
                 id="role"
-                className="w-full rounded-md border p-2"
+                className="w-full rounded-md border p-2 mt-1"
                 value={formData.role}
                 onChange={e =>
                   setFormData({ ...formData, role: e.target.value })
@@ -156,6 +169,7 @@ export function PersonForm({
                 onChange={e =>
                   setFormData({ ...formData, title: e.target.value })
                 }
+                className="mt-1"
               />
             </div>
             <div>
@@ -166,6 +180,7 @@ export function PersonForm({
                 onChange={e =>
                   setFormData({ ...formData, company: e.target.value })
                 }
+                className="mt-1"
               />
             </div>
             <div>
@@ -176,6 +191,7 @@ export function PersonForm({
                 onChange={e =>
                   setFormData({ ...formData, country: e.target.value })
                 }
+                className="mt-1"
               />
             </div>
             <div>
@@ -184,21 +200,26 @@ export function PersonForm({
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={e =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={handleEmailChange}
+                className={`mt-1 ${emailError ? 'border-red-500' : ''}`}
               />
+              {emailError && (
+                <p className="text-sm text-red-500 mt-1">{emailError}</p>
+              )}
             </div>
           </div>
           <DialogFooter className="mt-6">
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit">Save</Button>
+            <Button type="submit" disabled={isSubmitting || !!emailError}>
+              {isSubmitting ? 'Saving...' : 'Save'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
