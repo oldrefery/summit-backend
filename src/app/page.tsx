@@ -1,9 +1,11 @@
+// src/app/page.tsx
 'use client';
 
 import { usePeople } from '@/hooks/use-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, CalendarDays, MapPin, BellRing } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default function DashboardPage() {
   const { data: people } = usePeople();
@@ -88,12 +90,13 @@ export default function DashboardPage() {
           <CardContent>
             {/* Здесь будут кнопки быстрых действий */}
             <div className="space-y-2">
-              <Link
-                href="/people/new"
-                className="block w-full p-2 text-center bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+              <Button
+                className="w-full"
+                onClick={() => (window.location.href = '/people')}
               >
                 Add New Person
-              </Link>
+              </Button>
+
               <Link
                 href="/events/new"
                 className="block w-full p-2 text-center bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90"
