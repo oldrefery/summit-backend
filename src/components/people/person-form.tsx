@@ -22,6 +22,8 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { ImageUpload } from '@/components/ui/image-upload';
+import { storage } from '@/lib/supabase';
 
 interface PersonFormProps {
   person?: Partial<Person>;
@@ -48,11 +50,19 @@ export function PersonForm({
     email: '',
     mobile: '',
     bio: '',
+    photo_url: '',
   });
   const [emailError, setEmailError] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null | undefined>(
+    undefined
+  );
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
+      if (!open) {
+        //Resetting the state on form closing
+        setPhotoFile(undefined);
+      }
       onOpenChangeAction(open);
     },
     [onOpenChangeAction]
@@ -69,7 +79,9 @@ export function PersonForm({
         email: person.email || '',
         mobile: person.mobile || '',
         bio: person.bio || '',
+        photo_url: person.photo_url || '',
       });
+      setPhotoFile(undefined);
     } else {
       setFormData({
         name: '',
@@ -80,8 +92,11 @@ export function PersonForm({
         email: '',
         mobile: '',
         bio: '',
+        photo_url: '',
       });
+      setPhotoFile(undefined);
     }
+    setEmailError('');
   }, [person]);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -89,18 +104,73 @@ export function PersonForm({
     setIsSubmitting(true);
 
     try {
+      const baseData = { ...formData };
+
+      if (photoFile) {
+        try {
+          console.log('Handling photo upload...');
+
+          if (person?.photo_url) {
+            console.log('Removing old photo:', person.photo_url);
+            try {
+              await storage.removeAvatar(person.photo_url);
+            } catch (removeError) {
+              console.warn('Error removing old avatar:', removeError);
+            }
+          }
+
+          const userId = person?.id || 'new';
+          const newPhotoUrl = await storage.uploadAvatar(
+            photoFile,
+            `user-${userId}-${Date.now()}`
+          );
+          console.log('New photo uploaded:', newPhotoUrl);
+
+          if (!newPhotoUrl) {
+            throw new Error('Failed to get photo URL after upload');
+          }
+
+          baseData.photo_url = newPhotoUrl;
+        } catch (uploadError) {
+          console.error('Error handling photo:', uploadError);
+          showError('Failed to upload photo. Please try again.');
+          setIsSubmitting(false);
+          return;
+        }
+      } else if (photoFile === null) {
+        // If photoFile === null, it means that the user deleted the photo
+        baseData.photo_url = '';
+
+        // Delete the old photo if there was one
+        if (person?.photo_url) {
+          try {
+            await storage.removeAvatar(person.photo_url);
+          } catch (removeError) {
+            console.warn('Error removing old avatar:', removeError);
+          }
+        }
+      } else {
+        baseData.photo_url = person?.photo_url || '';
+      }
+
+      console.log('Saving data:', baseData);
+
       if (person?.id) {
         await updatePerson.mutateAsync({
           id: person.id,
-          data: formData,
+          data: baseData,
         });
       } else {
-        await createPerson.mutateAsync(formData);
+        await createPerson.mutateAsync(baseData);
       }
-      handleOpenChange(false);
+
+      onOpenChangeAction(false);
       onSuccess?.();
     } catch (error) {
-      showError(error);
+      console.error('Form submission error:', error);
+      showError(
+        error instanceof Error ? error.message : 'Failed to save person'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -121,6 +191,11 @@ export function PersonForm({
     }
   };
 
+  const handlePhotoChange = useCallback((file: File | null) => {
+    console.log('Photo changed:', file);
+    setPhotoFile(file);
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="bg-white text-black">
@@ -134,6 +209,11 @@ export function PersonForm({
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
+            <ImageUpload
+              onChange={handlePhotoChange}
+              value={person?.photo_url}
+              className="mb-4"
+            />
             <div>
               <Label htmlFor="name">
                 Name <span className="text-red-500">*</span>
