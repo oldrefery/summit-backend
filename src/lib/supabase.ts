@@ -49,7 +49,7 @@ export interface Person {
 export interface Event {
   id: number;
   created_at: string;
-  section: string;
+  section_id: number;
   date: string;
   title: string;
   description?: string;
@@ -57,6 +57,8 @@ export interface Event {
   end_time: string;
   duration?: string;
   location_id?: number;
+  location?: Location;
+  event_people?: EventPerson[];
 }
 
 export interface EventPerson {
@@ -65,6 +67,7 @@ export interface EventPerson {
   event_id: number;
   person_id: number;
   role: string;
+  person?: Person;
 }
 
 export interface Location {
@@ -258,6 +261,13 @@ export const api = {
 
   events: {
     async getAll() {
+      try {
+        const result = await ensureAuthenticated(); // Добавляем проверку аутентификации
+        console.log('ensureAuthenticated result:', result);
+      } catch (e) {
+        console.log('Error in ensureAuthenticated:', e);
+      }
+
       const { data, error } = await supabase
         .from('events')
         .select(
@@ -272,19 +282,301 @@ export const api = {
         .order('start_time');
 
       if (error) throw error;
+      console.log('Get all events:', data); // для отладки
+      return data;
+    },
+
+    async getById(id: number) {
+      const { data, error } = await supabase
+        .from('events')
+        .select(
+          `
+          *,
+          location:locations(*),
+          event_people:event_people(
+            person:people(*)
+          )
+        `
+        )
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+
+    async create(
+      event: Omit<Event, 'id' | 'created_at'> & { speaker_ids?: number[] }
+    ) {
+      const { speaker_ids, ...eventData } = event;
+
+      // Start a transaction
+      const { data: newEvent, error: eventError } = await supabase
+        .from('events')
+        .insert([eventData])
+        .select()
+        .single();
+
+      if (eventError) {
+        console.error('Failed to create event:', eventError);
+        throw eventError;
+      }
+
+      // If we have speakers, create event_people records
+      if (speaker_ids?.length) {
+        const eventPeopleData = speaker_ids.map(person_id => ({
+          event_id: newEvent.id,
+          person_id,
+          role: 'speaker',
+        }));
+
+        const { error: speakersError } = await supabase
+          .from('event_people')
+          .insert(eventPeopleData);
+
+        if (speakersError) {
+          console.error('Failed to add speakers:', speakersError);
+          throw speakersError;
+        }
+      }
+
+      return newEvent;
+    },
+
+    async update(
+      id: number,
+      updates: Partial<Omit<Event, 'id' | 'created_at'>> & {
+        speaker_ids?: number[];
+      }
+    ) {
+      const { speaker_ids, ...eventData } = updates;
+
+      // Start by updating the event
+      const { data: updatedEvent, error: eventError } = await supabase
+        .from('events')
+        .update(eventData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (eventError) {
+        console.error('Failed to update event:', eventError);
+        throw eventError;
+      }
+
+      // If speaker_ids are provided, update the speakers
+      if (speaker_ids !== undefined) {
+        // First, remove all existing speakers
+        const { error: deleteError } = await supabase
+          .from('event_people')
+          .delete()
+          .eq('event_id', id)
+          .eq('role', 'speaker');
+
+        if (deleteError) {
+          console.error('Failed to remove existing speakers:', deleteError);
+          throw deleteError;
+        }
+
+        // Then, add new speakers if any
+        if (speaker_ids.length > 0) {
+          const eventPeopleData = speaker_ids.map(person_id => ({
+            event_id: id,
+            person_id,
+            role: 'speaker',
+          }));
+
+          const { error: speakersError } = await supabase
+            .from('event_people')
+            .insert(eventPeopleData);
+
+          if (speakersError) {
+            console.error('Failed to add new speakers:', speakersError);
+            throw speakersError;
+          }
+        }
+      }
+
+      return updatedEvent;
+    },
+
+    async delete(id: number) {
+      const { error } = await supabase.from('events').delete().eq('id', id);
+
+      if (error) {
+        console.error('Delete event error:', error);
+        throw error;
+      }
+    },
+  },
+
+  sections: {
+    async getAll() {
+      await ensureAuthenticated();
+
+      const { data, error } = await supabase
+        .from('sections')
+        .select('*')
+        .order('date');
+
+      if (error) {
+        console.error('Failed to fetch sections:', error);
+        throw error;
+      }
+
       return data;
     },
   },
 
   locations: {
     async getAll() {
+      await ensureAuthenticated();
+
       const { data, error } = await supabase
         .from('locations')
         .select('*')
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to fetch locations:', error);
+        throw error;
+      }
+
       return data;
+    },
+
+    async getById(id: number) {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('Failed to fetch location:', error);
+        throw error;
+      }
+
+      return data;
+    },
+
+    async create(location: Omit<Location, 'id' | 'created_at'>) {
+      const { data, error } = await supabase
+        .from('locations')
+        .insert([location])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to create location:', error);
+        throw error;
+      }
+
+      return data;
+    },
+
+    async update(
+      id: number,
+      updates: Partial<Omit<Location, 'id' | 'created_at'>>
+    ) {
+      const { data, error } = await supabase
+        .from('locations')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to update location:', error);
+        throw error;
+      }
+
+      return data;
+    },
+
+    async delete(id: number) {
+      const { error } = await supabase.from('locations').delete().eq('id', id);
+
+      if (error) {
+        console.error('Failed to delete location:', error);
+        throw error;
+      }
+    },
+  },
+
+  resources: {
+    async getAll() {
+      await ensureAuthenticated();
+
+      const { data, error } = await supabase
+        .from('resources')
+        .select('*')
+        .order('name');
+
+      if (error) {
+        console.error('Failed to fetch resources:', error);
+        throw error;
+      }
+
+      return data;
+    },
+
+    async getById(id: number) {
+      const { data, error } = await supabase
+        .from('resources')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('Failed to fetch resource:', error);
+        throw error;
+      }
+
+      return data;
+    },
+
+    async create(resource: Omit<Resource, 'id' | 'created_at'>) {
+      const { data, error } = await supabase
+        .from('resources')
+        .insert([resource])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to create resource:', error);
+        throw error;
+      }
+
+      return data;
+    },
+
+    async update(
+      id: number,
+      updates: Partial<Omit<Resource, 'id' | 'created_at'>>
+    ) {
+      const { data, error } = await supabase
+        .from('resources')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to update resource:', error);
+        throw error;
+      }
+
+      return data;
+    },
+
+    async delete(id: number) {
+      const { error } = await supabase.from('resources').delete().eq('id', id);
+
+      if (error) {
+        console.error('Failed to delete resource:', error);
+        throw error;
+      }
     },
   },
 
