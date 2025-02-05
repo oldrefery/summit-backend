@@ -1,7 +1,7 @@
 // src/hooks/use-events.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/supabase';
-import type { Event } from '@/lib/supabase';
+import type { EventFormData } from '@/types';
 
 export function useEvents() {
   return useQuery({
@@ -29,10 +29,9 @@ export function useCreateEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (event: Omit<Event, 'id' | 'created_at'>) =>
-      api.events.create(event),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
+    mutationFn: (event: EventFormData) => api.events.create(event),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['events'] });
     },
   });
 }
@@ -46,10 +45,10 @@ export function useUpdateEvent() {
       updates,
     }: {
       id: number;
-      updates: Partial<Omit<Event, 'id' | 'created_at'>>;
+      updates: Partial<EventFormData>;
     }) => api.events.update(id, updates),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['events'] });
     },
   });
 }
@@ -59,8 +58,8 @@ export function useDeleteEvent() {
 
   return useMutation({
     mutationFn: (id: number) => api.events.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['events'] });
     },
   });
 }

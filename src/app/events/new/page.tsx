@@ -1,7 +1,11 @@
 // src/app/events/new/page.tsx
-'use client';
-
+import { Metadata } from 'next';
 import { EventForm } from '@/components/events/event-form';
+
+export const metadata: Metadata = {
+  title: 'Create New Event',
+  description: 'Create a new event in the system',
+};
 
 export default function NewEventPage() {
   return (

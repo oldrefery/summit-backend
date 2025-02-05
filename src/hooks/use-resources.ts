@@ -1,7 +1,7 @@
 // src/hooks/use-resources.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/supabase';
-import type { Resource } from '@/lib/supabase';
+import { Resource } from '@/types';
 
 export function useResources() {
   return useQuery({

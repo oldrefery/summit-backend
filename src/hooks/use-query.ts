@@ -1,6 +1,8 @@
+// src/hooks/use-query.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, Person } from '@/lib/supabase';
+import { api } from '@/lib/supabase';
 import { useToastContext } from '@/components/providers/toast-provider';
+import { Person } from '@/types';
 
 export function usePeople() {
   const queryClient = useQueryClient();

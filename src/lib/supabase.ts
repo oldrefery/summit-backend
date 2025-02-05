@@ -1,5 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import { MAX_FILE_SIZE_BYTES } from '@/app/constants';
+import type {
+  Person,
+  Event,
+  Location,
+  Resource,
+  MarkdownPage,
+  Announcement,
+  EventFormData,
+  EventPerson,
+  Section,
+} from '@/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -12,7 +23,6 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   },
 });
 
-// perform anonymous authentication
 export async function ensureAuthenticated() {
   const {
     data: { session },
@@ -29,80 +39,6 @@ export async function ensureAuthenticated() {
 
 function getPublicFileUrl(bucketName: string, fileName: string) {
   return `${supabaseUrl}/storage/v1/object/public/${bucketName}/${fileName}`;
-}
-
-// interfaces according to the database schema
-export interface Person {
-  id: number;
-  created_at: string;
-  name: string;
-  title?: string;
-  company?: string;
-  bio?: string;
-  photo_url?: string;
-  country?: string;
-  role: string;
-  email?: string;
-  mobile?: string;
-}
-
-export interface Event {
-  id: number;
-  created_at: string;
-  section_id: number;
-  date: string;
-  title: string;
-  description?: string;
-  start_time: string;
-  end_time: string;
-  duration?: string;
-  location_id?: number;
-  location?: Location;
-  event_people?: EventPerson[];
-}
-
-export interface EventPerson {
-  id: number;
-  created_at: string;
-  event_id: number;
-  person_id: number;
-  role: string;
-  person?: Person;
-}
-
-export interface Location {
-  id: number;
-  created_at: string;
-  name: string;
-  link_map?: string;
-  link?: string;
-  link_address?: string;
-}
-
-export interface Announcement {
-  id: number;
-  created_at: string;
-  person_id?: number;
-  published_at: string;
-  content: string;
-}
-
-export interface Resource {
-  id: number;
-  created_at: string;
-  name: string;
-  link: string;
-  description?: string;
-  is_route: boolean;
-}
-
-export interface SocialFeedPost {
-  id: number;
-  created_at: string;
-  author_id: number;
-  content: string;
-  timestamp: string;
-  image_urls: string[];
 }
 
 // Storage
@@ -129,7 +65,6 @@ export const storage = {
 
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
 
-      // Загружаем файл
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
@@ -146,7 +81,6 @@ export const storage = {
         throw new Error('Upload successful but path is missing');
       }
 
-      // Получаем публичный URL
       return getPublicFileUrl('avatars', fileName);
     } catch (error) {
       console.error('Error in uploadAvatar:', error);
@@ -158,7 +92,6 @@ export const storage = {
     try {
       if (!url) return;
 
-      // get filename from URL
       const parts = url.split('/');
       const fileName = parts[parts.length - 1];
 
@@ -184,6 +117,7 @@ export const storage = {
     return getPublicFileUrl('avatars', fileName);
   },
 };
+
 // API functions
 export const api = {
   people: {
@@ -198,7 +132,7 @@ export const api = {
         throw error;
       }
 
-      return data;
+      return data as Person[];
     },
 
     async getById(id: number) {
@@ -209,7 +143,8 @@ export const api = {
         .single();
 
       if (error) throw error;
-      return data;
+
+      return data as Person;
     },
 
     async create(person: Omit<Person, 'id' | 'created_at'>) {
@@ -224,7 +159,7 @@ export const api = {
         throw error;
       }
 
-      return data;
+      return data as Person;
     },
 
     async update(
@@ -243,7 +178,7 @@ export const api = {
         throw error;
       }
 
-      return data;
+      return data as Person;
     },
 
     delete: async (id: number) => {
@@ -258,11 +193,7 @@ export const api = {
 
   events: {
     async getAll() {
-      try {
-        await ensureAuthenticated();
-      } catch (e) {
-        console.log('Error in ensureAuthenticated:', e);
-      }
+      await ensureAuthenticated();
 
       const { data, error } = await supabase
         .from('events')
@@ -279,7 +210,10 @@ export const api = {
 
       if (error) throw error;
 
-      return data;
+      return data as (Event & {
+        location: Location | null;
+        event_people: (EventPerson & { person: Person })[];
+      })[];
     },
 
     async getById(id: number) {
@@ -299,19 +233,28 @@ export const api = {
 
       if (error) throw error;
 
-      return data;
+      return data as Event & {
+        location: Location | null;
+        event_people: (EventPerson & { person: Person })[];
+      };
     },
 
-    async create(
-      event: Omit<Event, 'id' | 'created_at'> & { speaker_ids?: number[] }
-    ) {
-      const { speaker_ids, ...eventData } = event;
+    async create(eventForm: EventFormData) {
+      const { speaker_ids, ...eventData } = eventForm;
 
       // Start a transaction
       const { data: newEvent, error: eventError } = await supabase
         .from('events')
         .insert([eventData])
-        .select()
+        .select(
+          `
+          *,
+          location:locations(*),
+          event_people:event_people(
+            person:people(*)
+          )
+        `
+        )
         .single();
 
       if (eventError) {
@@ -324,7 +267,7 @@ export const api = {
         const eventPeopleData = speaker_ids.map(person_id => ({
           event_id: newEvent.id,
           person_id,
-          role: 'speaker',
+          role: 'speaker' as const,
         }));
 
         const { error: speakersError } = await supabase
@@ -337,15 +280,13 @@ export const api = {
         }
       }
 
-      return newEvent;
+      return newEvent as Event & {
+        location: Location | null;
+        event_people: EventPerson[];
+      };
     },
 
-    async update(
-      id: number,
-      updates: Partial<Omit<Event, 'id' | 'created_at'>> & {
-        speaker_ids?: number[];
-      }
-    ) {
+    async update(id: number, updates: Partial<EventFormData>) {
       const { speaker_ids, ...eventData } = updates;
 
       // Start by updating the event
@@ -353,7 +294,15 @@ export const api = {
         .from('events')
         .update(eventData)
         .eq('id', id)
-        .select()
+        .select(
+          `
+          *,
+          location:locations(*),
+          event_people:event_people(
+            person:people(*)
+          )
+        `
+        )
         .single();
 
       if (eventError) {
@@ -380,7 +329,7 @@ export const api = {
           const eventPeopleData = speaker_ids.map(person_id => ({
             event_id: id,
             person_id,
-            role: 'speaker',
+            role: 'speaker' as const,
           }));
 
           const { error: speakersError } = await supabase
@@ -394,10 +343,25 @@ export const api = {
         }
       }
 
-      return updatedEvent;
+      return updatedEvent as Event & {
+        location: Location | null;
+        event_people: EventPerson[];
+      };
     },
 
     async delete(id: number) {
+      // Delete related records in the table event_people
+      const { error: eventPeopleError } = await supabase
+        .from('event_people')
+        .delete()
+        .eq('event_id', id);
+
+      if (eventPeopleError) {
+        console.error('Failed to delete event_people:', eventPeopleError);
+        throw eventPeopleError;
+      }
+
+      // Delete the event itself
       const { error } = await supabase.from('events').delete().eq('id', id);
 
       if (error) {
@@ -421,7 +385,7 @@ export const api = {
         throw error;
       }
 
-      return data;
+      return data as Section[];
     },
   },
 
@@ -439,7 +403,7 @@ export const api = {
         throw error;
       }
 
-      return data;
+      return data as Location[];
     },
 
     async getById(id: number) {
@@ -454,7 +418,7 @@ export const api = {
         throw error;
       }
 
-      return data;
+      return data as Location;
     },
 
     async create(location: Omit<Location, 'id' | 'created_at'>) {
@@ -469,7 +433,7 @@ export const api = {
         throw error;
       }
 
-      return data;
+      return data as Location;
     },
 
     async update(
@@ -488,7 +452,7 @@ export const api = {
         throw error;
       }
 
-      return data;
+      return data as Location;
     },
 
     async delete(id: number) {
@@ -515,7 +479,7 @@ export const api = {
         throw error;
       }
 
-      return data;
+      return data as Resource[];
     },
 
     async getById(id: number) {
@@ -530,7 +494,7 @@ export const api = {
         throw error;
       }
 
-      return data;
+      return data as Resource;
     },
 
     async create(resource: Omit<Resource, 'id' | 'created_at'>) {
@@ -545,7 +509,7 @@ export const api = {
         throw error;
       }
 
-      return data;
+      return data as Resource;
     },
 
     async update(
@@ -564,7 +528,7 @@ export const api = {
         throw error;
       }
 
-      return data;
+      return data as Resource;
     },
 
     async delete(id: number) {
@@ -572,6 +536,85 @@ export const api = {
 
       if (error) {
         console.error('Failed to delete resource:', error);
+        throw error;
+      }
+    },
+  },
+
+  markdown: {
+    async getAll() {
+      await ensureAuthenticated();
+
+      const { data, error } = await supabase
+        .from('markdown_pages')
+        .select('*')
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('Failed to fetch markdown pages:', error);
+        throw error;
+      }
+
+      return data as MarkdownPage[];
+    },
+
+    async getBySlug(slug: string) {
+      const { data, error } = await supabase
+        .from('markdown_pages')
+        .select('*')
+        .eq('slug', slug)
+        .single();
+
+      if (error) {
+        console.error('Failed to fetch markdown page:', error);
+        throw error;
+      }
+
+      return data as MarkdownPage;
+    },
+
+    async create(page: Omit<MarkdownPage, 'id' | 'created_at' | 'updated_at'>) {
+      const { data, error } = await supabase
+        .from('markdown_pages')
+        .insert([page])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to create markdown page:', error);
+        throw error;
+      }
+
+      return data as MarkdownPage;
+    },
+
+    async update(
+      id: number,
+      updates: Partial<Omit<MarkdownPage, 'id' | 'created_at' | 'updated_at'>>
+    ) {
+      const { data, error } = await supabase
+        .from('markdown_pages')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to update markdown page:', error);
+        throw error;
+      }
+
+      return data as MarkdownPage;
+    },
+
+    async delete(id: number) {
+      const { error } = await supabase
+        .from('markdown_pages')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Failed to delete markdown page:', error);
         throw error;
       }
     },
@@ -590,7 +633,39 @@ export const api = {
         .order('published_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as (Announcement & { person: Person })[];
+    },
+
+    async create(announcement: Omit<Announcement, 'id' | 'created_at'>) {
+      const { data, error } = await supabase
+        .from('announcements')
+        .insert([announcement])
+        .select(
+          `
+          *,
+          person:people(*)
+        `
+        )
+        .single();
+
+      if (error) {
+        console.error('Failed to create announcement:', error);
+        throw error;
+      }
+
+      return data as Announcement & { person: Person };
+    },
+
+    async delete(id: number) {
+      const { error } = await supabase
+        .from('announcements')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Failed to delete announcement:', error);
+        throw error;
+      }
     },
   },
 };

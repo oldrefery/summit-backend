@@ -1,4 +1,6 @@
 // src/components/events/event-form.tsx
+'use client';
+
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -24,7 +26,7 @@ import ReactSelect, { MultiValue } from 'react-select';
 import { useLocations } from '@/hooks/use-locations';
 import { usePeople } from '@/hooks/use-query';
 import { useCreateEvent, useUpdateEvent } from '@/hooks/use-events';
-import type { Event, EventPerson, Person } from '@/lib/supabase';
+import type { Event, EventFormData, EventPerson, Person } from '@/types';
 import { useSections } from '@/hooks/use-sections';
 import { useToastContext } from '@/components/providers/toast-provider';
 
@@ -42,12 +44,8 @@ interface OptionType {
   value: string;
 }
 
-type EventFormData = Omit<Event, 'id' | 'created_at'> & {
-  speaker_ids: number[];
-};
-
 interface FormData {
-  section_id: number | undefined;
+  section_id: number;
   date: string;
   title: string;
   description: string;
@@ -68,7 +66,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   const [isDirty, setIsDirty] = useState(false); // for tracking form changes
 
   const [formData, setFormData] = useState<FormData>({
-    section_id: initialData?.section_id || undefined,
+    section_id: initialData?.section_id || sections?.[0]?.id || 0, // Default to first section or 0
     date: initialData?.date || format(new Date(), 'yyyy-MM-dd'),
     title: initialData?.title || '',
     description: initialData?.description || '',
@@ -118,18 +116,14 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
       const end_timestamp = `${formData.date}T${formData.end_time}:00Z`;
 
       const eventApiData: EventFormData = {
-        section_id: formData.section_id
-          ? Number(formData.section_id)
-          : undefined,
+        section_id: formData.section_id,
         date: formData.date,
         title: formData.title,
-        description: formData.description || undefined,
+        description: formData.description || null,
         start_time: start_timestamp,
         end_time: end_timestamp,
-        location_id: formData.location_id
-          ? Number(formData.location_id)
-          : undefined,
-        duration: formData.duration || undefined,
+        location_id: formData.location_id ? Number(formData.location_id) : null,
+        duration: formData.duration || null,
         speaker_ids: selectedSpeakerIds.map(id => Number(id)),
       };
 
@@ -156,6 +150,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+
     setFormData(prev => ({ ...prev, [name]: value }));
     setIsDirty(true);
   };
@@ -182,10 +177,15 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   };
 
   const validateForm = () => {
+    if (!formData.section_id) {
+      showError('Section is required');
+      return false;
+    }
     // Date check (not past)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const eventDate = new Date(formData.date);
+
     if (eventDate < today) {
       showError('Event date cannot be in the past');
       return false;
@@ -194,6 +194,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
     // Time check (end after start)
     const startTime = new Date(`${formData.date}T${formData.start_time}`);
     const endTime = new Date(`${formData.date}T${formData.end_time}`);
+
     if (endTime <= startTime) {
       showError('End time must be after start time');
       return false;

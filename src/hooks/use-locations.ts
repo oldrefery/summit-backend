@@ -1,7 +1,7 @@
 // src/hooks/use-locations.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/supabase';
-import type { Location } from '@/lib/supabase';
+import type { Location } from '@/types';
 
 export function useLocations() {
   return useQuery({

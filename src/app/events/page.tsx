@@ -25,20 +25,25 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { useEvents, useDeleteEvent } from '@/hooks/use-events';
-import type { Event } from '@/lib/supabase';
+import type { Event } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToastContext } from '@/components/providers/toast-provider';
 
 export default function EventsPage() {
   const { data: events, isLoading } = useEvents();
   const deleteEvent = useDeleteEvent();
   const [searchTerm, setSearchTerm] = useState('');
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+  const { showError, showSuccess } = useToastContext();
 
   // Filter events based on search term
-  const filteredEvents = events?.filter(
-    event =>
-      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.section.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const sortedAndFilteredEvents = events
+    ?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .filter(
+      event =>
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.section.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   const handleDeleteClick = (event: Event) => {
     setEventToDelete(event);
@@ -49,8 +54,10 @@ export default function EventsPage() {
       try {
         await deleteEvent.mutateAsync(eventToDelete.id);
         setEventToDelete(null);
+        showSuccess('Event deleted successfully');
       } catch (error) {
         console.error('Failed to delete event:', error);
+        showError(error);
       }
     }
   };
@@ -69,8 +76,18 @@ export default function EventsPage() {
   if (isLoading) {
     return (
       <div className="p-8">
-        <div className="h-32 flex items-center justify-center">
-          <p className="text-muted-foreground">Loading events...</p>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-3/4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
@@ -98,7 +115,7 @@ export default function EventsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredEvents?.map(event => (
+        {sortedAndFilteredEvents?.map(event => (
           <Card key={event.id} className="relative">
             <CardHeader>
               <div className="flex justify-between items-start">
