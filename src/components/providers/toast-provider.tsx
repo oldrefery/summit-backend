@@ -20,7 +20,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       toast({
         title: 'Success',
         description: message,
-        variant: 'default',
+        variant: 'success',
+        duration: 3000,
       });
     },
     [toast]
@@ -35,10 +36,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         title: 'Error',
         description: errorMessage,
         variant: 'destructive',
+        duration: 5000,
       });
-
-      // Log the error to the console
-      console.error('Error details:', error);
     },
     [toast]
   );
