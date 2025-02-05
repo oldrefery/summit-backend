@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import ReactSelect from 'react-select';
+import ReactSelect, { MultiValue } from 'react-select';
 import { useLocations } from '@/hooks/use-locations';
 import { usePeople } from '@/hooks/use-query';
 import { useCreateEvent, useUpdateEvent } from '@/hooks/use-events';
@@ -42,6 +42,21 @@ interface OptionType {
   value: string;
 }
 
+type EventFormData = Omit<Event, 'id' | 'created_at'> & {
+  speaker_ids: number[];
+};
+
+interface FormData {
+  section_id: number | undefined;
+  date: string;
+  title: string;
+  description: string;
+  start_time: string;
+  end_time: string;
+  location_id: number | undefined;
+  duration: string;
+}
+
 export function EventForm({ initialData, onSuccess }: EventFormProps) {
   const router = useRouter();
   const { showError, showSuccess } = useToastContext();
@@ -52,7 +67,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   const updateEvent = useUpdateEvent();
   const [isDirty, setIsDirty] = useState(false); // for tracking form changes
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     section_id: initialData?.section_id || undefined,
     date: initialData?.date || format(new Date(), 'yyyy-MM-dd'),
     title: initialData?.title || '',
@@ -78,11 +93,13 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
         e.preventDefault();
-        e.returnValue = '';
+
+        return 'Changes you made may not be saved.';
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
@@ -100,15 +117,19 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
       const start_timestamp = `${formData.date}T${formData.start_time}:00Z`;
       const end_timestamp = `${formData.date}T${formData.end_time}:00Z`;
 
-      const eventApiData = {
-        section_id: formData.section_id ? Number(formData.section_id) : null,
+      const eventApiData: EventFormData = {
+        section_id: formData.section_id
+          ? Number(formData.section_id)
+          : undefined,
         date: formData.date,
         title: formData.title,
-        description: formData.description || null,
-        start_time: start_timestamp, // Используем полный timestamp
-        end_time: end_timestamp, // Используем полный timestamp
-        location_id: formData.location_id ? Number(formData.location_id) : null,
-        duration: formData.duration || null,
+        description: formData.description || undefined,
+        start_time: start_timestamp,
+        end_time: end_timestamp,
+        location_id: formData.location_id
+          ? Number(formData.location_id)
+          : undefined,
+        duration: formData.duration || undefined,
         speaker_ids: selectedSpeakerIds.map(id => Number(id)),
       };
 
@@ -308,10 +329,10 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
                     '',
                   value: id,
                 }))}
-                onChange={(newValue: OptionType[]) => {
-                  setSelectedSpeakerIds(
-                    newValue.map((v: OptionType) => v.value)
-                  );
+                onChange={(newValue: MultiValue<OptionType>) => {
+                  const values = Array.isArray(newValue) ? newValue : [];
+                  setSelectedSpeakerIds(values.map(v => v.value));
+                  setIsDirty(true);
                 }}
                 className="react-select-container"
                 classNamePrefix="react-select"
