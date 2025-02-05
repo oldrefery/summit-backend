@@ -262,8 +262,7 @@ export const api = {
   events: {
     async getAll() {
       try {
-        const result = await ensureAuthenticated(); // Добавляем проверку аутентификации
-        console.log('ensureAuthenticated result:', result);
+        const result = await ensureAuthenticated();
       } catch (e) {
         console.log('Error in ensureAuthenticated:', e);
       }
@@ -282,7 +281,7 @@ export const api = {
         .order('start_time');
 
       if (error) throw error;
-      console.log('Get all events:', data); // для отладки
+
       return data;
     },
 
@@ -302,6 +301,7 @@ export const api = {
         .single();
 
       if (error) throw error;
+
       return data;
     },
 

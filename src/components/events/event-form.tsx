@@ -1,5 +1,5 @@
 // src/components/events/event-form.tsx
-import { ChangeEvent, FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import {
@@ -26,6 +26,7 @@ import { usePeople } from '@/hooks/use-query';
 import { useCreateEvent, useUpdateEvent } from '@/hooks/use-events';
 import type { Event, EventPerson, Person } from '@/lib/supabase';
 import { useSections } from '@/hooks/use-sections';
+import { useToastContext } from '@/components/providers/toast-provider';
 
 interface EventFormProps {
   initialData?: Event & {
@@ -43,11 +44,13 @@ interface OptionType {
 
 export function EventForm({ initialData, onSuccess }: EventFormProps) {
   const router = useRouter();
+  const { showError, showSuccess } = useToastContext();
   const { data: locations } = useLocations();
   const { data: sections } = useSections();
   const { data: allPeople, isLoading: isPeopleLoading } = usePeople();
   const createEvent = useCreateEvent();
   const updateEvent = useUpdateEvent();
+  const [isDirty, setIsDirty] = useState(false); // for tracking form changes
 
   const [formData, setFormData] = useState({
     section_id: initialData?.section_id || undefined,
@@ -71,18 +74,27 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
       .filter((id): id is string => id !== undefined) || []
   );
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
   const availableSpeakers =
     allPeople?.filter(person => person.role === 'speaker') || [];
-  console.log('Filtered speakers before mapping:', availableSpeakers);
-
-  const speakerOptions = availableSpeakers.map(speaker => ({
-    label: speaker.name,
-    value: speaker.id.toString(),
-  }));
-  console.log('Mapped speaker options:', speakerOptions);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
 
     try {
       const start_timestamp = `${formData.date}T${formData.start_time}:00Z`;
@@ -99,21 +111,23 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
         duration: formData.duration || null,
         speaker_ids: selectedSpeakerIds.map(id => Number(id)),
       };
-      console.log('Creating event with data:', eventApiData);
 
       if (initialData) {
         await updateEvent.mutateAsync({
           id: initialData.id,
           updates: eventApiData,
         });
+        showSuccess('Event updated successfully');
       } else {
         await createEvent.mutateAsync(eventApiData);
+        showSuccess('Event created successfully');
       }
 
+      setIsDirty(false);
       onSuccess?.();
       router.push('/events');
     } catch (error) {
-      console.error('Failed to save event:', error);
+      showError(error);
     }
   };
 
@@ -122,6 +136,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   ) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setIsDirty(true);
   };
 
   const handleLocationChange = (value: string) => {
@@ -129,6 +144,41 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
       ...prev,
       location_id: value ? Number(value) : undefined,
     }));
+  };
+
+  const handleCancel = () => {
+    if (isDirty) {
+      if (
+        window.confirm(
+          'You have unsaved changes. Are you sure you want to leave?'
+        )
+      ) {
+        router.push('/events');
+      }
+    } else {
+      router.push('/events');
+    }
+  };
+
+  const validateForm = () => {
+    // Date check (not past)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const eventDate = new Date(formData.date);
+    if (eventDate < today) {
+      showError('Event date cannot be in the past');
+      return false;
+    }
+
+    // Time check (end after start)
+    const startTime = new Date(`${formData.date}T${formData.start_time}`);
+    const endTime = new Date(`${formData.date}T${formData.end_time}`);
+    if (endTime <= startTime) {
+      showError('End time must be after start time');
+      return false;
+    }
+
+    return true;
   };
 
   return (
@@ -271,18 +321,21 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
           </div>
         </CardContent>
         <CardFooter className="flex justify-end space-x-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push('/events')}
-          >
+          <Button type="button" variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
           <Button
             type="submit"
             disabled={createEvent.isPending || updateEvent.isPending}
           >
-            {initialData ? 'Update' : 'Create'} Event
+            {createEvent.isPending || updateEvent.isPending ? (
+              <span>Saving...</span>
+            ) : initialData ? (
+              'Update'
+            ) : (
+              'Create'
+            )}{' '}
+            Event{' '}
           </Button>
         </CardFooter>
       </Card>

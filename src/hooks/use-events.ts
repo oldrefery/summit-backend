@@ -8,9 +8,7 @@ export function useEvents() {
     queryKey: ['events'],
     queryFn: async () => {
       try {
-        const events = await api.events.getAll();
-        console.log('Received events:', events); // Для отладки
-        return events;
+        return await api.events.getAll();
       } catch (error) {
         console.error('Error fetching events:', error);
         throw error;
