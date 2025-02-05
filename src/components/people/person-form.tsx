@@ -32,6 +32,8 @@ interface PersonFormProps {
   onSuccess?: () => void;
 }
 
+type FileImage = File | null | undefined;
+
 export function PersonForm({
   person,
   open,
@@ -39,8 +41,9 @@ export function PersonForm({
   onSuccess,
 }: PersonFormProps) {
   const { createPerson, updatePerson } = usePeople();
-  const { showError } = useToastContext();
+  const { showError, showSuccess } = useToastContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     title: '',
@@ -53,20 +56,19 @@ export function PersonForm({
     photo_url: '',
   });
   const [emailError, setEmailError] = useState('');
-  const [photoFile, setPhotoFile] = useState<File | null | undefined>(
-    undefined
-  );
+  const [photoFile, setPhotoFile] = useState<FileImage>(undefined);
 
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) {
-        //Resetting the state on form closing
-        setPhotoFile(undefined);
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
       }
-      onOpenChangeAction(open);
-    },
-    [onOpenChangeAction]
-  );
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   useEffect(() => {
     if (person) {
@@ -97,103 +99,145 @@ export function PersonForm({
       setPhotoFile(undefined);
     }
     setEmailError('');
+    setIsDirty(false);
   }, [person]);
+
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && isDirty) {
+        if (
+          window.confirm(
+            'You have unsaved changes. Are you sure you want to leave?'
+          )
+        ) {
+          setPhotoFile(undefined);
+          setIsDirty(false);
+          onOpenChangeAction(false);
+        }
+      } else {
+        setPhotoFile(undefined);
+        setIsDirty(false);
+        onOpenChangeAction(open);
+      }
+    },
+    [isDirty, onOpenChangeAction]
+  );
+
+  const validateEmail = (email: string): boolean => {
+    return email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const validateForm = (): boolean => {
+    // Проверка имени
+    if (!formData.name.trim()) {
+      showError('Name is required');
+      return false;
+    }
+
+    // Проверка email
+    if (formData.email && !validateEmail(formData.email)) {
+      showError('Invalid email address');
+      return false;
+    }
+
+    // Проверка мобильного номера (если есть)
+    if (formData.mobile && !/^\+?[\d\s-]+$/.test(formData.mobile)) {
+      showError('Invalid mobile number format');
+      return false;
+    }
+
+    return true;
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const baseData = { ...formData };
 
       if (photoFile) {
-        try {
-          console.log('Handling photo upload...');
-
-          if (person?.photo_url) {
-            console.log('Removing old photo:', person.photo_url);
-            try {
-              await storage.removeAvatar(person.photo_url);
-            } catch (removeError) {
-              console.warn('Error removing old avatar:', removeError);
-            }
-          }
-
-          const userId = person?.id || 'new';
-          const newPhotoUrl = await storage.uploadAvatar(
-            photoFile,
-            `user-${userId}-${Date.now()}`
-          );
-          console.log('New photo uploaded:', newPhotoUrl);
-
-          if (!newPhotoUrl) {
-            throw new Error('Failed to get photo URL after upload');
-          }
-
-          baseData.photo_url = newPhotoUrl;
-        } catch (uploadError) {
-          console.error('Error handling photo:', uploadError);
-          showError('Failed to upload photo. Please try again.');
-          setIsSubmitting(false);
-          return;
-        }
-      } else if (photoFile === null) {
-        // If photoFile === null, it means that the user deleted the photo
-        baseData.photo_url = '';
-
-        // Delete the old photo if there was one
         if (person?.photo_url) {
           try {
             await storage.removeAvatar(person.photo_url);
           } catch (removeError) {
-            console.warn('Error removing old avatar:', removeError);
+            showError(
+              'Failed to remove old photo. Please try again.' + removeError
+            );
+          }
+        }
+
+        const userId = person?.id || 'new';
+        const newName = `user-${userId}-${Date.now()}`;
+        const newPhotoUrl = await storage.uploadAvatar(photoFile, newName);
+
+        if (!newPhotoUrl) {
+          showError('Failed to upload photo: URL not received');
+          setIsSubmitting(false);
+          return;
+        }
+
+        baseData.photo_url = newPhotoUrl;
+      } else if (photoFile === null) {
+        baseData.photo_url = '';
+        if (person?.photo_url) {
+          try {
+            await storage.removeAvatar(person.photo_url);
+          } catch (removeError) {
+            showError(
+              'Failed to remove old photo. Please try again.' + removeError
+            );
           }
         }
       } else {
         baseData.photo_url = person?.photo_url || '';
       }
 
-      console.log('Saving data:', baseData);
-
       if (person?.id) {
         await updatePerson.mutateAsync({
           id: person.id,
           data: baseData,
         });
+        showSuccess('Person updated successfully');
       } else {
         await createPerson.mutateAsync(baseData);
+        showSuccess('Person created successfully');
       }
 
+      setIsDirty(false);
       onOpenChangeAction(false);
       onSuccess?.();
     } catch (error) {
-      console.error('Form submission error:', error);
-      showError(
-        error instanceof Error ? error.message : 'Failed to save person'
-      );
+      showError(error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const validateEmail = (email: string): boolean => {
-    return email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setIsDirty(true);
 
-  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const email = e.target.value;
-    setFormData({ ...formData, email });
-
-    if (!validateEmail(email)) {
-      setEmailError('Please enter a valid email address');
-    } else {
-      setEmailError('');
+    if (name === 'email') {
+      if (!validateEmail(value)) {
+        setEmailError('Please enter a valid email address');
+      } else {
+        setEmailError('');
+      }
     }
   };
 
   const handlePhotoChange = useCallback((file: File | null) => {
-    console.log('Photo changed:', file);
     setPhotoFile(file);
+    setIsDirty(true);
   }, []);
 
   return (
@@ -220,10 +264,9 @@ export function PersonForm({
               </Label>
               <Input
                 id="name"
+                name="name"
                 value={formData.name}
-                onChange={e =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={handleInputChange}
                 required
               />
             </div>
@@ -231,11 +274,10 @@ export function PersonForm({
               <Label htmlFor="role">Role</Label>
               <select
                 id="role"
+                name="role"
                 className="w-full rounded-md border p-2 mt-1"
                 value={formData.role}
-                onChange={e =>
-                  setFormData({ ...formData, role: e.target.value })
-                }
+                onChange={handleInputChange}
               >
                 <option value="attendee">Attendee</option>
                 <option value="speaker">Speaker</option>
@@ -245,10 +287,9 @@ export function PersonForm({
               <Label htmlFor="title">Title</Label>
               <Input
                 id="title"
+                name="title"
                 value={formData.title}
-                onChange={e =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
+                onChange={handleInputChange}
                 className="mt-1"
               />
             </div>
@@ -256,10 +297,9 @@ export function PersonForm({
               <Label htmlFor="company">Company</Label>
               <Input
                 id="company"
+                name="company"
                 value={formData.company}
-                onChange={e =>
-                  setFormData({ ...formData, company: e.target.value })
-                }
+                onChange={handleInputChange}
                 className="mt-1"
               />
             </div>
@@ -267,10 +307,9 @@ export function PersonForm({
               <Label htmlFor="country">Country</Label>
               <Input
                 id="country"
+                name="country"
                 value={formData.country}
-                onChange={e =>
-                  setFormData({ ...formData, country: e.target.value })
-                }
+                onChange={handleInputChange}
                 className="mt-1"
               />
             </div>
@@ -278,14 +317,26 @@ export function PersonForm({
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
                 value={formData.email}
-                onChange={handleEmailChange}
+                onChange={handleInputChange}
                 className={`mt-1 ${emailError ? 'border-red-500' : ''}`}
               />
               {emailError && (
                 <p className="text-sm text-red-500 mt-1">{emailError}</p>
               )}
+            </div>
+            <div>
+              <Label htmlFor="mobile">Mobile</Label>
+              <Input
+                id="mobile"
+                name="mobile"
+                value={formData.mobile}
+                onChange={handleInputChange}
+                className="mt-1"
+                placeholder="+1234567890"
+              />
             </div>
           </div>
           <DialogFooter className="mt-6">
@@ -297,8 +348,12 @@ export function PersonForm({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || !!emailError}>
-              {isSubmitting ? 'Saving...' : 'Save'}
+            <Button
+              type="submit"
+              disabled={isSubmitting || !!emailError}
+              className="min-w-[80px]"
+            >
+              {isSubmitting ? 'Saving...' : person?.id ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
         </form>

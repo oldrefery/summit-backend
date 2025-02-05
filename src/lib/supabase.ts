@@ -231,8 +231,6 @@ export const api = {
       id: number,
       updates: Partial<Omit<Person, 'id' | 'created_at'>>
     ) {
-      console.log('Updating with data:', { id, updates }); // для отладки
-
       const { data, error } = await supabase
         .from('people')
         .update(updates)
@@ -249,7 +247,6 @@ export const api = {
     },
 
     delete: async (id: number) => {
-      console.log('Deleting:', id);
       const { error } = await supabase.from('people').delete().eq('id', id);
 
       if (error) {
@@ -262,7 +259,7 @@ export const api = {
   events: {
     async getAll() {
       try {
-        const result = await ensureAuthenticated();
+        await ensureAuthenticated();
       } catch (e) {
         console.log('Error in ensureAuthenticated:', e);
       }
