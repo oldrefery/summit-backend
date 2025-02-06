@@ -1,70 +1,56 @@
 // src/app/locations/page.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { LocationFilters } from '@/components/locations/location-filters';
 import { LocationForm } from '@/components/locations/location-form';
+import { LocationsTable } from '@/components/locations/locations-table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDelete } from '@/components/ui/confirm-delete';
 import { useLocations } from '@/hooks/use-locations';
+import { useToastContext } from '@/components/providers/toast-provider';
+import { useSortFilter } from '@/hooks/use-sort-filter';
 import type { Location } from '@/types';
 import { MapPin, Plus } from 'lucide-react';
 
-type SortKey = 'name' | 'created_at';
-type SortOrder = 'asc' | 'desc';
-
 export default function LocationsPage() {
-  const { data: locations = [], isLoading, deleteLocation } = useLocations();
+  const {
+    data: locations = [],
+    isLoading,
+    isError,
+    deleteLocation,
+  } = useLocations();
+  const { showError } = useToastContext();
   const [selectedLocation, setSelectedLocation] = useState<Location>();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [locationToDelete, setLocationToDelete] = useState<Location | null>(
     null
   );
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('name');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortOrder('asc');
+  const {
+    searchQuery,
+    setSearchQuery,
+    sortKey,
+    sortOrder,
+    handleSort,
+    filteredAndSorted: filteredLocations,
+  } = useSortFilter<Location>(locations, {
+    initialSortKey: 'name',
+    searchField: 'name',
+  });
+
+  useEffect(() => {
+    if (isError) {
+      showError('Failed to load locations. Please try again later.');
     }
+  }, [isError, showError]);
+
+  const handleEdit = (location: Location) => {
+    setSelectedLocation(location);
+    setIsFormOpen(true);
   };
-
-  const filteredAndSortedLocations = useMemo(() => {
-    let result = [...locations];
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(location =>
-        location.name.toLowerCase().includes(query)
-      );
-    }
-
-    result.sort((a, b) => {
-      const aValue = a[sortKey];
-      const bValue = b[sortKey];
-      const modifier = sortOrder === 'asc' ? 1 : -1;
-
-      if (aValue < bValue) return -1 * modifier;
-      if (aValue > bValue) return 1 * modifier;
-      return 0;
-    });
-
-    return result;
-  }, [locations, searchQuery, sortKey, sortOrder]);
 
   const handleDelete = async () => {
     if (locationToDelete?.id) {
@@ -72,7 +58,7 @@ export default function LocationsPage() {
         await deleteLocation.mutateAsync(locationToDelete.id);
         setLocationToDelete(null);
       } catch (error) {
-        console.error('Failed to delete location:', error);
+        showError(error);
       }
     }
   };
@@ -114,13 +100,13 @@ export default function LocationsPage() {
           <LocationFilters
             searchQuery={searchQuery}
             onSearchChangeAction={setSearchQuery}
-            totalResults={filteredAndSortedLocations.length}
-            sortKey={sortKey}
+            totalResults={filteredLocations.length}
+            sortKey={sortKey as 'name' | 'created_at'}
             sortOrder={sortOrder}
             onSortAction={handleSort}
           />
 
-          {filteredAndSortedLocations.length === 0 ? (
+          {filteredLocations.length === 0 ? (
             <div className="text-center py-12">
               <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No locations found</h3>
@@ -136,48 +122,11 @@ export default function LocationsPage() {
             </div>
           ) : (
             <div className="relative mt-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[40%]">Name</TableHead>
-                    <TableHead className="w-[30%]">Address</TableHead>
-                    <TableHead className="w-[20%]">Map Link</TableHead>
-                    <TableHead className="w-[10%]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAndSortedLocations.map(location => (
-                    <TableRow key={location.id}>
-                      <TableCell className="font-medium">
-                        {location.name}
-                      </TableCell>
-                      <TableCell>{location.address}</TableCell>
-                      <TableCell>{location.link_map ? 'Yes' : 'No'}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedLocation(location);
-                              setIsFormOpen(true);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setLocationToDelete(location)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <LocationsTable
+                locations={filteredLocations}
+                onEditAction={handleEdit}
+                onDeleteAction={setLocationToDelete}
+              />
             </div>
           )}
         </CardContent>
@@ -186,7 +135,7 @@ export default function LocationsPage() {
       <LocationForm
         location={selectedLocation}
         open={isFormOpen}
-        onOpenChangeAction={open => {
+        onOpenChangeAction={(open: boolean) => {
           setIsFormOpen(open);
           if (!open) setSelectedLocation(undefined);
         }}

@@ -2,44 +2,34 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/supabase';
 import type { EventFormData } from '@/types';
+import { useToastContext } from '@/components/providers/toast-provider';
 
 export function useEvents() {
-  return useQuery({
+  const { showError, showSuccess } = useToastContext();
+  const {
+    data = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ['events'],
-    queryFn: async () => {
-      try {
-        return await api.events.getAll();
-      } catch (error) {
-        console.error('Error fetching events:', error);
-        throw error;
-      }
-    },
+    queryFn: () => api.events.getAll(),
   });
-}
 
-export function useEvent(id: number) {
-  return useQuery({
-    queryKey: ['events', id],
-    queryFn: () => api.events.getById(id),
-    enabled: !!id,
-  });
-}
-
-export function useCreateEvent() {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  const createEvent = useMutation({
     mutationFn: (event: EventFormData) => api.events.create(event),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['events'] });
+      showSuccess('Event created successfully');
+    },
+    onError: error => {
+      showError(error);
     },
   });
-}
 
-export function useUpdateEvent() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
+  const updateEvent = useMutation({
     mutationFn: ({
       id,
       updates,
@@ -49,17 +39,39 @@ export function useUpdateEvent() {
     }) => api.events.update(id, updates),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['events'] });
+      showSuccess('Event updated successfully');
+    },
+    onError: error => {
+      showError(error);
     },
   });
-}
 
-export function useDeleteEvent() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
+  const deleteEvent = useMutation({
     mutationFn: (id: number) => api.events.delete(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['events'] });
+      showSuccess('Event deleted successfully');
     },
+    onError: error => {
+      showError(error);
+    },
+  });
+
+  return {
+    data,
+    isLoading,
+    isError,
+    error,
+    createEvent,
+    updateEvent,
+    deleteEvent,
+  };
+}
+
+export function useEvent(id: number) {
+  return useQuery({
+    queryKey: ['events', id],
+    queryFn: () => api.events.getById(id),
+    enabled: !!id,
   });
 }

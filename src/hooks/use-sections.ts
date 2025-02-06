@@ -23,8 +23,8 @@ export function useSections() {
   const createSection = useMutation({
     mutationFn: (section: Omit<Section, 'id' | 'created_at'>) =>
       api.sections.create(section),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sections'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['sections'] });
       showSuccess('Section created successfully');
     },
     onError: error => {
@@ -40,8 +40,8 @@ export function useSections() {
       id: number;
       data: Partial<Omit<Section, 'id' | 'created_at'>>;
     }) => api.sections.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sections'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['sections'] });
       showSuccess('Section updated successfully');
     },
     onError: error => {
@@ -51,8 +51,8 @@ export function useSections() {
 
   const deleteSection = useMutation({
     mutationFn: api.sections.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sections'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['sections'] });
       showSuccess('Section deleted successfully');
     },
     onError: error => {
@@ -63,6 +63,7 @@ export function useSections() {
   return {
     data: sectionsQuery.data ?? [],
     isLoading: sectionsQuery.isLoading,
+    isError: sectionsQuery.isError,
     error: sectionsQuery.error,
     createSection,
     updateSection,

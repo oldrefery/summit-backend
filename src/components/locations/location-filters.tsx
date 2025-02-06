@@ -19,6 +19,7 @@ export function LocationFilters({
   onSearchChangeAction,
   totalResults,
   sortKey,
+  sortOrder,
   onSortAction,
 }: LocationFiltersProps) {
   return (
@@ -78,6 +79,10 @@ export function LocationFilters({
               </Button>
             </>
           )}
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Sorted by {sortKey} (
+          {sortOrder === 'asc' ? 'ascending' : 'descending'})
         </div>
       </div>
     </div>

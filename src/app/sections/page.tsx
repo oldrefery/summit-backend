@@ -1,76 +1,53 @@
 // src/app/sections/page.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { SectionFilters } from '@/components/sections/section-filters';
 import { SectionForm } from '@/components/sections/section-form';
+import { SectionsTable } from '@/components/sections/sections-table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDelete } from '@/components/ui/confirm-delete';
-import { format, isToday, isYesterday, isTomorrow } from 'date-fns';
 import { useSections } from '@/hooks/use-sections';
+import { useToastContext } from '@/components/providers/toast-provider';
+import { useSortFilter } from '@/hooks/use-sort-filter';
 import type { Section } from '@/types';
 import { CalendarDays, Plus } from 'lucide-react';
 
-type SortKey = 'name' | 'date';
-type SortOrder = 'asc' | 'desc';
-
 export default function SectionsPage() {
-  const { data: sections = [], isLoading, deleteSection } = useSections();
-  const [selectedSection, setSelectedSection] = useState<Section | undefined>();
+  const {
+    data: sections = [],
+    isLoading,
+    isError,
+    deleteSection,
+  } = useSections();
+  const { showError } = useToastContext();
+  const [selectedSection, setSelectedSection] = useState<Section>();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [sectionToDelete, setSectionToDelete] = useState<Section | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('date');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortOrder('asc');
+  const {
+    searchQuery,
+    setSearchQuery,
+    sortKey,
+    sortOrder,
+    handleSort,
+    filteredAndSorted: filteredSections,
+  } = useSortFilter<Section>(sections, {
+    initialSortKey: 'date',
+    searchField: 'name',
+  });
+
+  useEffect(() => {
+    if (isError) {
+      showError('Failed to load sections. Please try again later.');
     }
-  };
+  }, [isError, showError]);
 
-  const filteredAndSortedSections = useMemo(() => {
-    let result = [...sections];
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(section =>
-        section.name.toLowerCase().includes(query)
-      );
-    }
-
-    result.sort((a, b) => {
-      const aValue = a[sortKey];
-      const bValue = b[sortKey];
-      const modifier = sortOrder === 'asc' ? 1 : -1;
-
-      if (aValue < bValue) return -1 * modifier;
-      if (aValue > bValue) return 1 * modifier;
-      return 0;
-    });
-
-    return result;
-  }, [sections, searchQuery, sortKey, sortOrder]);
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    if (isToday(date)) return 'Today';
-    if (isYesterday(date)) return 'Yesterday';
-    if (isTomorrow(date)) return 'Tomorrow';
-    return format(date, 'MMM d, yyyy');
+  const handleEdit = (section: Section) => {
+    setSelectedSection(section);
+    setIsFormOpen(true);
   };
 
   const handleDelete = async () => {
@@ -79,7 +56,7 @@ export default function SectionsPage() {
         await deleteSection.mutateAsync(sectionToDelete.id);
         setSectionToDelete(null);
       } catch (error) {
-        console.error('Failed to delete section:', error);
+        showError(error);
       }
     }
   };
@@ -120,14 +97,14 @@ export default function SectionsPage() {
         <CardContent>
           <SectionFilters
             searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            totalResults={filteredAndSortedSections.length}
-            sortKey={sortKey}
+            onSearchChangeAction={setSearchQuery}
+            totalResults={filteredSections.length}
+            sortKey={sortKey as 'name' | 'date'}
             sortOrder={sortOrder}
-            onSort={handleSort}
+            onSortAction={handleSort}
           />
 
-          {filteredAndSortedSections.length === 0 ? (
+          {filteredSections.length === 0 ? (
             <div className="text-center py-12">
               <CalendarDays className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No sections found</h3>
@@ -143,50 +120,11 @@ export default function SectionsPage() {
             </div>
           ) : (
             <div className="relative mt-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[40%]">Name</TableHead>
-                    <TableHead className="w-[30%]">Date</TableHead>
-                    <TableHead className="w-[20%]">Created</TableHead>
-                    <TableHead className="w-[10%]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAndSortedSections.map(section => (
-                    <TableRow key={section.id}>
-                      <TableCell className="font-medium">
-                        {section.name}
-                      </TableCell>
-                      <TableCell>{formatDate(section.date)}</TableCell>
-                      <TableCell>
-                        {format(new Date(section.created_at), 'MMM d, yyyy')}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedSection(section);
-                              setIsFormOpen(true);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => setSectionToDelete(section)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <SectionsTable
+                sections={filteredSections}
+                onEditAction={handleEdit}
+                onDeleteAction={setSectionToDelete}
+              />
             </div>
           )}
         </CardContent>
@@ -195,7 +133,7 @@ export default function SectionsPage() {
       <SectionForm
         section={selectedSection}
         open={isFormOpen}
-        onOpenChange={open => {
+        onOpenChangeAction={(open: boolean) => {
           setIsFormOpen(open);
           if (!open) setSelectedSection(undefined);
         }}

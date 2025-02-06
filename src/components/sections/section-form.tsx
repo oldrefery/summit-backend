@@ -20,10 +20,14 @@ import type { Section } from '@/types';
 interface SectionFormProps {
   section?: Section;
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChangeAction: (open: boolean) => void;
 }
 
-export function SectionForm({ section, open, onOpenChange }: SectionFormProps) {
+export function SectionForm({
+  section,
+  open,
+  onOpenChangeAction,
+}: SectionFormProps) {
   const { showError } = useToastContext();
   const { createSection, updateSection } = useSections();
   const [isDirty, setIsDirty] = useState(false);
@@ -86,7 +90,7 @@ export function SectionForm({ section, open, onOpenChange }: SectionFormProps) {
       }
 
       setIsDirty(false);
-      onOpenChange(false);
+      onOpenChangeAction(false);
     } catch (error) {
       showError(error);
     }
@@ -100,10 +104,10 @@ export function SectionForm({ section, open, onOpenChange }: SectionFormProps) {
         )
       ) {
         setIsDirty(false);
-        onOpenChange(false);
+        onOpenChangeAction(false);
       }
     } else {
-      onOpenChange(open);
+      onOpenChangeAction(open);
     }
   };
 

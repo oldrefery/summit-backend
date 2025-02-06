@@ -2,8 +2,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/supabase';
 import type { LocationFormData } from '@/types';
+import { useToastContext } from '@/components/providers/toast-provider';
 
 export function useLocations() {
+  const { showError, showSuccess } = useToastContext();
   const {
     data = [],
     isLoading,
@@ -20,6 +22,10 @@ export function useLocations() {
     mutationFn: (location: LocationFormData) => api.locations.create(location),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['locations'] });
+      showSuccess('Location created successfully');
+    },
+    onError: error => {
+      showError(error);
     },
   });
 
@@ -33,6 +39,10 @@ export function useLocations() {
     }) => api.locations.update(id, data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['locations'] });
+      showSuccess('Location updated successfully');
+    },
+    onError: error => {
+      showError(error);
     },
   });
 
@@ -40,6 +50,10 @@ export function useLocations() {
     mutationFn: (id: number) => api.locations.delete(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['locations'] });
+      showSuccess('Location deleted successfully');
+    },
+    onError: error => {
+      showError(error);
     },
   });
 

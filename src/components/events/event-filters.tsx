@@ -1,33 +1,27 @@
-// src/components/sections/section-filters.tsx
+// src/components/events/event-filters.tsx
 'use client';
 
 import { InputSearch } from '@/components/ui/input-search';
 import { Button } from '@/components/ui/button';
-import { X, ArrowUpDown } from 'lucide-react';
+import { X } from 'lucide-react';
 
-interface SectionFiltersProps {
+interface EventFiltersProps {
   searchQuery: string;
   onSearchChangeAction: (value: string) => void;
   totalResults: number;
-  sortKey: 'name' | 'date';
-  sortOrder: 'asc' | 'desc';
-  onSortAction: (key: 'name' | 'date') => void;
 }
 
-export function SectionFilters({
+export function EventFilters({
   searchQuery,
   onSearchChangeAction,
   totalResults,
-  sortKey,
-  sortOrder,
-  onSortAction,
-}: SectionFiltersProps) {
+}: EventFiltersProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-md">
           <InputSearch
-            placeholder="Search by name..."
+            placeholder="Search events..."
             value={searchQuery}
             onChange={e => onSearchChangeAction(e.target.value)}
           />
@@ -41,30 +35,11 @@ export function SectionFilters({
             </Button>
           )}
         </div>
-
-        <div className="flex gap-2">
-          <Button
-            variant={sortKey === 'name' ? 'default' : 'outline'}
-            onClick={() => onSortAction('name')}
-            className="min-w-[100px]"
-          >
-            Name{' '}
-            {sortKey === 'name' && <ArrowUpDown className="h-4 w-4 ml-2" />}
-          </Button>
-          <Button
-            variant={sortKey === 'date' ? 'default' : 'outline'}
-            onClick={() => onSortAction('date')}
-            className="min-w-[100px]"
-          >
-            Date{' '}
-            {sortKey === 'date' && <ArrowUpDown className="h-4 w-4 ml-2" />}
-          </Button>
-        </div>
       </div>
 
       <div className="text-sm text-muted-foreground flex justify-between items-center">
         <div>
-          {totalResults} {totalResults === 1 ? 'section' : 'sections'} found
+          {totalResults} {totalResults === 1 ? 'event' : 'events'} found
           {searchQuery && (
             <>
               {' '}
@@ -77,10 +52,6 @@ export function SectionFilters({
               </Button>
             </>
           )}
-        </div>
-        <div className="text-sm text-muted-foreground">
-          Sorted by {sortKey} (
-          {sortOrder === 'asc' ? 'ascending' : 'descending'})
         </div>
       </div>
     </div>
