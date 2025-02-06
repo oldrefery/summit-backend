@@ -13,21 +13,12 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { useEvents, useDeleteEvent } from '@/hooks/use-events';
 import type { Event } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToastContext } from '@/components/providers/toast-provider';
+import { ConfirmDelete } from '@/components/ui/confirm-delete';
 
 export default function EventsPage() {
   const { data: events, isLoading } = useEvents();
@@ -64,7 +55,6 @@ export default function EventsPage() {
 
   const formatEventTime = (time: string) => {
     try {
-      // Parse the ISO timestamp directly
       const dateTime = parseISO(time);
       return format(dateTime, 'HH:mm');
     } catch (error) {
@@ -166,29 +156,13 @@ export default function EventsPage() {
         ))}
       </div>
 
-      <AlertDialog
+      <ConfirmDelete
         open={!!eventToDelete}
         onOpenChange={() => setEventToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the event &quot;
-              {eventToDelete?.title}&quot;. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onConfirm={handleDeleteConfirm}
+        title="Delete Event"
+        description={`Are you sure you want to delete "${eventToDelete?.title}"? This action cannot be undone.`}
+      />
     </div>
   );
 }

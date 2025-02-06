@@ -181,13 +181,39 @@ export const api = {
       return data as Person;
     },
 
-    delete: async (id: number) => {
-      const { error } = await supabase.from('people').delete().eq('id', id);
+    async delete(id: number) {
+      // Check related records in event_people
+      const { data: eventPeople, error: checkError } = await supabase
+        .from('event_people')
+        .select('id')
+        .eq('person_id', id);
 
-      if (error) {
-        console.error('Delete error:', error);
-        throw error;
+      if (checkError) {
+        console.error('Failed to check related records:', checkError);
+        throw checkError;
       }
+
+      if (eventPeople && eventPeople.length > 0) {
+        throw new Error('Cannot delete person who is assigned to events');
+      }
+
+      // Check related records in announcements
+      const { data: announcements, error: announcementsError } = await supabase
+        .from('announcements')
+        .select('id')
+        .eq('person_id', id);
+
+      if (announcementsError) {
+        console.error('Failed to check announcements:', announcementsError);
+        throw announcementsError;
+      }
+
+      if (announcements && announcements.length > 0) {
+        throw new Error('Cannot delete person who has announcements');
+      }
+
+      const { error } = await supabase.from('people').delete().eq('id', id);
+      if (error) throw error;
     },
   },
 
@@ -350,24 +376,23 @@ export const api = {
     },
 
     async delete(id: number) {
-      // Delete related records in the table event_people
-      const { error: eventPeopleError } = await supabase
+      // Check related records in event_people
+      const { data: eventPeople, error: checkError } = await supabase
         .from('event_people')
-        .delete()
+        .select('id')
         .eq('event_id', id);
 
-      if (eventPeopleError) {
-        console.error('Failed to delete event_people:', eventPeopleError);
-        throw eventPeopleError;
+      if (checkError) {
+        console.error('Failed to check related records:', checkError);
+        throw checkError;
       }
 
-      // Delete the event itself
+      if (eventPeople && eventPeople.length > 0) {
+        throw new Error('Cannot delete event with assigned speakers');
+      }
+
       const { error } = await supabase.from('events').delete().eq('id', id);
-
-      if (error) {
-        console.error('Delete event error:', error);
-        throw error;
-      }
+      if (error) throw error;
     },
   },
 
@@ -386,6 +411,70 @@ export const api = {
       }
 
       return data as Section[];
+    },
+
+    async create(section: Omit<Section, 'id' | 'created_at'>) {
+      await ensureAuthenticated();
+
+      const { data, error } = await supabase
+        .from('sections')
+        .insert([section])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to create section:', error);
+        throw error;
+      }
+
+      return data as Section;
+    },
+
+    async update(
+      id: number,
+      updates: Partial<Omit<Section, 'id' | 'created_at'>>
+    ) {
+      await ensureAuthenticated();
+
+      const { data, error } = await supabase
+        .from('sections')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to update section:', error);
+        throw error;
+      }
+
+      return data as Section;
+    },
+
+    async delete(id: number) {
+      await ensureAuthenticated();
+
+      // Проверяем, есть ли связанные события
+      const { data: events, error: eventsError } = await supabase
+        .from('events')
+        .select('id')
+        .eq('section_id', id);
+
+      if (eventsError) {
+        console.error('Failed to check related events:', eventsError);
+        throw eventsError;
+      }
+
+      if (events && events.length > 0) {
+        throw new Error('Cannot delete section with related events');
+      }
+
+      const { error } = await supabase.from('sections').delete().eq('id', id);
+
+      if (error) {
+        console.error('Failed to delete section:', error);
+        throw error;
+      }
     },
   },
 
@@ -456,12 +545,23 @@ export const api = {
     },
 
     async delete(id: number) {
-      const { error } = await supabase.from('locations').delete().eq('id', id);
+      // Check related records in events
+      const { data: events, error: checkError } = await supabase
+        .from('events')
+        .select('id')
+        .eq('location_id', id);
 
-      if (error) {
-        console.error('Failed to delete location:', error);
-        throw error;
+      if (checkError) {
+        console.error('Failed to check related events:', checkError);
+        throw checkError;
       }
+
+      if (events && events.length > 0) {
+        throw new Error('Cannot delete location that is used in events');
+      }
+
+      const { error } = await supabase.from('locations').delete().eq('id', id);
+      if (error) throw error;
     },
   },
 

@@ -171,7 +171,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Link href="/people/new" className="block">
+              <Link href="/people" className="block">
                 <Button className="w-full">Add New Person</Button>
               </Link>
               <Link href="/events/new" className="block">

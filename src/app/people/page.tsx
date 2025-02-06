@@ -3,7 +3,7 @@
 
 import { useState, useCallback } from 'react';
 import { usePeople } from '@/hooks/use-query';
-import { Person } from '@/lib/supabase';
+import { Person } from '@/types';
 import { PersonForm } from '@/components/people/person-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,27 +15,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { InputSearch } from '@/components/ui/input-search';
+import { ConfirmDelete } from '@/components/ui/confirm-delete';
+import { useToastContext } from '@/components/providers/toast-provider';
 import { debounce } from 'lodash';
 
 export default function PeoplePage() {
   const { data: people, isLoading, deletePerson } = usePeople();
+  const { showError, showSuccess } = useToastContext();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [selectedPerson, setSelectedPerson] = useState<
     Partial<Person> | undefined
   >();
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -75,9 +67,10 @@ export default function PeoplePage() {
     if (personToDelete?.id) {
       try {
         await deletePerson.mutateAsync(personToDelete.id);
-        setDeleteDialogOpen(false);
         setPersonToDelete(null);
+        showSuccess('Person deleted successfully');
       } catch (error) {
+        showError(error);
         console.error('Error deleting person:', error);
       }
     }
@@ -164,10 +157,7 @@ export default function PeoplePage() {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => {
-                            setPersonToDelete(person);
-                            setDeleteDialogOpen(true);
-                          }}
+                          onClick={() => setPersonToDelete(person)}
                         >
                           Delete
                         </Button>
@@ -187,33 +177,13 @@ export default function PeoplePage() {
         onOpenChangeAction={handleFormOpenChange}
       />
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="bg-white text-black">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-black">
-              Are you sure?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600">
-              This action cannot be undone. This will permanently delete{' '}
-              <span className="font-medium">{personToDelete?.name}</span>.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => setDeleteDialogOpen(false)}
-              className="bg-gray-100 hover:bg-gray-200"
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDelete
+        open={!!personToDelete}
+        onOpenChange={() => setPersonToDelete(null)}
+        onConfirm={handleDelete}
+        title="Delete Person"
+        description={`Are you sure you want to delete "${personToDelete?.name}"? This action cannot be undone.`}
+      />
     </div>
   );
 }
