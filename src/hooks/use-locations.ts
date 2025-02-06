@@ -1,59 +1,55 @@
 // src/hooks/use-locations.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/supabase';
-import type { Location } from '@/types';
+import type { LocationFormData } from '@/types';
 
 export function useLocations() {
-  return useQuery({
+  const {
+    data = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ['locations'],
     queryFn: () => api.locations.getAll(),
   });
-}
 
-export function useLocation(id: number) {
-  return useQuery({
-    queryKey: ['locations', id],
-    queryFn: () => api.locations.getById(id),
-    enabled: !!id,
-  });
-}
-
-export function useCreateLocation() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (location: Omit<Location, 'id' | 'created_at'>) =>
-      api.locations.create(location),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['locations'] });
+  const createLocation = useMutation({
+    mutationFn: (location: LocationFormData) => api.locations.create(location),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['locations'] });
     },
   });
-}
 
-export function useUpdateLocation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
+  const updateLocation = useMutation({
     mutationFn: ({
       id,
-      updates,
+      data,
     }: {
       id: number;
-      updates: Partial<Omit<Location, 'id' | 'created_at'>>;
-    }) => api.locations.update(id, updates),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      data: Partial<LocationFormData>;
+    }) => api.locations.update(id, data),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['locations'] });
     },
   });
-}
 
-export function useDeleteLocation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
+  const deleteLocation = useMutation({
     mutationFn: (id: number) => api.locations.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['locations'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['locations'] });
     },
   });
+
+  return {
+    data,
+    isLoading,
+    isError,
+    error,
+    createLocation,
+    updateLocation,
+    deleteLocation,
+  };
 }
