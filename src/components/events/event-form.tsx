@@ -25,10 +25,10 @@ import {
 import ReactSelect, { MultiValue } from 'react-select';
 import { useLocations } from '@/hooks/use-locations';
 import { usePeople } from '@/hooks/use-query';
-import { useCreateEvent, useUpdateEvent } from '@/hooks/use-events';
 import type { Event, EventFormData, EventPerson, Person } from '@/types';
 import { useSections } from '@/hooks/use-sections';
 import { useToastContext } from '@/components/providers/toast-provider';
+import { useEvents } from '@/hooks/use-events';
 
 interface EventFormProps {
   initialData?: Event & {
@@ -61,8 +61,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   const { data: locations } = useLocations();
   const { data: sections } = useSections();
   const { data: allPeople, isLoading: isPeopleLoading } = usePeople();
-  const createEvent = useCreateEvent();
-  const updateEvent = useUpdateEvent();
+  const { createEvent, updateEvent } = useEvents();
   const [isDirty, setIsDirty] = useState(false); // for tracking form changes
 
   const [formData, setFormData] = useState<FormData>({
@@ -177,26 +176,27 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   };
 
   const validateForm = () => {
-    if (!formData.section_id) {
-      showError('Section is required');
-      return false;
+    const errors: Record<string, string> = {};
+
+    if (!formData.title.trim()) {
+      errors.title = 'Title is required';
     }
-    // Date check (not past)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+
     const eventDate = new Date(formData.date);
-
-    if (eventDate < today) {
-      showError('Event date cannot be in the past');
-      return false;
-    }
-
-    // Time check (end after start)
     const startTime = new Date(`${formData.date}T${formData.start_time}`);
     const endTime = new Date(`${formData.date}T${formData.end_time}`);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    if (eventDate < now) {
+      errors.date = 'Event date cannot be in the past';
+    }
 
     if (endTime <= startTime) {
-      showError('End time must be after start time');
+      errors.end_time = 'End time must be after start time';
+    }
+    if (Object.keys(errors).length > 0) {
+      Object.values(errors).forEach(error => showError(error));
       return false;
     }
 
