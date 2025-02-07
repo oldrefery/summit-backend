@@ -1,59 +1,72 @@
 // src/hooks/use-resources.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/supabase';
-import { Resource } from '@/types';
+import { useToastContext } from '@/components/providers/toast-provider';
+import type { Resource } from '@/types';
 
 export function useResources() {
-  return useQuery({
-    queryKey: ['resources'],
-    queryFn: () => api.resources.getAll(),
-  });
-}
-
-export function useResource(id: number) {
-  return useQuery({
-    queryKey: ['resources', id],
-    queryFn: () => api.resources.getById(id),
-    enabled: !!id,
-  });
-}
-
-export function useCreateResource() {
+  const { showError, showSuccess } = useToastContext();
   const queryClient = useQueryClient();
 
-  return useMutation({
+  const resourcesQuery = useQuery({
+    queryKey: ['resources'],
+    queryFn: async () => {
+      try {
+        return await api.resources.getAll();
+      } catch (error) {
+        showError(error);
+        throw error;
+      }
+    },
+  });
+
+  const createResource = useMutation({
     mutationFn: (resource: Omit<Resource, 'id' | 'created_at'>) =>
       api.resources.create(resource),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resources'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['resources'] });
+      showSuccess('Resource created successfully');
+    },
+    onError: error => {
+      showError(error);
     },
   });
-}
 
-export function useUpdateResource() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
+  const updateResource = useMutation({
     mutationFn: ({
       id,
-      updates,
+      data,
     }: {
       id: number;
-      updates: Partial<Omit<Resource, 'id' | 'created_at'>>;
-    }) => api.resources.update(id, updates),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resources'] });
+      data: Partial<Omit<Resource, 'id' | 'created_at'>>;
+    }) => api.resources.update(id, data),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['resources'] });
+      showSuccess('Resource updated successfully');
+    },
+    onError: error => {
+      showError(error);
     },
   });
-}
 
-export function useDeleteResource() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: number) => api.resources.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['resources'] });
+  const deleteResource = useMutation({
+    mutationFn: api.resources.delete,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['resources'] });
+      showSuccess('Resource deleted successfully');
+    },
+    onError: error => {
+      showError(error);
     },
   });
+
+  return {
+    data: resourcesQuery.data ?? [],
+    isLoading: resourcesQuery.isLoading,
+    isError: resourcesQuery.isError,
+    error: resourcesQuery.error,
+    createResource,
+    updateResource,
+    deleteResource,
+  };
 }

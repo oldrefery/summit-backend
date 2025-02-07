@@ -52,7 +52,7 @@ export interface Section extends BaseEntity {
 export interface Resource extends BaseEntity {
   name: string;
   link: string;
-  description: string;
+  description: string | null;
   is_route: boolean;
 }
 
