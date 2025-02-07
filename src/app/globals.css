@@ -88,6 +88,44 @@
       }
     }
 
+    /* markdown editor styles */
+    & .w-md-editor {
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+
+    & .w-md-editor-toolbar {
+      background-color: hsl(var(--secondary));
+      border-color: hsl(var(--border));
+    }
+
+    & .w-md-editor-text {
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+
+    & .w-md-editor-preview {
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+
+    & .w-md-editor-toolbar-divider {
+      background-color: hsl(var(--border));
+    }
+
+    & .w-md-editor-toolbar button {
+      color: hsl(var(--foreground));
+    }
+
+    & .w-md-editor-toolbar button:hover {
+      background-color: hsl(var(--accent));
+    }
+
+    & .w-md-editor-content {
+      background-color: hsl(var(--background));
+    }
+  }
+
   }
 
   /* Basic styles */
@@ -170,6 +208,21 @@
   .dark .react-select-container .react-select__multi-value {
     background-color: hsl(var(--muted));
   }
+
+/* markdown editor styles */
+.w-md-editor {
+  border-color: hsl(var(--border)) !important;
+  border-radius: var(--radius) !important;
+}
+
+.w-md-editor-toolbar {
+  border-top-left-radius: var(--radius) !important;
+  border-top-right-radius: var(--radius) !important;
+}
+
+.w-md-editor-content {
+  border-bottom-left-radius: var(--radius) !important;
+  border-bottom-right-radius: var(--radius) !important;
 }
 
 @layer base {
