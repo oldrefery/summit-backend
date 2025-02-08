@@ -13,6 +13,7 @@ import type { MarkdownPage } from '@/types';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -140,9 +141,17 @@ export function MarkdownForm({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent
+        className="max-w-4xl"
+        aria-describedby="dialog-description"
+      >
         <DialogHeader>
           <DialogTitle>{page ? 'Edit Page' : 'Create New Page'}</DialogTitle>
+          <DialogDescription id="dialog-description">
+            {page
+              ? 'Edit page details below.'
+              : 'Enter the details for the new page.'}
+          </DialogDescription>
         </DialogHeader>
         <div className="mt-4">
           <form onSubmit={handleSubmit} className="space-y-6">

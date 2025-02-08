@@ -40,12 +40,14 @@ export function ConfirmDelete({
           <AlertDialogCancel
             onClick={() => onOpenChange(false)}
             className="bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+            data-testid="confirm-cancel-button"
           >
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             className="bg-red-500 hover:bg-red-600 text-white"
+            data-testid="confirm-delete-button"
           >
             Delete
           </AlertDialogAction>
