@@ -9,7 +9,6 @@ import {
   useCallback,
 } from 'react';
 import { usePeople } from '@/hooks/use-query';
-import { Person } from '@/lib/supabase';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -24,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { storage } from '@/lib/supabase';
+import { Person } from '@/types';
 
 interface PersonFormProps {
   person?: Partial<Person>;
