@@ -10,6 +10,7 @@ import type {
   EventFormData,
   EventPerson,
   Section,
+  EntityChanges,
 } from '@/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -766,6 +767,152 @@ export const api = {
         console.error('Failed to delete announcement:', error);
         throw error;
       }
+    },
+  },
+
+  changes: {
+    async getAll() {
+      await ensureAuthenticated();
+
+      // Get counts of updates since last version
+      const [
+        { count: eventsCount },
+        { count: peopleCount },
+        { count: locationsCount },
+        { count: sectionsCount },
+        { count: resourcesCount },
+        { count: announcementsCount },
+        { count: socialPostsCount },
+        { count: markdownPagesCount },
+      ] = await Promise.all([
+        supabase
+          .from('events')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', 'last_version.published_at'),
+        supabase
+          .from('people')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', 'last_version.published_at'),
+        supabase
+          .from('locations')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', 'last_version.published_at'),
+        supabase
+          .from('sections')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', 'last_version.published_at'),
+        supabase
+          .from('resources')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', 'last_version.published_at'),
+        supabase
+          .from('announcements')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', 'last_version.published_at'),
+        supabase
+          .from('social_feed_posts')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', 'last_version.published_at'),
+        supabase
+          .from('markdown_pages')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', 'last_version.published_at'),
+      ]);
+
+      return {
+        events: eventsCount || 0,
+        people: peopleCount || 0,
+        locations: locationsCount || 0,
+        sections: sectionsCount || 0,
+        resources: resourcesCount || 0,
+        announcements: announcementsCount || 0,
+        social_posts: socialPostsCount || 0,
+        markdown_pages: markdownPagesCount || 0,
+      } as EntityChanges;
+    },
+
+    async publish() {
+      await ensureAuthenticated();
+
+      // Get the latest version number
+      const { data: versions } = await supabase
+        .from('json_versions')
+        .select('version')
+        .order('version', { ascending: false })
+        .limit(1);
+
+      const nextVersion = versions?.[0]?.version ? versions[0].version + 1 : 1;
+
+      // Get all current data
+      const [
+        events,
+        people,
+        locations,
+        sections,
+        resources,
+        announcements,
+        socialPosts,
+        markdownPages,
+      ] = await Promise.all([
+        api.events.getAll(),
+        api.people.getAll(),
+        api.locations.getAll(),
+        api.sections.getAll(),
+        api.resources.getAll(),
+        api.announcements.getAll(),
+        // TODO: Add social posts API
+        [],
+        api.markdown.getAll(),
+      ]);
+
+      // Get changes for version description
+      const changes = await api.changes.getAll();
+
+      // Create JSON content
+      const jsonContent = {
+        metadata: {
+          version: nextVersion,
+          publishedAt: new Date().toISOString(),
+          changes,
+        },
+        data: {
+          events,
+          people,
+          locations,
+          sections,
+          resources,
+          announcements,
+          social_posts: socialPosts,
+          markdown_pages: markdownPages,
+        },
+      };
+
+      // Upload JSON file to storage
+      const { error: uploadError } = await supabase.storage
+        .from('app-data')
+        .upload('app-data.json', JSON.stringify(jsonContent), {
+          upsert: true,
+          contentType: 'application/json',
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Create version record
+      const { error: versionError } = await supabase
+        .from('json_versions')
+        .insert({
+          version: nextVersion,
+          changes,
+          file_path: 'app-data.json',
+        });
+
+      if (versionError) {
+        throw versionError;
+      }
+
+      return jsonContent;
     },
   },
 };

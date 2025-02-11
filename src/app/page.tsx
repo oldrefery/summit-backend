@@ -16,11 +16,14 @@ import {
   FileText,
   Files,
   Layers,
+  Upload,
+  Clock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
 import type { Event } from '@/types';
+import { useChanges } from '@/hooks/use-changes';
+import { Badge } from '@/components/ui/badge';
 
 const getUpcomingEventsCount = (events: Event[] = []) => {
   return events.filter(e => new Date(e.date) > new Date()).length;
@@ -34,6 +37,11 @@ export default function DashboardPage() {
   const { data: sections, isLoading: sectionsLoading } = useSections();
   const { data: markdownPages, isLoading: markdownLoading } =
     useMarkdownPages();
+  const {
+    data: changes,
+    isLoading: changesLoading,
+    publishVersion,
+  } = useChanges();
 
   const stats = [
     {
@@ -86,14 +94,7 @@ export default function DashboardPage() {
     },
   ];
 
-  const recentActivity = events
-    ?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5)
-    .map(event => ({
-      title: event.title,
-      date: format(new Date(event.date), 'MMM d, yyyy'),
-      description: `${event.event_people?.length || 0} speakers`,
-    }));
+  const totalChanges = Object.values(changes).reduce((a, b) => a + b, 0);
 
   return (
     <div className="p-8">
@@ -132,34 +133,44 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-8">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                <CardTitle>Pending Changes</CardTitle>
+              </div>
+              {totalChanges > 0 && (
+                <Badge variant="secondary">{totalChanges} total changes</Badge>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            {eventsLoading ? (
+            {changesLoading ? (
               <div className="space-y-2">
-                {[...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
               </div>
-            ) : recentActivity?.length ? (
+            ) : Object.entries(changes).some(([, count]) => count > 0) ? (
               <div className="space-y-4">
-                {recentActivity.map((activity, i) => (
-                  <div key={i} className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{activity.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {activity.description}
+                {Object.entries(changes).map(([entity, count]) =>
+                  count > 0 ? (
+                    <div
+                      key={entity}
+                      className="flex justify-between items-center"
+                    >
+                      <p className="capitalize font-medium">
+                        {entity.replace('_', ' ')}
                       </p>
+                      <Badge>
+                        {count} {count === 1 ? 'change' : 'changes'}
+                      </Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {activity.date}
-                    </div>
-                  </div>
-                ))}
+                  ) : null
+                )}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                No recent activity
+                No pending changes
               </p>
             )}
           </CardContent>
@@ -179,11 +190,15 @@ export default function DashboardPage() {
                   Create Event
                 </Button>
               </Link>
-              <Link href="/pages/new" className="block">
-                <Button variant="outline" className="w-full">
-                  New Page
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => publishVersion.mutate()}
+                disabled={totalChanges === 0 || publishVersion.isPending}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Publish New Version
+              </Button>
             </div>
           </CardContent>
         </Card>
