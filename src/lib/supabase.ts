@@ -11,6 +11,7 @@ import type {
   EventPerson,
   Section,
   EntityChanges,
+  Version,
 } from '@/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -774,6 +775,15 @@ export const api = {
     async getAll() {
       await ensureAuthenticated();
 
+      // Get last version's published_at
+      const { data: lastVersion } = await supabase
+        .from('json_versions')
+        .select('published_at')
+        .order('published_at', { ascending: false })
+        .limit(1);
+
+      const lastPublishedAt = lastVersion?.[0]?.published_at || '1970-01-01';
+
       // Get counts of updates since last version
       const [
         { count: eventsCount },
@@ -788,35 +798,35 @@ export const api = {
         supabase
           .from('events')
           .select('*', { count: 'exact', head: true })
-          .gt('created_at', 'last_version.published_at'),
+          .gt('updated_at', lastPublishedAt), // changed from created_at
         supabase
           .from('people')
           .select('*', { count: 'exact', head: true })
-          .gt('created_at', 'last_version.published_at'),
+          .gt('updated_at', lastPublishedAt),
         supabase
           .from('locations')
           .select('*', { count: 'exact', head: true })
-          .gt('created_at', 'last_version.published_at'),
+          .gt('updated_at', lastPublishedAt),
         supabase
           .from('sections')
           .select('*', { count: 'exact', head: true })
-          .gt('created_at', 'last_version.published_at'),
+          .gt('updated_at', lastPublishedAt),
         supabase
           .from('resources')
           .select('*', { count: 'exact', head: true })
-          .gt('created_at', 'last_version.published_at'),
+          .gt('updated_at', lastPublishedAt),
         supabase
           .from('announcements')
           .select('*', { count: 'exact', head: true })
-          .gt('created_at', 'last_version.published_at'),
+          .gt('updated_at', lastPublishedAt),
         supabase
           .from('social_feed_posts')
           .select('*', { count: 'exact', head: true })
-          .gt('created_at', 'last_version.published_at'),
+          .gt('updated_at', lastPublishedAt),
         supabase
           .from('markdown_pages')
           .select('*', { count: 'exact', head: true })
-          .gt('created_at', 'last_version.published_at'),
+          .gt('updated_at', lastPublishedAt),
       ]);
 
       return {
@@ -834,85 +844,72 @@ export const api = {
     async publish() {
       await ensureAuthenticated();
 
-      // Get the latest version number
-      const { data: versions } = await supabase
-        .from('json_versions')
-        .select('version')
-        .order('version', { ascending: false })
-        .limit(1);
+      // Call server function to prepare data and create version record
+      const { data, error: rpcError } = await supabase.rpc(
+        'publish_new_version'
+      );
 
-      const nextVersion = versions?.[0]?.version ? versions[0].version + 1 : 1;
-
-      // Get all current data
-      const [
-        events,
-        people,
-        locations,
-        sections,
-        resources,
-        announcements,
-        socialPosts,
-        markdownPages,
-      ] = await Promise.all([
-        api.events.getAll(),
-        api.people.getAll(),
-        api.locations.getAll(),
-        api.sections.getAll(),
-        api.resources.getAll(),
-        api.announcements.getAll(),
-        // TODO: Add social posts API
-        [],
-        api.markdown.getAll(),
-      ]);
-
-      // Get changes for version description
-      const changes = await api.changes.getAll();
-
-      // Create JSON content
-      const jsonContent = {
-        metadata: {
-          version: nextVersion,
-          publishedAt: new Date().toISOString(),
-          changes,
-        },
-        data: {
-          events,
-          people,
-          locations,
-          sections,
-          resources,
-          announcements,
-          social_posts: socialPosts,
-          markdown_pages: markdownPages,
-        },
-      };
+      if (rpcError) {
+        console.error('Failed to publish version:', rpcError);
+        throw rpcError;
+      }
 
       // Upload JSON file to storage
       const { error: uploadError } = await supabase.storage
         .from('app-data')
-        .upload('app-data.json', JSON.stringify(jsonContent), {
+        .upload('app-data.json', JSON.stringify(data.data), {
           upsert: true,
           contentType: 'application/json',
         });
 
       if (uploadError) {
+        console.error('Failed to upload file:', uploadError);
         throw uploadError;
       }
 
-      // Create version record
-      const { error: versionError } = await supabase
+      return data;
+    },
+  },
+
+  versions: {
+    async getAll() {
+      const { data, error } = await supabase
         .from('json_versions')
-        .insert({
-          version: nextVersion,
-          changes,
-          file_path: 'app-data.json',
-        });
+        .select('*')
+        .order('published_at', { ascending: false });
 
-      if (versionError) {
-        throw versionError;
-      }
+      if (error) throw error;
+      return data as Version[];
+    },
 
-      return jsonContent;
+    async rollback(version: string) {
+      // Кщддифсл мукышщт
+      const { data: versionData, error: versionError } = await supabase
+        .from('json_versions')
+        .select('*')
+        .eq('version', version)
+        .single();
+
+      if (versionError) throw versionError;
+
+      // new version from the source version
+      const { error: publishError } = await supabase.rpc(
+        'publish_new_version_from',
+        { source_version_id: versionData.id }
+      );
+
+      if (publishError) throw publishError;
+
+      return versionData;
+    },
+
+    async delete(id: string) {
+      const { error } = await supabase
+        .from('json_versions')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
     },
   },
 };

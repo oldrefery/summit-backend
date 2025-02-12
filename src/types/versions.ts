@@ -51,3 +51,20 @@ export interface AppJson {
     markdown_pages: MarkdownPage[];
   };
 }
+
+export interface Version {
+  version: string;
+  published_at: string;
+  changes: {
+    events: number;
+    people: number;
+    sections: number;
+    locations: number;
+    resources: number;
+    social_posts: number;
+    announcements: number;
+    markdown_pages: number;
+  };
+  file_url: string;
+  id: string;
+}
