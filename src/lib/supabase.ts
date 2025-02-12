@@ -791,70 +791,17 @@ export const api = {
     async getAll() {
       await ensureAuthenticated();
 
-      // Get last version's published_at
-      const { data: lastVersion } = await supabase
-        .from('json_versions')
-        .select('published_at')
-        .order('published_at', { ascending: false })
-        .limit(1);
+      // Use database function instead of direct counts
+      const { data, error } = await supabase.rpc(
+        'get_changes_since_last_version'
+      );
 
-      const lastPublishedAt = lastVersion?.[0]?.published_at || '1970-01-01';
+      if (error) {
+        console.error('Failed to get changes:', error);
+        throw error;
+      }
 
-      // Get counts of updates since last version
-      const [
-        { count: eventsCount },
-        { count: peopleCount },
-        { count: locationsCount },
-        { count: sectionsCount },
-        { count: resourcesCount },
-        { count: announcementsCount },
-        { count: socialPostsCount },
-        { count: markdownPagesCount },
-      ] = await Promise.all([
-        supabase
-          .from('events')
-          .select('*', { count: 'exact', head: true })
-          .gt('updated_at', lastPublishedAt), // changed from created_at
-        supabase
-          .from('people')
-          .select('*', { count: 'exact', head: true })
-          .gt('updated_at', lastPublishedAt),
-        supabase
-          .from('locations')
-          .select('*', { count: 'exact', head: true })
-          .gt('updated_at', lastPublishedAt),
-        supabase
-          .from('sections')
-          .select('*', { count: 'exact', head: true })
-          .gt('updated_at', lastPublishedAt),
-        supabase
-          .from('resources')
-          .select('*', { count: 'exact', head: true })
-          .gt('updated_at', lastPublishedAt),
-        supabase
-          .from('announcements')
-          .select('*', { count: 'exact', head: true })
-          .gt('updated_at', lastPublishedAt),
-        supabase
-          .from('social_feed_posts')
-          .select('*', { count: 'exact', head: true })
-          .gt('updated_at', lastPublishedAt),
-        supabase
-          .from('markdown_pages')
-          .select('*', { count: 'exact', head: true })
-          .gt('updated_at', lastPublishedAt),
-      ]);
-
-      return {
-        events: eventsCount || 0,
-        people: peopleCount || 0,
-        locations: locationsCount || 0,
-        sections: sectionsCount || 0,
-        resources: resourcesCount || 0,
-        announcements: announcementsCount || 0,
-        social_posts: socialPostsCount || 0,
-        markdown_pages: markdownPagesCount || 0,
-      } as EntityChanges;
+      return data as EntityChanges;
     },
 
     async publish() {
