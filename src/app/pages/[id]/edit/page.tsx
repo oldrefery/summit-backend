@@ -2,11 +2,11 @@
 import EditPageClient from './edit-client';
 
 interface EditPagePageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
-export default function EditPagePage({ params }: EditPagePageProps) {
-  return <EditPageClient id={params.id} />;
+export default async function EditPagePage({ params }: EditPagePageProps) {
+  const { id } = await params;
+
+  return <EditPageClient id={id} />;
 }

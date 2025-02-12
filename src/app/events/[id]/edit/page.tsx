@@ -2,11 +2,10 @@
 import EditEventClient from './edit-client';
 
 interface EditEventPageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
-export default function EditEventPage({ params }: EditEventPageProps) {
-  return <EditEventClient id={params.id} />;
+export default async function EditEventPage({ params }: EditEventPageProps) {
+  const { id } = await params;
+  return <EditEventClient id={id} />;
 }

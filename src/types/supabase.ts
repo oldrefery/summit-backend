@@ -1,7 +1,7 @@
 // src/types/supabase.ts
 import { BaseEntity } from './base';
 
-type PersonRole = 'speaker' | 'attendee';
+export type PersonRole = 'speaker' | 'attendee';
 type EventPersonRole = 'speaker';
 
 export interface Person extends BaseEntity {

@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { storage } from '@/lib/supabase';
-import { Person } from '@/types';
+import { Person, PersonRole } from '@/types';
 
 interface PersonFormProps {
   person?: Partial<Person>;
@@ -44,7 +44,17 @@ export function PersonForm({
   const { showError, showSuccess } = useToastContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    title: string;
+    company: string;
+    role: PersonRole;
+    country: string;
+    email: string;
+    mobile: string;
+    bio: string;
+    photo_url: string;
+  }>({
     name: '',
     title: '',
     company: '',
