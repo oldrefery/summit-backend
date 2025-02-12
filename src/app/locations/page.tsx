@@ -13,7 +13,8 @@ import { useLocations } from '@/hooks/use-locations';
 import { useToastContext } from '@/components/providers/toast-provider';
 import { useSortFilter } from '@/hooks/use-sort-filter';
 import type { Location } from '@/types';
-import { MapPin, Plus } from 'lucide-react';
+import { ArrowLeft, MapPin, Plus } from 'lucide-react';
+import Link from 'next/link';
 
 export default function LocationsPage() {
   const {
@@ -87,9 +88,17 @@ export default function LocationsPage() {
     <div className="p-8">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-6 w-6" />
-            <CardTitle>Locations</CardTitle>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </Link>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-6 w-6" />
+              <CardTitle>Locations</CardTitle>
+            </div>
           </div>
           <Button onClick={() => setIsFormOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />

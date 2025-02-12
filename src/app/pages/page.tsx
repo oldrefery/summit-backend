@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, Plus } from 'lucide-react';
+import { ArrowLeft, FileText, Plus } from 'lucide-react';
 import { useMarkdownPages } from '@/hooks/use-markdown';
 import { PageFilters } from '@/components/pages/page-filters';
 import { PagesTable } from '@/components/pages/pages-table';
@@ -13,6 +13,7 @@ import { MarkdownForm } from '@/components/pages/markdown-form';
 import { ConfirmDelete } from '@/components/ui/confirm-delete';
 import { useToastContext } from '@/components/providers/toast-provider';
 import type { MarkdownPage } from '@/types';
+import Link from 'next/link';
 
 export default function PagesPage() {
   const {
@@ -84,9 +85,17 @@ export default function PagesPage() {
     <div className="p-8">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileText className="h-6 w-6" />
-            <CardTitle>Pages</CardTitle>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </Link>
+            <div className="flex items-center gap-2">
+              <FileText className="h-6 w-6" />
+              <CardTitle>Pages</CardTitle>
+            </div>
           </div>
           <Button onClick={() => setIsFormOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />

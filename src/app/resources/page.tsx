@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Files, Plus } from 'lucide-react';
+import { ArrowLeft, Files, Plus } from 'lucide-react';
 import { useResources } from '@/hooks/use-resources';
 import { ResourcesTable } from '@/components/resources/resources-table';
 import { ResourceFilters } from '@/components/resources/resource-filters';
@@ -13,6 +13,7 @@ import { ResourceForm } from '@/components/resources/resource-form';
 import { ConfirmDelete } from '@/components/ui/confirm-delete';
 import { useToastContext } from '@/components/providers/toast-provider';
 import type { Resource } from '@/types';
+import Link from 'next/link';
 
 export default function ResourcesPage() {
   const { data: resources = [], isLoading, deleteResource } = useResources();
@@ -72,9 +73,17 @@ export default function ResourcesPage() {
     <div className="p-8">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Files className="h-6 w-6" />
-            <CardTitle>Resources</CardTitle>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </Link>
+            <div className="flex items-center gap-2">
+              <Files className="h-6 w-6" />
+              <CardTitle>Resources</CardTitle>
+            </div>
           </div>
           <Button onClick={() => setIsFormOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />

@@ -19,6 +19,8 @@ import { InputSearch } from '@/components/ui/input-search';
 import { ConfirmDelete } from '@/components/ui/confirm-delete';
 import { useToastContext } from '@/components/providers/toast-provider';
 import { debounce } from 'lodash';
+import Link from 'next/link';
+import { ArrowLeft, Users } from 'lucide-react';
 
 export default function PeoplePage() {
   const { data: people, isLoading, deletePerson } = usePeople();
@@ -80,7 +82,18 @@ export default function PeoplePage() {
     <div className="p-8">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>People</CardTitle>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </Link>
+            <div className="flex items-center gap-2">
+              <Users className="h-6 w-6" />
+              <CardTitle>People</CardTitle>
+            </div>
+          </div>
           <Button onClick={() => handleFormOpenChange(true)}>Add Person</Button>
         </CardHeader>
         <CardContent>

@@ -11,7 +11,7 @@ import { useToastContext } from '@/components/providers/toast-provider';
 import { ConfirmDelete } from '@/components/ui/confirm-delete';
 import { EventFilters } from '@/components/events/event-filters';
 import { EventsTable } from '@/components/events/events-table';
-import { CalendarDays, Plus } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Plus } from 'lucide-react';
 import type { Event } from '@/types';
 
 export default function EventsPage() {
@@ -70,9 +70,17 @@ export default function EventsPage() {
     <div className="p-8">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-6 w-6" />
-            <CardTitle>Events</CardTitle>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </Link>
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-6 w-6" />
+              <CardTitle>Events</CardTitle>
+            </div>
           </div>
           <Link href="/events/new">
             <Button>
