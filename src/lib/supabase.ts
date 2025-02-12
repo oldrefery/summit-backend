@@ -14,8 +14,17 @@ import type {
   Version,
 } from '@/types';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseAnonEmail = process.env.SUPABASE_ANON_EMAIL!;
+const supabaseAnonPassword = process.env.SUPABASE_ANON_PASSWORD!;
+
+console.log('supabaseUrl:', supabaseUrl);
+console.log('supabaseKey:', supabaseKey);
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Supabase environment variables are not set!');
+}
 
 // client with auto refresh of the session
 export const supabase = createClient(supabaseUrl, supabaseKey, {
@@ -26,6 +35,13 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 });
 
 export async function ensureAuthenticated() {
+  const email = supabaseAnonEmail;
+  const password = supabaseAnonPassword;
+
+  if (!email || !password) {
+    throw new Error('Supabase auth credentials are not set!');
+  }
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -33,8 +49,8 @@ export async function ensureAuthenticated() {
   if (!session) {
     // If there is no session, perform anonymous authentication
     await supabase.auth.signInWithPassword({
-      email: process.env.NEXT_PUBLIC_SUPABASE_ANON_EMAIL!,
-      password: process.env.NEXT_PUBLIC_SUPABASE_ANON_PASSWORD!,
+      email,
+      password,
     });
   }
 }
