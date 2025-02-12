@@ -19,9 +19,6 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseAnonEmail = process.env.SUPABASE_ANON_EMAIL!;
 const supabaseAnonPassword = process.env.SUPABASE_ANON_PASSWORD!;
 
-console.log('supabaseUrl:', supabaseUrl);
-console.log('supabaseKey:', supabaseKey);
-
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('Supabase environment variables are not set!');
 }
