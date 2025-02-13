@@ -13,6 +13,7 @@ import type {
   EntityChanges,
   Version,
 } from '@/types';
+import { showToastError } from '@/lib/toast-handler';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -63,19 +64,19 @@ export const storage = {
       await ensureAuthenticated();
 
       if (file.size > MAX_FILE_SIZE_BYTES) {
-        throw new Error(
+        showToastError(
           'File size should not exceed ' + MAX_FILE_SIZE_BYTES + ' bytes'
         );
       }
 
       if (!file.type.startsWith('image/')) {
-        throw new Error('File must be an image');
+        showToastError('File must be an image');
       }
 
       const fileExt = file.name.split('.').pop()?.toLowerCase();
 
       if (!fileExt || !['jpg', 'jpeg', 'png'].includes(fileExt)) {
-        throw new Error('Only JPG and PNG files are allowed');
+        showToastError('Only JPG and PNG files are allowed');
       }
 
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
@@ -89,11 +90,11 @@ export const storage = {
 
       if (uploadError) {
         console.error('Upload error details:', uploadError);
-        throw new Error(uploadError.message);
+        showToastError(uploadError.message);
       }
 
       if (!uploadData?.path) {
-        throw new Error('Upload successful but path is missing');
+        showToastError('Upload successful but path is missing');
       }
 
       return getPublicFileUrl('avatars', fileName);
@@ -118,18 +119,13 @@ export const storage = {
 
       if (error) {
         console.error('Remove error:', error);
-        throw new Error(`Failed to remove file: ${error.message}`);
+        showToastError(`Failed to remove file: ${error.message}`);
       }
     } catch (error) {
       console.error('Error in removeAvatar:', error);
       throw error;
     }
-  },
-
-  getPublicUrl(path: string) {
-    const parts = path.split('/');
-    const fileName = parts[parts.length - 1];
-    return getPublicFileUrl('avatars', fileName);
+    showToastError('non_existing_table');
   },
 };
 
@@ -148,18 +144,6 @@ export const api = {
       }
 
       return data as Person[];
-    },
-
-    async getById(id: number) {
-      const { data, error } = await supabase
-        .from('people')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-
-      return data as Person;
     },
 
     async create(person: Omit<Person, 'id' | 'created_at'>) {
@@ -510,21 +494,6 @@ export const api = {
       return data as Location[];
     },
 
-    async getById(id: number) {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        console.error('Failed to fetch location:', error);
-        throw error;
-      }
-
-      return data as Location;
-    },
-
     async create(location: Omit<Location, 'id' | 'created_at'>) {
       const { data, error } = await supabase
         .from('locations')
@@ -595,21 +564,6 @@ export const api = {
       }
 
       return data as Resource[];
-    },
-
-    async getById(id: number) {
-      const { data, error } = await supabase
-        .from('resources')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        console.error('Failed to fetch resource:', error);
-        throw error;
-      }
-
-      return data as Resource;
     },
 
     async create(resource: Omit<Resource, 'id' | 'created_at'>) {

@@ -6,7 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/components/ui/use-toast';
 
 type ToastContextType = {
-  showSuccess: (message: string) => void;
+  showSuccess: (message: string, id?: string) => void;
   showError: (error: unknown) => void;
 };
 
@@ -16,8 +16,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   const showSuccess = useCallback(
-    (message: string) => {
+    (message: string, id?: string) => {
       toast({
+        id,
         title: 'Success',
         description: message,
         variant: 'success',

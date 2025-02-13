@@ -24,6 +24,7 @@ import {
 import { ImageUpload } from '@/components/ui/image-upload';
 import { storage } from '@/lib/supabase';
 import { Person, PersonRole } from '@/types';
+import { isToastActive } from '@/components/ui/use-toast';
 
 interface PersonFormProps {
   person?: Partial<Person>;
@@ -213,10 +214,15 @@ export function PersonForm({
           id: person.id,
           data: baseData,
         });
-        showSuccess('Person updated successfully');
+        if (!isToastActive('person-updated')) {
+          // Проверка
+          showSuccess('Person updated successfully', 'person-updated'); // Уникальный ID
+        }
       } else {
         await createPerson.mutateAsync(baseData);
-        showSuccess('Person created successfully');
+        if (!isToastActive('person-created')) {
+          showSuccess('Person created successfully', 'person-created');
+        }
       }
 
       setIsDirty(false);
