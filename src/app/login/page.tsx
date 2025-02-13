@@ -6,14 +6,14 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
+import { useToastContext } from '@/components/providers/toast-provider';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
-  const { toast } = useToast();
+  const { showError } = useToastContext(); // Получаем showError
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -28,17 +28,13 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || 'Failed to login');
+        showError(error.message || 'Failed to login');
       }
 
       router.push('/');
       router.refresh();
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to login',
-        variant: 'destructive',
-      });
+      showError(error instanceof Error ? error.message : 'Failed to login');
     } finally {
       setLoading(false);
     }
