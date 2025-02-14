@@ -457,7 +457,7 @@ export const api = {
     async delete(id: number) {
       await ensureAuthenticated();
 
-      // Проверяем, есть ли связанные события
+      // Check related records in events
       const { data: events, error: eventsError } = await supabase
         .from('events')
         .select('id')
@@ -469,7 +469,9 @@ export const api = {
       }
 
       if (events && events.length > 0) {
-        throw new Error('Cannot delete section with related events');
+        throw new Error(
+          `Cannot delete section with related events (${events.length})`
+        );
       }
 
       const { error } = await supabase.from('sections').delete().eq('id', id);
@@ -801,7 +803,6 @@ export const api = {
     },
 
     async rollback(version: string) {
-      // Кщддифсл мукышщт
       const { data: versionData, error: versionError } = await supabase
         .from('json_versions')
         .select('*')
