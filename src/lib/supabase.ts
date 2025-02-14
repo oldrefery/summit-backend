@@ -12,6 +12,10 @@ import type {
   Section,
   EntityChanges,
   Version,
+  AppUser,
+  NotificationHistory,
+  NotificationFormData,
+  PushStatistics,
 } from '@/types';
 import { showToastError } from '@/lib/toast-handler';
 
@@ -824,6 +828,58 @@ export const api = {
         .eq('id', id);
 
       if (error) throw error;
+    },
+  },
+
+  push: {
+    async getUsers() {
+      const { data, error } = await supabase
+        .from('app_users')
+        .select('*')
+        .order('last_active_at', { ascending: false });
+
+      if (error) throw error;
+      return data as AppUser[];
+    },
+
+    async getTokens() {
+      const { data, error } = await supabase
+        .from('push_tokens')
+        .select('*, app_users(*)')
+        .eq('is_active', true);
+
+      if (error) throw error;
+      return data;
+    },
+
+    async getNotificationHistory() {
+      const { data, error } = await supabase
+        .from('notification_history')
+        .select('*')
+        .order('sent_at', { ascending: false });
+
+      if (error) throw error;
+      return data as NotificationHistory[];
+    },
+
+    async sendNotification(notification: NotificationFormData) {
+      const { data, error } = await supabase.rpc('send_push_notification', {
+        p_title: notification.title,
+        p_body: notification.body,
+        p_data: notification.data || {},
+        p_target_type: notification.target_type,
+        p_target_users: notification.target_users || [],
+      });
+
+      if (error) throw error;
+      return data;
+    },
+
+    async getStatistics() {
+      const { data, error } = await supabase.rpc('get_push_statistics');
+
+      if (error) throw error;
+      return data as PushStatistics;
     },
   },
 };

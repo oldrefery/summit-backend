@@ -21,9 +21,11 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import type { Event } from '@/types';
+import type { Event, StatItem } from '@/types';
 import { useChanges } from '@/hooks/use-changes';
 import { Badge } from '@/components/ui/badge';
+import { Bell } from 'lucide-react';
+import { usePushStatistics } from '@/hooks/use-push';
 
 const getUpcomingEventsCount = (events: Event[] = []) => {
   return events.filter(e => new Date(e.date) > new Date()).length;
@@ -42,8 +44,9 @@ export default function DashboardPage() {
     isLoading: changesLoading,
     publishVersion,
   } = useChanges();
+  const { data: pushStats, isLoading: pushStatsLoading } = usePushStatistics();
 
-  const stats = [
+  const stats: StatItem[] = [
     {
       title: 'People',
       value: people?.length || 0,
@@ -91,6 +94,14 @@ export default function DashboardPage() {
       icon: FileText,
       description: `${markdownPages?.filter(p => p.published)?.length || 0} published`,
       href: '/pages',
+    },
+    {
+      title: 'Push Notifications',
+      value: pushStats?.active_tokens ?? 0,
+      loading: pushStatsLoading,
+      icon: Bell,
+      description: `${pushStats?.active_users ?? 0} active users`,
+      href: '/notifications',
     },
   ];
 
