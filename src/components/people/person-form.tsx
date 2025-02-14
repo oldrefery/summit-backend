@@ -139,19 +139,16 @@ export function PersonForm({
   };
 
   const validateForm = (): boolean => {
-    // Проверка имени
     if (!formData.name.trim()) {
       showError('Name is required');
       return false;
     }
 
-    // Проверка email
     if (formData.email && !validateEmail(formData.email)) {
       showError('Invalid email address');
       return false;
     }
 
-    // Проверка мобильного номера (если есть)
     if (formData.mobile && !/^\+?[\d\s-]+$/.test(formData.mobile)) {
       showError('Invalid mobile number format');
       return false;
@@ -215,13 +212,12 @@ export function PersonForm({
           data: baseData,
         });
         if (!isToastActive('person-updated')) {
-          // Проверка
-          showSuccess('Person updated successfully', 'person-updated'); // Уникальный ID
+          showSuccess('Person updated successfully');
         }
       } else {
         await createPerson.mutateAsync(baseData);
         if (!isToastActive('person-created')) {
-          showSuccess('Person created successfully', 'person-created');
+          showSuccess('Person created successfully');
         }
       }
 
