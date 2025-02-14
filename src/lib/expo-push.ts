@@ -1,6 +1,5 @@
 // src/lib/expo-push.ts
 import { NotificationFormData } from '@/types/push';
-import { useQuery } from '@tanstack/react-query';
 
 const EXPO_PUSH_API = 'https://exp.host/--/api/v2/push/send';
 
