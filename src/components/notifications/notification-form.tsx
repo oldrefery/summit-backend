@@ -1,19 +1,17 @@
 // src/components/notifications/notification-form.tsx
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { FormEvent, useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { usePushUsers, useSendNotification } from '@/hooks/use-push';
-import type { NotificationFormData } from '@/types/push';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -21,6 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import ReactSelect from 'react-select';
+import { usePushUsers, useSendNotification } from '@/hooks/use-push';
+import type { NotificationFormData } from '@/types/push';
 
 interface NotificationFormProps {
   open: boolean;
@@ -33,6 +34,7 @@ export function NotificationForm({
 }: NotificationFormProps) {
   const { data: users = [] } = usePushUsers();
   const { mutate: sendNotification, isPending } = useSendNotification();
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [formData, setFormData] = useState<NotificationFormData>({
     title: '',
     body: '',
@@ -42,9 +44,18 @@ export function NotificationForm({
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const userOptions = users.map(user => ({
+    value: user.id,
+    label: `${user.device_info.deviceName} (${user.device_info.osName})`,
+  }));
+
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    sendNotification(formData);
+    sendNotification({
+      ...formData,
+      target_users:
+        formData.target_type === 'specific_users' ? selectedUsers : undefined,
+    });
     onOpenChangeAction(false);
   };
 
@@ -101,6 +112,27 @@ export function NotificationForm({
             </Select>
           </div>
 
+          {formData.target_type === 'specific_users' && (
+            <div className="space-y-2">
+              <Label>Select Users</Label>
+              <ReactSelect
+                isMulti
+                options={userOptions}
+                value={userOptions.filter(option =>
+                  selectedUsers.includes(option.value)
+                )}
+                onChange={selected => {
+                  setSelectedUsers(
+                    selected ? selected.map(option => option.value) : []
+                  );
+                }}
+                className="react-select-container"
+                classNamePrefix="react-select"
+                placeholder="Select users..."
+              />
+            </div>
+          )}
+
           <div className="flex justify-end space-x-2">
             <Button
               type="button"
@@ -109,7 +141,14 @@ export function NotificationForm({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button
+              type="submit"
+              disabled={
+                isPending ||
+                (formData.target_type === 'specific_users' &&
+                  selectedUsers.length === 0)
+              }
+            >
               {isPending ? 'Sending...' : 'Send Notification'}
             </Button>
           </div>
