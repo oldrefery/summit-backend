@@ -3,10 +3,10 @@
 
 import { createContext, useContext, useCallback, ReactNode } from 'react';
 import { Toaster } from '@/components/ui/toaster';
-import { useToast } from '@/components/ui/use-toast';
+import { isToastActive, useToast } from '@/components/ui/use-toast';
 
 type ToastContextType = {
-  showSuccess: (message: string, id?: string) => void;
+  showSuccess: (message: string) => void;
   showError: (error: unknown) => void;
 };
 
@@ -15,32 +15,32 @@ const ToastContext = createContext<ToastContextType | null>(null);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
-  const showSuccess = useCallback(
-    (message: string, id?: string) => {
-      toast({
-        id,
-        title: 'Success',
-        description: message,
-        variant: 'success',
-        duration: 3000,
-      });
+  const showToast = useCallback(
+    (message: string, variant: 'success' | 'destructive') => {
+      if (!isToastActive(message)) {
+        toast({
+          id: message,
+          title: variant === 'success' ? 'Success' : 'Error',
+          description: message,
+          variant,
+          duration: 5000,
+        });
+      }
     },
     [toast]
   );
 
+  const showSuccess = useCallback(
+    (message: string) => showToast(message, 'success'),
+    [showToast]
+  );
+
   const showError = useCallback(
     (error: unknown) => {
-      const errorMessage =
-        error instanceof Error ? error.message : 'An unexpected error occurred';
-
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-        duration: 5000,
-      });
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(message, 'destructive');
     },
-    [toast]
+    [showToast]
   );
 
   return (
