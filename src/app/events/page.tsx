@@ -31,7 +31,7 @@ export default function EventsPage() {
     .filter(
       event =>
         event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.section.toLowerCase().includes(searchTerm.toLowerCase())
+        event.section?.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
   const handleDeleteConfirm = async () => {
