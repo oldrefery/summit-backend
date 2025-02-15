@@ -375,23 +375,30 @@ export const api = {
     },
 
     async delete(id: number) {
-      // Check related records in event_people
-      const { data: eventPeople, error: checkError } = await supabase
+      // First, delete all event_people records
+      const { error: deleteEventPeopleError } = await supabase
         .from('event_people')
-        .select('id')
+        .delete()
         .eq('event_id', id);
 
-      if (checkError) {
-        console.error('Failed to check related records:', checkError);
-        throw checkError;
+      if (deleteEventPeopleError) {
+        console.error(
+          'Failed to delete event_people records:',
+          deleteEventPeopleError
+        );
+        throw deleteEventPeopleError;
       }
 
-      if (eventPeople && eventPeople.length > 0) {
-        throw new Error('Cannot delete event with assigned speakers');
-      }
+      // Then delete the event
+      const { error: deleteEventError } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', id);
 
-      const { error } = await supabase.from('events').delete().eq('id', id);
-      if (error) throw error;
+      if (deleteEventError) {
+        console.error('Failed to delete event:', deleteEventError);
+        throw deleteEventError;
+      }
     },
   },
 

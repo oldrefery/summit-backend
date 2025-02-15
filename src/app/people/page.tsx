@@ -22,6 +22,7 @@ import { debounce } from 'lodash';
 import Link from 'next/link';
 import { ArrowLeft, Users } from 'lucide-react';
 import Image from 'next/image';
+import { ImportDialog } from '@/components/people/import-dialog';
 
 export default function PeoplePage() {
   const { data: people, isLoading, deletePerson } = usePeople();
@@ -33,6 +34,7 @@ export default function PeoplePage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const handleFormOpenChange = useCallback((open: boolean) => {
     setIsFormOpen(open);
@@ -95,7 +97,14 @@ export default function PeoplePage() {
               <CardTitle>People</CardTitle>
             </div>
           </div>
-          <Button onClick={() => handleFormOpenChange(true)}>Add Person</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+              Import from Excel
+            </Button>
+            <Button onClick={() => handleFormOpenChange(true)}>
+              Add Person
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
@@ -215,6 +224,8 @@ export default function PeoplePage() {
         title="Delete Person"
         description={`Are you sure you want to delete "${personToDelete?.name}"? This action cannot be undone.`}
       />
+
+      <ImportDialog open={isImportOpen} onOpenChangeAction={setIsImportOpen} />
     </div>
   );
 }
