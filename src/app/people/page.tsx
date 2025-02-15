@@ -100,7 +100,7 @@ export default function PeoplePage() {
         <CardContent>
           <div className="mb-4">
             <InputSearch
-              placeholder="Search by name, title, company..."
+              placeholder="Search by name, title, company, country..."
               onChange={e => handleSearch(e.target.value)}
               className="max-w-md"
             />
