@@ -23,13 +23,19 @@ interface ImportDialogProps {
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
-  const { createPerson } = usePeople();
+  const { createPerson, data: existingPeople } = usePeople();
   const { showError, showSuccess } = useToastContext();
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const validateRole = (role: string): PersonRole => {
+    return role.toLowerCase() === 'speaker' ? 'speaker' : 'attendee';
+  };
+
+  // Функция для нормализации имени
+  const normalizeName = (name: string) => name.trim().toLowerCase();
+
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-
     if (!file) return;
 
     if (file.size > MAX_FILE_SIZE) {
@@ -40,15 +46,16 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
     setIsProcessing(true);
 
     try {
-      // Чтение файла с помощью read-excel-file
       const rows = await readXlsxFile(file);
-      const dataRows: (string | null)[][] = rows.slice(1) as (
-        | string
-        | null
-      )[][];
 
-      // Первая строка - заголовки
+      if (rows.length < 2) {
+        showError('Excel file must contain at least one data row');
+        return;
+      }
+
       const headers = rows[0] as string[];
+      const dataRows = rows.slice(1);
+
       const expectedHeaders = [
         'Name',
         'Role',
@@ -65,8 +72,17 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
         return;
       }
 
+      // Получаем существующие имена
+      const existingNames = new Set(
+        existingPeople.map(p => normalizeName(p.name))
+      );
+
+      let duplicatesCount = 0;
+      const uniquePeople: PersonFormData[] = [];
+
       const people: PersonFormData[] = dataRows.map(row => {
-        const [name, role, title, company, country, email, mobile, bio] = row;
+        const [name, role, title, company, country, email, mobile, bio] =
+          row as (string | null)[];
 
         return {
           name: name?.toString() || '',
@@ -81,10 +97,23 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
         };
       });
 
+      // Фильтрация дубликатов
+      for (const person of people) {
+        const normalized = normalizeName(person.name);
+
+        if (existingNames.has(normalized)) {
+          duplicatesCount++;
+          continue;
+        }
+
+        uniquePeople.push(person);
+        existingNames.add(normalized);
+      }
+
       // Валидация обязательных полей
-      const errors = people
+      const errors = uniquePeople
         .map((person, index) => {
-          if (!person.name) {
+          if (!person.name.trim()) {
             return `Row ${index + 2}: Name is required`;
           }
           return null;
@@ -97,21 +126,27 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
       }
 
       // Сохранение данных
-      for (const person of people) {
+      for (const person of uniquePeople) {
         await createPerson.mutateAsync(person);
       }
 
-      showSuccess(`Successfully imported ${people.length} people`);
+      // Формирование итогового сообщения
+      let message = `Successfully imported ${uniquePeople.length} people`;
+      if (duplicatesCount > 0) {
+        message += `. ${duplicatesCount} duplicates skipped`;
+      }
+      if (duplicatesCount === dataRows.length) {
+        showError('All records are duplicates. Nothing to import');
+        return;
+      }
+
+      showSuccess(message);
       onOpenChangeAction(false);
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const validateRole = (role: string): PersonRole => {
-    return role.toLowerCase() === 'speaker' ? 'speaker' : 'attendee';
   };
 
   return (
