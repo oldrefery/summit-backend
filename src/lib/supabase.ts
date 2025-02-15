@@ -224,18 +224,14 @@ export const api = {
     async getAll() {
       await ensureAuthenticated();
 
-      const { data, error } = await supabase
-        .from('events')
-        .select(
-          `
+      const { data, error } = await supabase.from('events').select(`
           *,
           location:locations(*),
+          section:sections(name),
           event_people:event_people(
             person:people(*)
           )
-        `
-        )
-        .order('start_time');
+        `);
 
       if (error) throw error;
 

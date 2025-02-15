@@ -25,7 +25,9 @@ export interface Event extends BaseEntity {
   description?: string | null;
   duration?: string | null;
   location_id?: number | null;
-  section: string;
+  section?: {
+    name: string;
+  };
   location?: Location;
   event_people?: EventPerson[];
 }
