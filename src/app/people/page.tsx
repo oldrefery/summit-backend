@@ -21,6 +21,7 @@ import { useToastContext } from '@/components/providers/toast-provider';
 import { debounce } from 'lodash';
 import Link from 'next/link';
 import { ArrowLeft, Users } from 'lucide-react';
+import Image from 'next/image';
 
 export default function PeoplePage() {
   const { data: people, isLoading, deletePerson } = usePeople();
@@ -137,6 +138,7 @@ export default function PeoplePage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Avatar</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Title</TableHead>
@@ -149,6 +151,22 @@ export default function PeoplePage() {
               <TableBody>
                 {filteredPeople.map(person => (
                   <TableRow key={person.id}>
+                    <TableCell>
+                      {person.photo_url ? (
+                        <Image
+                          src={person.photo_url}
+                          alt={person.name}
+                          width={40}
+                          height={40}
+                          className="rounded-full object-cover"
+                          unoptimized // так как фото из Supabase
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                          <Users className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">{person.name}</TableCell>
                     <TableCell>{person.role}</TableCell>
                     <TableCell>{person.title || '-'}</TableCell>
