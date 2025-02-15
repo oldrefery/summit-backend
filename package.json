@@ -37,12 +37,12 @@
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.3",
     "react-select": "^5.10.0",
+    "read-excel-file": "^5.8.6",
     "rehype-highlight": "^7.0.2",
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.0",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7",
-    "xlsx": "^0.18.5"
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

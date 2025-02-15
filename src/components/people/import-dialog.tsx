@@ -2,7 +2,7 @@
 'use client';
 
 import { ChangeEvent, useState } from 'react';
-import { read, utils } from 'xlsx';
+import readXlsxFile from 'read-excel-file';
 import { usePeople } from '@/hooks/use-query';
 import { PersonFormData, PersonRole } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -20,24 +20,7 @@ interface ImportDialogProps {
   onOpenChangeAction: (open: boolean) => void;
 }
 
-interface ExcelRow {
-  Name?: string;
-  name?: string;
-  Role?: string;
-  role?: string;
-  Title?: string;
-  title?: string;
-  Company?: string;
-  company?: string;
-  Country?: string;
-  country?: string;
-  Email?: string;
-  email?: string;
-  Mobile?: string;
-  mobile?: string;
-  Bio?: string;
-  bio?: string;
-}
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
   const { createPerson } = usePeople();
@@ -46,50 +29,64 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
 
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+
     if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      showError('File size exceeds 5MB limit');
+      return;
+    }
 
     setIsProcessing(true);
 
     try {
-      const data = await file.arrayBuffer();
-      const workbook = read(data, { cellDates: true });
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = utils.sheet_to_json<ExcelRow>(worksheet);
-      console.log(JSON.stringify(jsonData, null, 2));
+      // Чтение файла с помощью read-excel-file
+      const rows = await readXlsxFile(file);
+      const dataRows: (string | null)[][] = rows.slice(1) as (
+        | string
+        | null
+      )[][];
 
-      const validateRole = (role: string): PersonRole => {
-        const normalizedRole = role.toLowerCase();
-        return normalizedRole === 'speaker' ? 'speaker' : 'attendee';
-      };
+      // Первая строка - заголовки
+      const headers = rows[0] as string[];
+      const expectedHeaders = [
+        'Name',
+        'Role',
+        'Title',
+        'Company',
+        'Country',
+        'Email',
+        'Mobile',
+        'Bio',
+      ];
 
-      // Map columns from Excel to PersonFormData fields
-      const people: PersonFormData[] = jsonData.map(row => ({
-        name: row.Name || row.name || '',
-        role: validateRole(row.Role || row.role || 'attendee'),
-        title: row.Title || row.title || null,
-        company: row.Company || row.company || null,
-        country: row.Country || row.country || null,
-        email: row.Email || row.email || null,
-        mobile: row.Mobile || row.mobile || null,
-        bio: row.Bio || row.bio || null,
-        photo_url: null,
-      }));
+      if (!expectedHeaders.every(h => headers.includes(h))) {
+        showError('Invalid Excel file structure. Please check column headers');
+        return;
+      }
 
-      // Validate data
+      const people: PersonFormData[] = dataRows.map(row => {
+        const [name, role, title, company, country, email, mobile, bio] = row;
+
+        return {
+          name: name?.toString() || '',
+          role: validateRole(role?.toString() || 'attendee'),
+          title: title?.toString() || null,
+          company: company?.toString() || null,
+          country: country?.toString() || null,
+          email: email?.toString() || null,
+          mobile: mobile?.toString() || null,
+          bio: bio?.toString() || null,
+          photo_url: null,
+        };
+      });
+
+      // Валидация обязательных полей
       const errors = people
         .map((person, index) => {
           if (!person.name) {
             return `Row ${index + 2}: Name is required`;
           }
-
-          // Add if email validation is required
-          // if (
-          //   person.email &&
-          //   !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(person.email)
-          // ) {
-          //   return `Row ${index + 2}: Invalid email format`;
-          // }
-
           return null;
         })
         .filter((error): error is string => error !== null);
@@ -99,7 +96,7 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
         return;
       }
 
-      // Create records
+      // Сохранение данных
       for (const person of people) {
         await createPerson.mutateAsync(person);
       }
@@ -107,10 +104,14 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
       showSuccess(`Successfully imported ${people.length} people`);
       onOpenChangeAction(false);
     } catch (error) {
-      showError(error);
+      showError(error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const validateRole = (role: string): PersonRole => {
+    return role.toLowerCase() === 'speaker' ? 'speaker' : 'attendee';
   };
 
   return (
