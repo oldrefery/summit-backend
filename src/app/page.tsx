@@ -1,7 +1,7 @@
 // src/app/page.tsx
 'use client';
 
-import { usePeople } from '@/hooks/use-query';
+import { usePeople } from '@/hooks/use-people';
 import { useEvents } from '@/hooks/use-events';
 import { useLocations } from '@/hooks/use-locations';
 import { useMarkdownPages } from '@/hooks/use-markdown';

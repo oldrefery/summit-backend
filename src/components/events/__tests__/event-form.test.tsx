@@ -60,7 +60,7 @@ describe('EventForm', () => {
     }),
   }));
 
-  vi.mock('@/hooks/use-query', () => ({
+  vi.mock('@/hooks/use-people', () => ({
     usePeople: () => ({
       data: mockPeople,
       isLoading: false,

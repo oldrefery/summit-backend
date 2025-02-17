@@ -1,7 +1,7 @@
 // src/app/events/[id]/edit/edit-client.tsx
 'use client';
 
-import { useEvent } from '@/hooks/use-events';
+import { useEvents } from '@/hooks/use-events';
 import { EventForm } from '@/components/events/event-form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -11,7 +11,7 @@ interface EditEventClientProps {
 }
 
 export default function EditEventClient({ id }: EditEventClientProps) {
-  const { data: event, isLoading } = useEvent(parseInt(id));
+  const { data: event, isLoading } = useEvents(parseInt(id));
 
   if (isLoading) {
     return (

@@ -1,34 +1,94 @@
 // src/hooks/use-announcements.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/supabase';
+import { useToastContext } from '@/components/providers/toast-provider';
 import type { Announcement } from '@/types';
 
-export function useAnnouncements() {
-  return useQuery({
+export type AnnouncementWithRelations = Announcement;
+
+export type AnnouncementFormData = Omit<Announcement, 'id' | 'created_at'>;
+
+export function useAnnouncements<T extends number | undefined = undefined>(id?: T) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToastContext();
+
+  // Query for all announcements
+  const announcementsQuery = useQuery({
     queryKey: ['announcements'],
-    queryFn: () => api.announcements.getAll(),
-  });
-}
-
-export function useCreateAnnouncement() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (announcement: Omit<Announcement, 'id' | 'created_at'>) =>
-      api.announcements.create(announcement),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+    queryFn: async () => {
+      try {
+        return await api.announcements.getAll();
+      } catch (error) {
+        showError(error);
+        throw error;
+      }
     },
   });
-}
 
-export function useDeleteAnnouncement() {
-  const queryClient = useQueryClient();
+  // Query for single announcement
+  const announcementQuery = useQuery({
+    queryKey: ['announcements', id],
+    queryFn: async () => {
+      if (!id) return null;
+      try {
+        const announcements = await api.announcements.getAll();
+        return announcements.find(a => a.id === id) || null;
+      } catch (error) {
+        showError(error);
+        throw error;
+      }
+    },
+    enabled: !!id,
+  });
 
-  return useMutation({
-    mutationFn: (id: number) => api.announcements.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+  const createAnnouncement = useMutation({
+    mutationFn: (announcement: AnnouncementFormData) => api.announcements.create(announcement),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      showSuccess('Announcement created successfully');
+    },
+    onError: error => {
+      showError(error);
     },
   });
+
+  const updateAnnouncement = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Partial<AnnouncementFormData>;
+    }) => api.announcements.update(id, data),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      showSuccess('Announcement updated successfully');
+    },
+    onError: error => {
+      showError(error);
+    },
+  });
+
+  const deleteAnnouncement = useMutation({
+    mutationFn: api.announcements.delete,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['announcements'] });
+      showSuccess('Announcement deleted successfully');
+    },
+    onError: error => {
+      showError(error);
+    },
+  });
+
+  return {
+    // Return single announcement data if id is provided, otherwise return array
+    data: (id ? announcementQuery.data : announcementsQuery.data ?? []) as T extends number ? AnnouncementWithRelations | null : AnnouncementWithRelations[],
+    isLoading: id ? announcementQuery.isLoading : announcementsQuery.isLoading,
+    isError: id ? announcementQuery.isError : announcementsQuery.isError,
+    error: id ? announcementQuery.error : announcementsQuery.error,
+    // CRUD operations
+    createAnnouncement,
+    updateAnnouncement,
+    deleteAnnouncement,
+  };
 }

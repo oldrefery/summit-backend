@@ -34,8 +34,8 @@ export async function POST(request: Request) {
       };
 
       // Set secure HTTP-only cookie with session data
-      (await cookies()).set(AUTH.COOKIE_NAME, JSON.stringify(session), {
-        ...AUTH.COOKIE_OPTIONS,
+      (await cookies()).set(AUTH.COOKIE.NAME, JSON.stringify(session), {
+        ...AUTH.COOKIE.OPTIONS,
         secure: process.env.NODE_ENV === 'production',
         expires: new Date(session.expires),
       });

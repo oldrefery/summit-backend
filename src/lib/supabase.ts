@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { MAX_FILE_SIZE_BYTES } from '@/app/constants';
+import { FILE_LIMITS } from '@/app/constants';
 import type {
   Person,
   Event,
@@ -67,9 +67,9 @@ export const storage = {
     try {
       await ensureAuthenticated();
 
-      if (file.size > MAX_FILE_SIZE_BYTES) {
+      if (file.size > FILE_LIMITS.DEFAULT) {
         showToastError(
-          'File size should not exceed ' + MAX_FILE_SIZE_BYTES + ' bytes'
+          `File size should not exceed ${Math.floor(FILE_LIMITS.DEFAULT / (1024 * 1024))}MB`
         );
       }
 

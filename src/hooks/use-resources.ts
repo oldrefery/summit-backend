@@ -4,10 +4,15 @@ import { api } from '@/lib/supabase';
 import { useToastContext } from '@/components/providers/toast-provider';
 import type { Resource } from '@/types';
 
-export function useResources() {
+export type ResourceWithRelations = Resource;
+
+export type ResourceFormData = Omit<Resource, 'id' | 'created_at'>;
+
+export function useResources<T extends number | undefined = undefined>(id?: T) {
   const { showError, showSuccess } = useToastContext();
   const queryClient = useQueryClient();
 
+  // Query for all resources
   const resourcesQuery = useQuery({
     queryKey: ['resources'],
     queryFn: async () => {
@@ -20,9 +25,24 @@ export function useResources() {
     },
   });
 
+  // Query for single resource
+  const resourceQuery = useQuery({
+    queryKey: ['resources', id],
+    queryFn: async () => {
+      if (!id) return null;
+      try {
+        const resources = await api.resources.getAll();
+        return resources.find(r => r.id === id) || null;
+      } catch (error) {
+        showError(error);
+        throw error;
+      }
+    },
+    enabled: !!id,
+  });
+
   const createResource = useMutation({
-    mutationFn: (resource: Omit<Resource, 'id' | 'created_at'>) =>
-      api.resources.create(resource),
+    mutationFn: (resource: ResourceFormData) => api.resources.create(resource),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['resources'] });
       showSuccess('Resource created successfully');
@@ -38,7 +58,7 @@ export function useResources() {
       data,
     }: {
       id: number;
-      data: Partial<Omit<Resource, 'id' | 'created_at'>>;
+      data: Partial<ResourceFormData>;
     }) => api.resources.update(id, data),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['resources'] });
@@ -61,10 +81,12 @@ export function useResources() {
   });
 
   return {
-    data: resourcesQuery.data ?? [],
-    isLoading: resourcesQuery.isLoading,
-    isError: resourcesQuery.isError,
-    error: resourcesQuery.error,
+    // Return single resource data if id is provided, otherwise return array
+    data: (id ? resourceQuery.data : resourcesQuery.data ?? []) as T extends number ? ResourceWithRelations | null : ResourceWithRelations[],
+    isLoading: id ? resourceQuery.isLoading : resourcesQuery.isLoading,
+    isError: id ? resourceQuery.isError : resourcesQuery.isError,
+    error: id ? resourceQuery.error : resourcesQuery.error,
+    // CRUD operations
     createResource,
     updateResource,
     deleteResource,

@@ -3,7 +3,7 @@
 
 import { ChangeEvent, useState } from 'react';
 import readXlsxFile from 'read-excel-file';
-import { usePeople } from '@/hooks/use-query';
+import { usePeople } from '@/hooks/use-people';
 import { PersonFormData, PersonRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -55,7 +55,7 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
       const headers = rows[0] as string[];
       const dataRows = rows.slice(1);
 
-      if (!IMPORT_DIALOG.EXPECTED_HEADERS.every(h => headers.includes(h))) {
+      if (!IMPORT_DIALOG.EXPECTED_HEADERS.every((header: string) => headers.includes(header))) {
         showError('Invalid Excel file structure. Please check column headers');
         return;
       }

@@ -1,7 +1,17 @@
 // src/__mocks__/hooks.ts
 import { vi } from 'vitest';
-import type { Person, Event, Location, Section } from '@/types';
+import type { Person, Event, Location, Section, Resource, Announcement, Version } from '@/types';
 import { TEST_DATA, TestDateUtils } from './test-constants';
+import type { EventWithRelations } from '@/hooks/use-events';
+import type { PersonWithRelations } from '@/hooks/use-people';
+import type { LocationWithRelations } from '@/hooks/use-locations';
+import type { MarkdownPageWithRelations } from '@/hooks/use-markdown';
+import type { ResourceWithRelations } from '@/hooks/use-resources';
+import type { ChangesWithRelations } from '@/hooks/use-changes';
+import type { AnnouncementWithRelations } from '@/hooks/use-announcements';
+import type { VersionWithRelations } from '@/hooks/use-versions';
+import type { PushStatisticsWithRelations, PushNotificationWithRelations, PushUserWithRelations } from '@/hooks/use-push';
+import type { PushStatistics, PushNotification, PushUser } from '@/hooks/use-push';
 
 // Utility function for creating test data
 const defaultMutationResult = {
@@ -15,9 +25,9 @@ const defaultMutationResult = {
 };
 
 export const mockHooks = () => {
-  vi.mock('@/hooks/use-query', () => ({
+  vi.mock('@/hooks/use-people', () => ({
     usePeople: () => ({
-      data: [createTestData.person()],
+      data: [createTestData.person()] as PersonWithRelations[],
       isLoading: false,
       createPerson: defaultMutationResult,
       updatePerson: defaultMutationResult,
@@ -27,7 +37,7 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-events', () => ({
     useEvents: () => ({
-      data: [createTestData.event()],
+      data: [createTestData.event()] as EventWithRelations[],
       isLoading: false,
       createEvent: defaultMutationResult,
       updateEvent: defaultMutationResult,
@@ -37,7 +47,7 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-locations', () => ({
     useLocations: () => ({
-      data: [createTestData.location()],
+      data: [createTestData.location()] as LocationWithRelations[],
       isLoading: false,
       createLocation: defaultMutationResult,
       updateLocation: defaultMutationResult,
@@ -55,7 +65,7 @@ export const mockHooks = () => {
         updated_at: TEST_DATA.DEFAULTS.DATETIME,
         slug: 'test-page',
         published: true
-      }],
+      }] as MarkdownPageWithRelations[],
       isLoading: false,
       createMarkdownPage: defaultMutationResult,
       updateMarkdownPage: defaultMutationResult,
@@ -65,12 +75,7 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-resources', () => ({
     useResources: () => ({
-      data: [{
-        id: TEST_DATA.DEFAULTS.ID,
-        name: 'Test Resource',
-        url: 'https://test.com',
-        created_at: TEST_DATA.DEFAULTS.DATETIME
-      }],
+      data: [createTestData.resource()] as ResourceWithRelations[],
       isLoading: false,
       createResource: defaultMutationResult,
       updateResource: defaultMutationResult,
@@ -90,7 +95,16 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-changes', () => ({
     useChanges: () => ({
-      data: { changes: [], lastPublishedVersion: '1.0.0' },
+      data: {
+        events: 0,
+        people: 0,
+        locations: 0,
+        sections: 0,
+        resources: 0,
+        announcements: 0,
+        social_posts: 0,
+        markdown_pages: 0,
+      } as ChangesWithRelations,
       isLoading: false,
       publishVersion: defaultMutationResult,
     }),
@@ -98,32 +112,15 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-push', () => ({
     usePushStatistics: () => ({
-      data: TEST_DATA.PUSH_STATISTICS,
+      data: createTestData.pushStatistics() as PushStatisticsWithRelations,
       isLoading: false,
     }),
     useNotificationHistory: () => ({
-      data: [{
-        id: TEST_DATA.DEFAULTS.ID,
-        title: 'Test Notification',
-        body: 'Test Body',
-        sent_at: TEST_DATA.DEFAULTS.DATETIME,
-        status: 'delivered',
-        target_users: ['user1', 'user2']
-      }],
+      data: [createTestData.pushNotification()] as PushNotificationWithRelations[],
       isLoading: false,
     }),
     usePushUsers: () => ({
-      data: [{
-        id: TEST_DATA.DEFAULTS.ID,
-        token: 'test-token',
-        platform: 'ios',
-        created_at: TEST_DATA.DEFAULTS.DATETIME,
-        last_active: TEST_DATA.DEFAULTS.DATETIME,
-        device_info: {
-          deviceName: 'iPhone 12',
-          osName: 'iOS 15.0'
-        }
-      }],
+      data: [createTestData.pushUser()] as PushUserWithRelations[],
       isLoading: false,
     }),
     useSendNotification: () => defaultMutationResult,
@@ -131,13 +128,11 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-announcements', () => ({
     useAnnouncements: () => ({
-      data: [{
-        id: TEST_DATA.DEFAULTS.ID,
-        title: 'Test Announcement',
-        content: 'Test Content',
-        created_at: TEST_DATA.DEFAULTS.DATETIME
-      }],
-      isLoading: false
+      data: [createTestData.announcement()] as AnnouncementWithRelations[],
+      isLoading: false,
+      createAnnouncement: defaultMutationResult,
+      updateAnnouncement: defaultMutationResult,
+      deleteAnnouncement: defaultMutationResult,
     }),
   }));
 
@@ -158,17 +153,7 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-versions', () => ({
     useVersions: () => ({
-      data: [{
-        id: TEST_DATA.DEFAULTS.ID,
-        version: '1.0.0',
-        created_at: TEST_DATA.DEFAULTS.DATETIME,
-        published_at: TEST_DATA.DEFAULTS.DATETIME,
-        changes: {
-          pages: 2,
-          events: 1
-        },
-        file_url: 'https://example.com/v1.0.0.zip'
-      }],
+      data: [createTestData.version()] as VersionWithRelations[],
       isLoading: false,
       rollbackVersion: defaultMutationResult
     }),
@@ -196,6 +181,7 @@ export const createTestData = {
     section_id: TEST_DATA.DEFAULTS.ID,
     created_at: TEST_DATA.DEFAULTS.DATETIME,
     description: 'Test Description',
+    event_people: [],
     ...override,
   }),
 
@@ -212,6 +198,64 @@ export const createTestData = {
     name: 'Test Section',
     date: TEST_DATA.DEFAULTS.DATE,
     created_at: TEST_DATA.DEFAULTS.DATETIME,
+    ...override,
+  }),
+
+  resource: (override: Partial<Resource> = {}) => ({
+    id: TEST_DATA.DEFAULTS.ID,
+    name: 'Test Resource',
+    is_route: false,
+    created_at: TEST_DATA.DEFAULTS.DATETIME,
+    ...override,
+  }),
+
+  announcement: (override: Partial<Announcement> = {}) => ({
+    id: TEST_DATA.DEFAULTS.ID,
+    title: 'Test Announcement',
+    content: 'Test Content',
+    created_at: TEST_DATA.DEFAULTS.DATETIME,
+    ...override,
+  }),
+
+  version: (override: Partial<Version> = {}) => ({
+    id: TEST_DATA.DEFAULTS.ID,
+    version: '1.0.0',
+    created_at: TEST_DATA.DEFAULTS.DATETIME,
+    published_at: TEST_DATA.DEFAULTS.DATETIME,
+    changes: {
+      pages: 2,
+      events: 1
+    },
+    file_url: 'https://example.com/v1.0.0.zip',
+    ...override,
+  }),
+
+  pushStatistics: (override: Partial<PushStatistics> = {}) => ({
+    active_tokens: 100,
+    active_users: 50,
+    ...override,
+  }),
+
+  pushNotification: (override: Partial<PushNotification> = {}) => ({
+    id: TEST_DATA.DEFAULTS.ID,
+    title: 'Test Notification',
+    body: 'Test Body',
+    sent_at: TEST_DATA.DEFAULTS.DATETIME,
+    status: 'delivered' as const,
+    target_users: ['user1', 'user2'],
+    ...override,
+  }),
+
+  pushUser: (override: Partial<PushUser> = {}) => ({
+    id: TEST_DATA.DEFAULTS.ID,
+    token: 'test-token',
+    platform: 'ios' as const,
+    created_at: TEST_DATA.DEFAULTS.DATETIME,
+    last_active: TEST_DATA.DEFAULTS.DATETIME,
+    device_info: {
+      deviceName: 'iPhone 12',
+      osName: 'iOS 15.0'
+    },
     ...override,
   }),
 };
