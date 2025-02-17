@@ -26,7 +26,19 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-events', () => ({
     useEvents: () => ({
-      data: [],
+      data: [{
+        id: 1,
+        title: 'Test Event',
+        date: '2024-02-16',
+        start_time: '10:00:00',
+        end_time: '11:00:00',
+        section_id: 1,
+        created_at: '2024-02-16T00:00:00Z',
+        description: 'Test Description',
+        location: { id: 1, name: 'Test Location' },
+        event_people: [],
+        section: { id: 1, name: 'Test Section' }
+      }],
       isLoading: false,
       createEvent: defaultMutationResult,
       updateEvent: defaultMutationResult,
@@ -36,7 +48,7 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-locations', () => ({
     useLocations: () => ({
-      data: [],
+      data: [createTestData.location()],
       isLoading: false,
       createLocation: defaultMutationResult,
       updateLocation: defaultMutationResult,
@@ -46,7 +58,15 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-markdown', () => ({
     useMarkdownPages: () => ({
-      data: [],
+      data: [{
+        id: 1,
+        title: 'Test Page',
+        content: 'Test Content',
+        created_at: '2024-02-16T00:00:00Z',
+        updated_at: '2024-02-16T00:00:00Z',
+        slug: 'test-page',
+        published: true
+      }],
       isLoading: false,
       createMarkdownPage: defaultMutationResult,
       updateMarkdownPage: defaultMutationResult,
@@ -56,7 +76,7 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-resources', () => ({
     useResources: () => ({
-      data: [],
+      data: [{ id: 1, name: 'Test Resource', url: 'https://test.com', created_at: '2024-02-16T00:00:00Z' }],
       isLoading: false,
       createResource: defaultMutationResult,
       updateResource: defaultMutationResult,
@@ -83,7 +103,7 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-changes', () => ({
     useChanges: () => ({
-      data: {},
+      data: { changes: [], lastPublishedVersion: '1.0.0' },
       isLoading: false,
       publishVersion: defaultMutationResult,
     }),
@@ -91,22 +111,54 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-push', () => ({
     usePushStatistics: () => ({
-      data: { active_tokens: 0, active_users: 0 },
+      data: {
+        active_tokens: 100,
+        active_users: 50,
+        total_notifications: 1000,
+        total_sent: 500,
+        total_delivered: 450,
+        total_opened: 200
+      },
       isLoading: false,
     }),
     useNotificationHistory: () => ({
-      data: [],
+      data: [{
+        id: 1,
+        title: 'Test Notification',
+        body: 'Test Body',
+        sent_at: '2024-02-16T00:00:00Z',
+        status: 'delivered',
+        target_users: ['user1', 'user2']
+      }],
       isLoading: false,
     }),
     usePushUsers: () => ({
-      data: [],
+      data: [{
+        id: 1,
+        token: 'test-token',
+        platform: 'ios',
+        created_at: '2024-02-16T00:00:00Z',
+        last_active: '2024-02-16T00:00:00Z',
+        device_info: {
+          deviceName: 'iPhone 12',
+          osName: 'iOS 15.0'
+        }
+      }],
       isLoading: false,
     }),
     useSendNotification: () => defaultMutationResult,
   }));
 
   vi.mock('@/hooks/use-announcements', () => ({
-    useAnnouncements: () => ({ data: [], isLoading: false }),
+    useAnnouncements: () => ({
+      data: [{
+        id: 1,
+        title: 'Test Announcement',
+        content: 'Test Content',
+        created_at: '2024-02-16T00:00:00Z'
+      }],
+      isLoading: false
+    }),
   }));
 
   vi.mock('@/hooks/use-sort-filter', () => ({
@@ -116,12 +168,30 @@ export const mockHooks = () => {
       sortKey: 'name',
       sortOrder: 'asc',
       handleSort: vi.fn(),
-      filteredAndSorted: [],
+      filteredAndSorted: [{
+        id: 1,
+        name: 'Test Item',
+        created_at: '2024-02-16T00:00:00Z'
+      }],
     }),
   }));
 
   vi.mock('@/hooks/use-versions', () => ({
-    useVersions: () => ({ data: [], isLoading: false }),
+    useVersions: () => ({
+      data: [{
+        id: 1,
+        version: '1.0.0',
+        created_at: '2024-02-16T00:00:00Z',
+        published_at: '2024-02-16T00:00:00Z',
+        changes: {
+          pages: 2,
+          events: 1
+        },
+        file_url: 'https://example.com/v1.0.0.zip'
+      }],
+      isLoading: false,
+      rollbackVersion: defaultMutationResult
+    }),
   }));
 };
 

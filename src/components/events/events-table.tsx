@@ -27,7 +27,7 @@ interface EventsTableProps {
 export function EventsTable({ events, onDeleteAction }: EventsTableProps) {
   const formatEventTime = (time: string) => {
     try {
-      const dateTime = parseISO(time);
+      const dateTime = parseISO(`2000-01-01T${time}`);
       return format(dateTime, 'HH:mm');
     } catch (error) {
       console.error('Error formatting time:', error);
