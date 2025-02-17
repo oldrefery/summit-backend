@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { format, isToday, isYesterday, isTomorrow } from 'date-fns';
+import { format, isToday, isYesterday, isTomorrow, parseISO, parse } from 'date-fns';
 import type { Section } from '@/types';
 
 interface SectionsTableProps {
@@ -24,12 +24,29 @@ export function SectionsTable({
   onEditAction,
   onDeleteAction,
 }: SectionsTableProps) {
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    if (isToday(date)) return 'Today';
-    if (isYesterday(date)) return 'Yesterday';
-    if (isTomorrow(date)) return 'Tomorrow';
-    return format(date, 'MMM d, yyyy');
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return 'No date';
+    try {
+      const date = parse(dateStr, 'yyyy-MM-dd', new Date());
+      if (isToday(date)) return 'Today';
+      if (isYesterday(date)) return 'Yesterday';
+      if (isTomorrow(date)) return 'Tomorrow';
+      return format(date, 'MMM d, yyyy');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
+  };
+
+  const formatCreatedDate = (dateStr: string | undefined) => {
+    if (!dateStr) return 'No date';
+    try {
+      const date = parseISO(dateStr);
+      return format(date, 'MMM d, yyyy');
+    } catch (error) {
+      console.error('Error formatting created date:', error);
+      return 'Invalid date';
+    }
   };
 
   return (
@@ -47,9 +64,7 @@ export function SectionsTable({
           <TableRow key={section.id}>
             <TableCell className="font-medium">{section.name}</TableCell>
             <TableCell>{formatDate(section.date)}</TableCell>
-            <TableCell>
-              {format(new Date(section.created_at), 'MMM d, yyyy')}
-            </TableCell>
+            <TableCell>{formatCreatedDate(section.created_at)}</TableCell>
             <TableCell>
               <div className="flex gap-2">
                 <Button
