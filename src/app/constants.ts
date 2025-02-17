@@ -16,12 +16,12 @@ export const API = {
     },
 } as const;
 
-// Import dialog configuration
-export const IMPORT_DIALOG = {
+// Excel import configuration
+export const EXCEL_IMPORT = {
     /** Maximum file size for Excel imports (5MB) */
-    MAX_FILE_SIZE: 5 * 1024 * 1024,
+    MAX_FILE_SIZE: FILE_LIMITS.EXCEL_IMPORT,
     /** Required headers for Excel import */
-    EXPECTED_HEADERS: [
+    HEADERS: [
         'Name',
         'Role',
         'Title',
@@ -79,24 +79,6 @@ export const AUTH = {
     },
 } as const;
 
-// Excel import configuration
-export const EXCEL_IMPORT = {
-    /** Required columns for people import */
-    REQUIRED_HEADERS: [
-        'Name',
-        'Role',
-        'Title',
-        'Company',
-        'Country',
-        'Email',
-        'Mobile',
-        'Bio',
-    ] as const,
-    /** Default role for imported users */
-    DEFAULT_ROLE: 'attendee' as const,
-} as const;
-
 // Type definitions for better type inference
 export type DatePattern = typeof FORM.DATE_PATTERN;
-export type ExcelHeaders = typeof EXCEL_IMPORT.REQUIRED_HEADERS[number];
-export type ImportHeaders = typeof IMPORT_DIALOG.EXPECTED_HEADERS[number];
+export type ExcelHeaders = typeof EXCEL_IMPORT.HEADERS[number];
