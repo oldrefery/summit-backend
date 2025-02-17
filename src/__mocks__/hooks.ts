@@ -1,7 +1,7 @@
 // src/__mocks__/hooks.ts
 import { vi } from 'vitest';
 import type { Person, Event, Location, Section, Resource, Announcement, Version } from '@/types';
-import { TEST_DATA, TestDateUtils } from './test-constants';
+import { TEST_DATA } from './test-constants';
 import type { EventWithRelations } from '@/hooks/use-events';
 import type { PersonWithRelations } from '@/hooks/use-people';
 import type { LocationWithRelations } from '@/hooks/use-locations';

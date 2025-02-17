@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { MarkdownForm } from '@/components/pages/markdown-form';
-import { useMarkdownPage } from '@/hooks/use-markdown';
+import { useMarkdownPages } from '@/hooks/use-markdown';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
@@ -12,7 +12,7 @@ interface EditPageClientProps {
 }
 
 export default function EditPageClient({ id }: EditPageClientProps) {
-  const { data: page, isLoading } = useMarkdownPage(id);
+  const { data: page, isLoading } = useMarkdownPages(id);
   const [isFormOpen, setIsFormOpen] = useState(true);
 
   if (isLoading) {

@@ -27,7 +27,7 @@ import { useLocations } from '@/hooks/use-locations';
 import { useSections } from '@/hooks/use-sections';
 import { usePeople } from '@/hooks/use-people';
 import { useEvents } from '@/hooks/use-events';
-import type { EventFormData, EventPerson, Person } from '@/types';
+import type { EventFormData } from '@/types';
 import type { EventWithRelations } from '@/hooks/use-events';
 import { useToastContext } from '@/components/providers/toast-provider';
 
