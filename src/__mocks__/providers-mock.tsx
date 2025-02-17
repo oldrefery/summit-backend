@@ -9,8 +9,8 @@ interface ToastContextType {
 }
 
 // Создаем моки с правильными типами
-const showSuccessMock = vi.fn((_: string) => void 0);
-const showErrorMock = vi.fn((_: string | Error) => void 0);
+const showSuccessMock = vi.fn(() => void 0);
+const showErrorMock = vi.fn(() => void 0);
 
 export const toastContext = {
   showSuccess: showSuccessMock,
