@@ -2,7 +2,7 @@
 import { mockHooks } from '@/__mocks__/hooks';
 import { renderWithProviders } from '@/__mocks__/test-wrapper';
 
-// Импортируем страницы
+// Import all application pages for smoke testing
 import DashboardPage from '@/app/page';
 import EventsPage from '@/app/events/page';
 import NewEventPage from '@/app/events/new/page';

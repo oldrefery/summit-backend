@@ -6,7 +6,7 @@ import { createTestData, mockHooks } from '@/__mocks__/hooks';
 import { renderWithProviders } from '@/__mocks__/test-wrapper';
 import { mockMutation } from '@/__mocks__/test-submit-setup';
 
-// Моки с тестовыми данными
+// Initialize test data using mock factories
 const mockLocations = [createTestData.location()];
 const mockSections = [createTestData.section()];
 const mockPeople = [createTestData.person({ role: 'speaker' })];
@@ -75,7 +75,7 @@ describe('EventForm', () => {
     renderWithProviders(<EventForm onSuccess={mockOnSuccess} />);
 
     await act(async () => {
-      // Заполняем форму валидными данными
+      // Fill form with valid test data
       const titleInput = screen.getByLabelText('Title');
       const startTimeInput = screen.getByLabelText('Start Time');
       const endTimeInput = screen.getByLabelText('End Time');
@@ -84,7 +84,7 @@ describe('EventForm', () => {
       fireEvent.change(startTimeInput, { target: { value: '10:00' } });
       fireEvent.change(endTimeInput, { target: { value: '11:00' } });
 
-      // Отправляем форму через кнопку submit
+      // Submit form using the submit button
       const submitButton = screen.getByRole('button', {
         name: /create event/i,
       });
@@ -106,11 +106,11 @@ describe('EventForm', () => {
     renderWithProviders(<EventForm onSuccess={mockOnSuccess} />);
 
     await act(async () => {
-      // Вносим изменения в форму
+      // Make changes to the form
       const titleInput = screen.getByLabelText('Title');
       fireEvent.change(titleInput, { target: { value: 'Changed Title' } });
 
-      // Нажимаем кнопку отмены
+      // Click the cancel button
       const cancelButton = screen.getByRole('button', { name: /cancel/i });
       fireEvent.click(cancelButton);
     });

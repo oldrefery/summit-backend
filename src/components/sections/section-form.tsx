@@ -16,6 +16,7 @@ import {
 import { useToastContext } from '@/components/providers/toast-provider';
 import { useSections } from '@/hooks/use-sections';
 import type { Section } from '@/types';
+import { FORM_VALIDATION } from '@/app/constants';
 
 interface SectionFormProps {
   section?: Section;
@@ -43,9 +44,10 @@ export function SectionForm({
         date: section.date,
       });
     } else {
+      // Initialize with current date for new sections
       setFormData({
         name: '',
-        date: new Date().toISOString().split('T')[0], // Текущая дата по умолчанию
+        date: new Date().toISOString().split('T')[0],
       });
     }
     setIsDirty(false);
@@ -62,9 +64,8 @@ export function SectionForm({
       return false;
     }
 
-    // Проверка формата даты
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(formData.date)) {
+    // Validate date format (YYYY-MM-DD)
+    if (!FORM_VALIDATION.DATE_FORMAT.test(formData.date)) {
       showError('Invalid date format. Use YYYY-MM-DD');
       return false;
     }
@@ -98,11 +99,7 @@ export function SectionForm({
 
   const handleOpenChange = (open: boolean) => {
     if (!open && isDirty) {
-      if (
-        window.confirm(
-          'You have unsaved changes. Are you sure you want to leave?'
-        )
-      ) {
+      if (window.confirm(FORM_VALIDATION.UNSAVED_CHANGES_MESSAGE)) {
         setIsDirty(false);
         onOpenChangeAction(false);
       }

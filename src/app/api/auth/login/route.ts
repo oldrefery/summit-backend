@@ -2,6 +2,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { RateLimiter } from '@/lib/rate-limiter';
+import { AUTH } from '@/app/constants';
 
 const limiter = new RateLimiter();
 
@@ -25,18 +26,17 @@ export async function POST(request: Request) {
       email === process.env.SUPABASE_ANON_EMAIL &&
       password === process.env.SUPABASE_ANON_PASSWORD
     ) {
-      // Create a session
+      // Create a session with expiration time
       const session = {
         email,
         created: Date.now(),
-        expires: Date.now() + 24 * 60 * 60 * 1000, // 24 часа
+        expires: Date.now() + AUTH.SESSION_DURATION,
       };
 
-      // Define the cookie with the session data
-      (await cookies()).set('auth_session', JSON.stringify(session), {
-        httpOnly: true,
+      // Set secure HTTP-only cookie with session data
+      (await cookies()).set(AUTH.COOKIE_NAME, JSON.stringify(session), {
+        ...AUTH.COOKIE_OPTIONS,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
         expires: new Date(session.expires),
       });
 

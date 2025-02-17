@@ -1,7 +1,7 @@
 // src/__mocks__/supabase.ts
 import { vi } from 'vitest';
 
-// Мок для createClient
+// Mock implementation of Supabase client
 const mockSupabaseClient = {
   auth: {
     getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
@@ -31,7 +31,7 @@ const mockSupabaseClient = {
 
 export const supabase = mockSupabaseClient;
 
-// Мок для api
+// Mock implementation of API endpoints
 export const api = {
   events: {
     getAll: vi.fn().mockResolvedValue([]),
@@ -92,21 +92,21 @@ export const api = {
   },
 };
 
-// Мок для storage api
+// Mock implementation of storage service
 export const storage = {
   uploadAvatar: vi.fn().mockResolvedValue('https://test.com/avatar.jpg'),
   removeAvatar: vi.fn().mockResolvedValue(undefined),
 };
 
-// Мок для ensureAuthenticated
+// Mock implementation of authentication middleware
 export const ensureAuthenticated = vi.fn().mockResolvedValue(undefined);
 
-// Мокаем @supabase/supabase-js
+// Mock the @supabase/supabase-js package
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn().mockReturnValue(mockSupabaseClient),
 }));
 
-// Обязательно мокаем весь модуль
+// Mock the entire Supabase module to ensure consistent behavior in tests
 vi.mock('@/lib/supabase', () => ({
   supabase: mockSupabaseClient,
   api,

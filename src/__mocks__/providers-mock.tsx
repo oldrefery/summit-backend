@@ -2,13 +2,13 @@
 import React, { createContext } from 'react';
 import { vi } from 'vitest';
 
-// Определяем тип для контекста
+// Type definition for the toast context
 interface ToastContextType {
   showSuccess: (message: string) => void;
   showError: (message: string | Error) => void;
 }
 
-// Создаем моки с правильными типами
+// Initialize mock functions with proper types
 const showSuccessMock = vi.fn(() => void 0);
 const showErrorMock = vi.fn(() => void 0);
 
@@ -17,15 +17,15 @@ export const toastContext = {
   showError: showErrorMock,
 } as ToastContextType;
 
-// Создаем контекст
+// Create the context with default mock values
 export const ToastContext = createContext<ToastContextType>(toastContext);
 
-// Создаем компонент-провайдер
+// Provider component for testing
 export const ToastProvider = ({ children }: { children: React.ReactNode }) => (
   <ToastContext.Provider value={toastContext}>{children}</ToastContext.Provider>
 );
 
-// Мокируем модуль toast-provider
+// Mock the toast-provider module for testing
 vi.mock('@/components/providers/toast-provider', () => ({
   ToastProvider,
   useToastContext: () => toastContext,

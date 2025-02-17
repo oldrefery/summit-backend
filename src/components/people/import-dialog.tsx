@@ -14,13 +14,12 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useToastContext } from '@/components/providers/toast-provider';
+import { IMPORT_DIALOG } from '@/app/constants';
 
 interface ImportDialogProps {
   open: boolean;
   onOpenChangeAction: (open: boolean) => void;
 }
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
   const { createPerson, data: existingPeople } = usePeople();
@@ -28,17 +27,17 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const validateRole = (role: string): PersonRole => {
-    return role.toLowerCase() === 'speaker' ? 'speaker' : 'attendee';
+    return role.toLowerCase() === 'speaker' ? 'speaker' : IMPORT_DIALOG.DEFAULT_ROLE;
   };
 
-  // Функция для нормализации имени
+  // Convert name to lowercase and remove extra spaces
   const normalizeName = (name: string) => name.trim().toLowerCase();
 
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > MAX_FILE_SIZE) {
+    if (file.size > IMPORT_DIALOG.MAX_FILE_SIZE) {
       showError('File size exceeds 5MB limit');
       return;
     }
@@ -56,23 +55,12 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
       const headers = rows[0] as string[];
       const dataRows = rows.slice(1);
 
-      const expectedHeaders = [
-        'Name',
-        'Role',
-        'Title',
-        'Company',
-        'Country',
-        'Email',
-        'Mobile',
-        'Bio',
-      ];
-
-      if (!expectedHeaders.every(h => headers.includes(h))) {
+      if (!IMPORT_DIALOG.EXPECTED_HEADERS.every(h => headers.includes(h))) {
         showError('Invalid Excel file structure. Please check column headers');
         return;
       }
 
-      // Получаем существующие имена
+      // Create a set of existing names for duplicate checking
       const existingNames = new Set(
         existingPeople.map(p => normalizeName(p.name))
       );
@@ -86,7 +74,7 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
 
         return {
           name: name?.toString() || '',
-          role: validateRole(role?.toString() || 'attendee'),
+          role: validateRole(role?.toString() || IMPORT_DIALOG.DEFAULT_ROLE),
           title: title?.toString() || null,
           company: company?.toString() || null,
           country: country?.toString() || null,
@@ -97,7 +85,7 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
         };
       });
 
-      // Фильтрация дубликатов
+      // Skip records that already exist in the database
       for (const person of people) {
         const normalized = normalizeName(person.name);
 
@@ -110,7 +98,7 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
         existingNames.add(normalized);
       }
 
-      // Валидация обязательных полей
+      // Check for required fields
       const errors = uniquePeople
         .map((person, index) => {
           if (!person.name.trim()) {
@@ -125,12 +113,12 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
         return;
       }
 
-      // Сохранение данных
+      // Save valid records to the database
       for (const person of uniquePeople) {
         await createPerson.mutateAsync(person);
       }
 
-      // Формирование итогового сообщения
+      // Prepare result message
       let message = `Successfully imported ${uniquePeople.length} people`;
       if (duplicatesCount > 0) {
         message += `. ${duplicatesCount} duplicates skipped`;

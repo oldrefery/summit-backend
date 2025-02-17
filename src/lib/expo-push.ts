@@ -1,7 +1,6 @@
 // src/lib/expo-push.ts
 import { NotificationFormData } from '@/types/push';
-
-const EXPO_PUSH_API = 'https://exp.host/--/api/v2/push/send';
+import { EXPO_MAX_NOTIFICATIONS_PER_REQUEST, EXPO_PUSH_API_URL } from '@/app/constants';
 
 interface ExpoPushMessage {
   to: string;
@@ -33,12 +32,12 @@ export async function sendPushNotifications(
     priority: 'high',
   }));
 
-  const chunks = chunkArray(messages, 100); // Expo принимает максимум 100 уведомлений за раз
+  const chunks = chunkArray(messages, EXPO_MAX_NOTIFICATIONS_PER_REQUEST);
   const results = { successful: [] as string[], failed: [] as string[] };
 
   for (const chunk of chunks) {
     try {
-      const response = await fetch(EXPO_PUSH_API, {
+      const response = await fetch(EXPO_PUSH_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
