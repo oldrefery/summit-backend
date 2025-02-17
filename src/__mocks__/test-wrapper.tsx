@@ -4,7 +4,7 @@ import { render, RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@/components/providers/toast-provider';
 
-// Создаем QueryClient для тестов
+// Initialize QueryClient with test-specific configuration
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -33,7 +33,7 @@ function Providers({ children }: ProvidersProps) {
   );
 }
 
-// Вспомогательная функция для рендера с провайдерами
+// Utility function to render components with all required providers
 function renderWithProviders(
   ui: React.ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>

@@ -1,11 +1,19 @@
 // src/__mocks__/hooks.ts
 import { vi } from 'vitest';
 import type { Person, Event, Location, Section } from '@/types';
+import {
+  MOCK_DEFAULT_ID,
+  MOCK_DEFAULT_DATE,
+  MOCK_DEFAULT_DATETIME,
+  MOCK_DEFAULT_START_TIME,
+  MOCK_DEFAULT_END_TIME,
+  MOCK_PUSH_STATISTICS
+} from '@/app/constants';
 
-// Используем вспомогательную функцию для создания тестовых данных
+// Utility function for creating test data
 const defaultMutationResult = {
   mutate: vi.fn(),
-  mutateAsync: vi.fn().mockResolvedValue({ id: 1 }),
+  mutateAsync: vi.fn().mockResolvedValue({ id: MOCK_DEFAULT_ID }),
   isPending: false,
   isSuccess: false,
   isError: false,
@@ -112,12 +120,12 @@ export const mockHooks = () => {
   vi.mock('@/hooks/use-push', () => ({
     usePushStatistics: () => ({
       data: {
-        active_tokens: 100,
-        active_users: 50,
-        total_notifications: 1000,
-        total_sent: 500,
-        total_delivered: 450,
-        total_opened: 200
+        active_tokens: MOCK_PUSH_STATISTICS.ACTIVE_TOKENS,
+        active_users: MOCK_PUSH_STATISTICS.ACTIVE_USERS,
+        total_notifications: MOCK_PUSH_STATISTICS.TOTAL_NOTIFICATIONS,
+        total_sent: MOCK_PUSH_STATISTICS.TOTAL_SENT,
+        total_delivered: MOCK_PUSH_STATISTICS.TOTAL_DELIVERED,
+        total_opened: MOCK_PUSH_STATISTICS.TOTAL_OPENED
       },
       isLoading: false,
     }),
@@ -195,46 +203,46 @@ export const mockHooks = () => {
   }));
 };
 
-// Helper для создания тестовых данных
+// Test data factory functions
 export const createTestData = {
   person: (override: Partial<Person> = {}) => ({
-    id: 1,
+    id: MOCK_DEFAULT_ID,
     name: 'Test Person',
     role: 'speaker' as const,
-    created_at: '2024-02-16T00:00:00Z',
+    created_at: MOCK_DEFAULT_DATETIME,
     title: 'Test Title',
     company: 'Test Company',
     ...override,
   }),
 
   event: (override: Partial<Event> = {}) => ({
-    id: 1,
+    id: MOCK_DEFAULT_ID,
     title: 'Test Event',
-    date: '2024-02-16',
-    start_time: '10:00',
-    end_time: '11:00',
-    section_id: 1,
-    created_at: '2024-02-16T00:00:00Z',
+    date: MOCK_DEFAULT_DATE,
+    start_time: MOCK_DEFAULT_START_TIME,
+    end_time: MOCK_DEFAULT_END_TIME,
+    section_id: MOCK_DEFAULT_ID,
+    created_at: MOCK_DEFAULT_DATETIME,
     description: 'Test Description',
     ...override,
   }),
 
   location: (override: Partial<Location> = {}) => ({
-    id: 1,
+    id: MOCK_DEFAULT_ID,
     name: 'Test Location',
-    created_at: '2024-02-16T00:00:00Z',
+    created_at: MOCK_DEFAULT_DATETIME,
     link_map: 'https://test.map',
     ...override,
   }),
 
   section: (override: Partial<Section> = {}) => ({
-    id: 1,
+    id: MOCK_DEFAULT_ID,
     name: 'Test Section',
-    date: '2024-02-16',
-    created_at: '2024-02-16T00:00:00Z',
+    date: MOCK_DEFAULT_DATE,
+    created_at: MOCK_DEFAULT_DATETIME,
     ...override,
   }),
 };
 
-// Helper для мока toast уведомлений
+// Mock function for toast notifications
 export const mockToast = vi.fn();

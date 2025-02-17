@@ -7,13 +7,13 @@ import { queryClient } from './test-wrapper';
 
 expect.extend(matchers);
 
-// Устанавливаем переменные окружения для Supabase
+// Set up Supabase environment variables for testing
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-key';
 process.env.SUPABASE_ANON_EMAIL = 'test@example.com';
 process.env.SUPABASE_ANON_PASSWORD = 'test-password';
 
-// Мок для next/navigation
+// Mock Next.js navigation hooks
 vi.mock('next/navigation', () => ({
   useRouter() {
     return {
@@ -30,11 +30,11 @@ vi.mock('next/navigation', () => ({
   },
 }));
 
-// Этот импорт должен идти после установки переменных окружения
+// Import Supabase mocks after environment variables are set
 import './supabase';
 
 afterEach(() => {
-  cleanup(); // Очистка после каждого теста
-  queryClient.clear(); // Очистка кэша react-query вместо clearQueryCache
+  cleanup(); // Clean up DOM after each test
+  queryClient.clear(); // Clear React Query cache
   vi.clearAllMocks();
 });

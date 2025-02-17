@@ -4,7 +4,7 @@ import { toast } from '@/components/ui/use-toast';
 
 export function showToastError(message: string) {
   toast({
-    id: String(new Date().getTime()), // Генерируем уникальный id
+    id: String(new Date().getTime()),
     title: 'Error',
     description: message,
     variant: 'destructive',
@@ -14,7 +14,7 @@ export function showToastError(message: string) {
 
 export function showToastSuccess(message: string) {
   toast({
-    id: String(new Date().getTime()), // Уникальный id для каждого тоста
+    id: String(new Date().getTime()),
     title: 'Success',
     description: message,
     variant: 'success',
