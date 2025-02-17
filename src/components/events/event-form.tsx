@@ -204,7 +204,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} role="form">
       <Card>
         <CardHeader>
           <CardTitle>
