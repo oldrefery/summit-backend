@@ -1,6 +1,7 @@
 // src/lib/toast-handler.ts
 
 import { toast } from '@/components/ui/use-toast';
+import { FORM } from '@/app/constants';
 
 export function showToastError(message: string) {
   toast({
@@ -8,7 +9,7 @@ export function showToastError(message: string) {
     title: 'Error',
     description: message,
     variant: 'destructive',
-    duration: 5000,
+    duration: FORM.TOAST.ERROR_DURATION,
   });
 }
 
@@ -18,6 +19,6 @@ export function showToastSuccess(message: string) {
     title: 'Success',
     description: message,
     variant: 'success',
-    duration: 3000,
+    duration: FORM.TOAST.SUCCESS_DURATION,
   });
 }

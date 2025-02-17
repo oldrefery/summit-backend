@@ -5,12 +5,10 @@ import { EventForm } from '../event-form';
 import { createTestData, mockHooks } from '@/__mocks__/hooks';
 import { renderWithProviders } from '@/__mocks__/test-wrapper';
 import { mockMutation } from '@/__mocks__/test-submit-setup';
+import { TestDateUtils } from '@/__mocks__/test-constants';
+import { FORM_VALIDATION } from '@/app/constants';
 
-// Initialize test data using mock factories
-const mockLocations = [createTestData.location()];
-const mockSections = [createTestData.section()];
-const mockPeople = [createTestData.person({ role: 'speaker' })];
-
+// Mock navigation
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -18,6 +16,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+// Mock hooks
 vi.mock('@/hooks/use-events', () => ({
   useEvents: () => ({
     data: [],
@@ -27,29 +26,46 @@ vi.mock('@/hooks/use-events', () => ({
   }),
 }));
 
-vi.mock('@/hooks/use-locations', () => ({
-  useLocations: () => ({
-    data: mockLocations,
-    isLoading: false,
-  }),
-}));
+const mockShowError = vi.fn();
 
-vi.mock('@/hooks/use-sections', () => ({
-  useSections: () => ({
-    data: mockSections,
-    isLoading: false,
-  }),
-}));
+const mockLocations = [
+  { id: '1', name: 'Location 1' },
+  { id: '2', name: 'Location 2' },
+];
 
-vi.mock('@/hooks/use-query', () => ({
-  usePeople: () => ({
-    data: mockPeople,
-    isLoading: false,
-  }),
-}));
+// Initialize test data using mock factories with dynamic dates
+const mockSections = [createTestData.section()];
+const mockPeople = [createTestData.person({ role: 'speaker' })];
 
 describe('EventForm', () => {
   const mockOnSuccess = vi.fn();
+
+  // Prepare test data using date utilities
+  const testDate = TestDateUtils.getBaseTestDate();
+  const formattedDate = TestDateUtils.formatDate(testDate);
+  const startTime = '10:00';
+  const endTime = '11:00';
+
+  vi.mock('@/hooks/use-locations', () => ({
+    useLocations: () => ({
+      data: mockLocations,
+      isLoading: false,
+    }),
+  }));
+
+  vi.mock('@/hooks/use-sections', () => ({
+    useSections: () => ({
+      data: [createTestData.section()],
+      isLoading: false,
+    }),
+  }));
+
+  vi.mock('@/hooks/use-query', () => ({
+    usePeople: () => ({
+      data: mockPeople,
+      isLoading: false,
+    }),
+  }));
 
   beforeEach(() => {
     mockHooks();
@@ -77,12 +93,14 @@ describe('EventForm', () => {
     await act(async () => {
       // Fill form with valid test data
       const titleInput = screen.getByLabelText('Title');
+      const dateInput = screen.getByLabelText('Date');
       const startTimeInput = screen.getByLabelText('Start Time');
       const endTimeInput = screen.getByLabelText('End Time');
 
       fireEvent.change(titleInput, { target: { value: 'New Test Event' } });
-      fireEvent.change(startTimeInput, { target: { value: '10:00' } });
-      fireEvent.change(endTimeInput, { target: { value: '11:00' } });
+      fireEvent.change(dateInput, { target: { value: formattedDate } });
+      fireEvent.change(startTimeInput, { target: { value: startTime } });
+      fireEvent.change(endTimeInput, { target: { value: endTime } });
 
       // Submit form using the submit button
       const submitButton = screen.getByRole('button', {
@@ -92,7 +110,17 @@ describe('EventForm', () => {
     });
 
     await waitFor(() => {
-      expect(mockMutation.mutateAsync).toHaveBeenCalled();
+      expect(mockMutation.mutateAsync).toHaveBeenCalledWith({
+        title: 'New Test Event',
+        date: formattedDate,
+        start_time: `${formattedDate}T${startTime}:00Z`,
+        end_time: `${formattedDate}T${endTime}:00Z`,
+        description: null,
+        duration: null,
+        location_id: null,
+        section_id: 1,
+        speaker_ids: [],
+      });
       expect(mockOnSuccess).toHaveBeenCalled();
       expect(mockPush).toHaveBeenCalledWith('/events');
     });
@@ -108,7 +136,10 @@ describe('EventForm', () => {
     await act(async () => {
       // Make changes to the form
       const titleInput = screen.getByLabelText('Title');
+      const dateInput = screen.getByLabelText('Date');
+
       fireEvent.change(titleInput, { target: { value: 'Changed Title' } });
+      fireEvent.change(dateInput, { target: { value: formattedDate } });
 
       // Click the cancel button
       const cancelButton = screen.getByRole('button', { name: /cancel/i });
