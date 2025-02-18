@@ -2,13 +2,39 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ImageUpload } from '../image-upload';
 import type { ImageProps } from 'next/image';
-import type { DetailedHTMLProps, ImgHTMLAttributes } from 'react';
+import React from 'react';
 
 // Mock next/image
 vi.mock('next/image', () => ({
-    default: (props: ImageProps) => {
-        const { unoptimized, src, ...imgProps } = props;
-        return <img {...imgProps} src={src.toString()} />;
+    default: function MockImage(props: ImageProps): React.ReactElement {
+        const { src, alt, className, width, height, unoptimized, ...rest } = props;
+        return (
+            <div
+                data-testid="preview-image"
+                className={className}
+                style={{ width, height }}
+                {...rest}
+            >
+                <div
+                    style={{
+                        position: 'relative',
+                        width: width,
+                        height: height,
+                    }}
+                >
+                    {React.createElement('img', {
+                        src: src.toString(),
+                        alt: alt || 'Preview',
+                        style: {
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                        },
+                        'data-unoptimized': unoptimized,
+                    })}
+                </div>
+            </div>
+        );
     },
 }));
 
