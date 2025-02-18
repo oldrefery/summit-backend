@@ -62,7 +62,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   const [isDirty, setIsDirty] = useState(false); // for tracking form changes
 
   const [formData, setFormData] = useState<FormData>({
-    section_id: initialData?.section_id || sections?.[0]?.id || 0, // Default to first section or 0
+    section_id: initialData?.section_id || sections?.[0]?.id || 0,
     date: initialData?.date || format(new Date(), 'yyyy-MM-dd'),
     title: initialData?.title || '',
     description: initialData?.description || '',
@@ -82,6 +82,8 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
       .map(ep => ep.person?.id?.toString())
       .filter((id): id is string => id !== undefined) || []
   );
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -173,10 +175,10 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   };
 
   const validateForm = () => {
-    const errors: Record<string, string> = {};
+    const newErrors: Record<string, string> = {};
 
     if (!formData.title.trim()) {
-      errors.title = 'Title is required';
+      newErrors.title = 'Title is required';
     }
 
     const eventDate = new Date(formData.date);
@@ -186,14 +188,17 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
     now.setHours(0, 0, 0, 0);
 
     if (eventDate < now) {
-      errors.date = 'Event date cannot be in the past';
+      newErrors.date = 'Event date cannot be in the past';
     }
 
     if (endTime <= startTime) {
-      errors.end_time = 'End time must be after start time';
+      newErrors.end_time = 'End time must be after start time';
+      showError('End time must be after start time');
     }
-    if (Object.keys(errors).length > 0) {
-      Object.values(errors).forEach(error => showError(error));
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
       return false;
     }
 
@@ -218,7 +223,14 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
                 value={formData.title}
                 onChange={handleInputChange}
                 required
+                aria-invalid={!!errors.title}
+                aria-errormessage={errors.title}
               />
+              {errors.title && (
+                <p className="text-sm text-destructive" role="alert">
+                  {errors.title}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="section">Section</Label>
@@ -253,7 +265,14 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
                 value={formData.date}
                 onChange={handleInputChange}
                 required
+                aria-invalid={!!errors.date}
+                aria-errormessage={errors.date}
               />
+              {errors.date && (
+                <p className="text-sm text-destructive" role="alert">
+                  {errors.date}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="start_time">Start Time</Label>
@@ -275,7 +294,14 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
                 value={formData.end_time}
                 onChange={handleInputChange}
                 required
+                aria-invalid={!!errors.end_time}
+                aria-errormessage={errors.end_time}
               />
+              {errors.end_time && (
+                <p className="text-sm text-destructive" role="alert">
+                  {errors.end_time}
+                </p>
+              )}
             </div>
           </div>
 
@@ -285,11 +311,10 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
               value={formData.location_id?.toString()}
               onValueChange={handleLocationChange}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label="Location">
                 <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">No location</SelectItem>
                 {locations?.map(location => (
                   <SelectItem key={location.id} value={location.id.toString()}>
                     {location.name}
@@ -300,61 +325,49 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              name="description"
-              value={formData.description || ''}
-              onChange={handleInputChange}
-              rows={4}
+            <Label htmlFor="speakers">Speakers</Label>
+            <ReactSelect
+              inputId="speakers"
+              aria-label="Speakers"
+              isMulti
+              isLoading={isPeopleLoading}
+              options={availableSpeakers.map(speaker => ({
+                value: speaker.id.toString(),
+                label: speaker.name,
+              }))}
+              value={selectedSpeakerIds.map(id => {
+                const speaker = availableSpeakers.find(s => s.id.toString() === id);
+                return speaker
+                  ? { value: id, label: speaker.name }
+                  : null;
+              }).filter((v): v is OptionType => v !== null)}
+              onChange={(newValue: MultiValue<OptionType>) => {
+                setSelectedSpeakerIds(newValue.map(v => v.value));
+                setIsDirty(true);
+              }}
+              classNames={{
+                control: () => 'flex h-10 w-full rounded-md border border-input bg-secondary px-3 py-1',
+              }}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Speakers</Label>
-            {isPeopleLoading ? (
-              <div>Loading speakers...</div>
-            ) : (
-              <ReactSelect
-                isMulti
-                options={availableSpeakers.map(speaker => ({
-                  label: speaker.name,
-                  value: speaker.id.toString(),
-                }))}
-                value={selectedSpeakerIds.map(id => ({
-                  label:
-                    availableSpeakers.find(s => s.id.toString() === id)?.name ||
-                    '',
-                  value: id,
-                }))}
-                onChange={(newValue: MultiValue<OptionType>) => {
-                  const values = Array.isArray(newValue) ? newValue : [];
-                  setSelectedSpeakerIds(values.map(v => v.value));
-                  setIsDirty(true);
-                }}
-                className="react-select-container"
-                classNamePrefix="react-select"
-                placeholder="Select speakers..."
-              />
-            )}
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              rows={4}
+            />
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end space-x-2">
+        <CardFooter className="flex justify-between">
           <Button type="button" variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            disabled={createEvent.isPending || updateEvent.isPending}
-          >
-            {createEvent.isPending || updateEvent.isPending ? (
-              <span>Saving...</span>
-            ) : initialData ? (
-              'Update'
-            ) : (
-              'Create'
-            )}{' '}
-            Event{' '}
+          <Button type="submit">
+            {initialData ? 'Update Event' : 'Create Event'}
           </Button>
         </CardFooter>
       </Card>

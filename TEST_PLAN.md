@@ -60,9 +60,9 @@ Test forms and components in each functional area.
 - [x] location-filters.tsx ✅ (all checks passed)
 
 #### Events
-- [ ] event-form.tsx
-- [ ] events-table.tsx
-- [ ] event-filters.tsx
+- [x] event-form.tsx ✅ (all checks passed)
+- [x] events-table.tsx ✅ (all checks passed)
+- [x] event-filters.tsx ✅ (all checks passed)
 
 #### Resources
 - [ ] resource-form.tsx
