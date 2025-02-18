@@ -35,8 +35,8 @@ Components to test:
 - [x] textarea.tsx ✅ (all checks passed)
 - [x] table.tsx ✅ (all checks passed)
 - [x] dialog.tsx ✅ (all checks passed)
-- [ ] toast.tsx
-- [ ] image-upload.tsx
+- [x] toast.tsx ✅ (all checks passed)
+- [x] image-upload.tsx ✅ (all checks passed)
 - [ ] badge.tsx
 - [ ] confirm-delete.tsx
 - [ ] alert-dialog.tsx
@@ -98,6 +98,10 @@ Test helper functions in /lib/ directory.
    - Props validation
    - State management tests
    - Error handling tests
+   - Accessibility requirements:
+     - Dialog components must include DialogTitle and DialogDescription
+     - Test proper ARIA attributes and roles
+     - Verify screen reader compatibility
 
 2. Use best practices:
    - Mock external dependencies

@@ -48,6 +48,8 @@ const TestDialog = ({ defaultOpen = false, onOpenChange = () => { } }) => (
 const TestDialogWithChildren: React.FC<{ defaultOpen?: boolean; children?: React.ReactNode }> = ({ defaultOpen, children }) => (
     <Dialog defaultOpen={defaultOpen}>
         <DialogContent>
+            <DialogTitle>Test Dialog</DialogTitle>
+            <DialogDescription>This is a test dialog</DialogDescription>
             {children}
         </DialogContent>
     </Dialog>
@@ -117,6 +119,8 @@ describe('Dialog Components', () => {
             render(
                 <Dialog defaultOpen>
                     <DialogContent className="custom-class">
+                        <DialogTitle>Test Dialog</DialogTitle>
+                        <DialogDescription>This is a test dialog</DialogDescription>
                         <div>Content</div>
                     </DialogContent>
                 </Dialog>
@@ -156,6 +160,7 @@ describe('Dialog Components', () => {
                     <DialogContent>
                         <DialogHeader className="custom-class">
                             <DialogTitle>Title</DialogTitle>
+                            <DialogDescription>This is a test dialog</DialogDescription>
                         </DialogHeader>
                     </DialogContent>
                 </Dialog>
@@ -207,6 +212,7 @@ describe('Dialog Components', () => {
                 <Dialog defaultOpen>
                     <DialogContent>
                         <DialogTitle className="custom-class">Title</DialogTitle>
+                        <DialogDescription>This is a test dialog</DialogDescription>
                     </DialogContent>
                 </Dialog>
             );
@@ -228,6 +234,7 @@ describe('Dialog Components', () => {
             render(
                 <Dialog defaultOpen>
                     <DialogContent>
+                        <DialogTitle>Test Dialog</DialogTitle>
                         <DialogDescription className="custom-class">Description</DialogDescription>
                     </DialogContent>
                 </Dialog>
