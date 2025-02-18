@@ -37,7 +37,7 @@ Components to test:
 - [x] dialog.tsx ✅ (all checks passed)
 - [x] toast.tsx ✅ (all checks passed)
 - [x] image-upload.tsx ✅ (all checks passed)
-- [ ] badge.tsx
+- [x] badge.tsx ✅ (all checks passed)
 - [ ] confirm-delete.tsx
 - [ ] alert-dialog.tsx
 - [ ] skeleton.tsx
