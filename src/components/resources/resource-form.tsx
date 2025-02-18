@@ -77,8 +77,6 @@ export function ResourceForm({
       }
     }
 
-    console.log(errors);
-
     if (Object.keys(errors).length > 0) {
       Object.values(errors).forEach(error => showError(error));
       return false;
@@ -140,7 +138,7 @@ export function ResourceForm({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form role="form" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
               <Label htmlFor="name">

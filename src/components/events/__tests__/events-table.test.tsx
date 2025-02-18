@@ -2,12 +2,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import { EventsTable } from '../events-table';
 import { format } from 'date-fns';
-import type { Event, EventPerson, Location, Person } from '@/types';
+import type { Event, EventPerson, Person } from '@/types';
 import { createTestData } from '@/__mocks__/hooks';
 
 // Мок данных для тестов
 const mockEvents: (Event & {
-    location: Location | null;
     event_people: (EventPerson & { person: Person })[];
 })[] = [
         {
@@ -51,7 +50,7 @@ const mockEvents: (Event & {
                 section_id: 2,
             }),
             section: { name: 'Test Section 2' },
-            location: null,
+            location: undefined,
             event_people: []
         }
     ];
