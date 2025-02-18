@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { vi } from 'vitest';
 import { LocationForm } from '../location-form';
 import { useToastContext } from '@/components/providers/toast-provider';
@@ -89,8 +89,10 @@ describe('LocationForm', () => {
             />
         );
 
-        const submitButton = screen.getByRole('button', { name: 'Create' });
-        fireEvent.click(submitButton);
+        await act(async () => {
+            const form = screen.getByRole('form');
+            await fireEvent.submit(form);
+        });
 
         await waitFor(() => {
             expect(mockShowError).toHaveBeenCalledWith('Name is required');
@@ -106,14 +108,16 @@ describe('LocationForm', () => {
             />
         );
 
-        const nameInput = screen.getByLabelText(/Name/);
-        const mapLinkInput = screen.getByLabelText(/Map Link/);
+        await act(async () => {
+            const nameInput = screen.getByLabelText(/Name/);
+            const mapLinkInput = screen.getByLabelText(/Map Link/);
 
-        fireEvent.change(nameInput, { target: { value: 'New Location' } });
-        fireEvent.change(mapLinkInput, { target: { value: 'https://maps.example.com' } });
+            fireEvent.change(nameInput, { target: { value: 'New Location' } });
+            fireEvent.change(mapLinkInput, { target: { value: 'https://maps.example.com' } });
 
-        const submitButton = screen.getByRole('button', { name: 'Create' });
-        fireEvent.click(submitButton);
+            const form = screen.getByRole('form');
+            await fireEvent.submit(form);
+        });
 
         await waitFor(() => {
             expect(mockCreateLocation).toHaveBeenCalledWith({
@@ -136,11 +140,13 @@ describe('LocationForm', () => {
             />
         );
 
-        const nameInput = screen.getByLabelText(/Name/);
-        fireEvent.change(nameInput, { target: { value: 'Updated Location' } });
+        await act(async () => {
+            const nameInput = screen.getByLabelText(/Name/);
+            fireEvent.change(nameInput, { target: { value: 'Updated Location' } });
 
-        const submitButton = screen.getByRole('button', { name: 'Update' });
-        fireEvent.click(submitButton);
+            const form = screen.getByRole('form');
+            await fireEvent.submit(form);
+        });
 
         await waitFor(() => {
             expect(mockUpdateLocation).toHaveBeenCalledWith({
@@ -180,7 +186,7 @@ describe('LocationForm', () => {
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
     });
 
-    it('handles unsaved changes warning', () => {
+    it('handles unsaved changes warning', async () => {
         global.confirm = vi.fn(() => true);
 
         render(
@@ -190,12 +196,13 @@ describe('LocationForm', () => {
             />
         );
 
-        const nameInput = screen.getByLabelText(/Name/);
-        fireEvent.change(nameInput, { target: { value: 'New Name' } });
+        await act(async () => {
+            const nameInput = screen.getByLabelText(/Name/);
+            fireEvent.change(nameInput, { target: { value: 'New Name' } });
 
-        // Симулируем закрытие диалога через кнопку Cancel
-        const cancelButton = screen.getByRole('button', { name: 'Cancel' });
-        fireEvent.click(cancelButton);
+            const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+            fireEvent.click(cancelButton);
+        });
 
         expect(global.confirm).toHaveBeenCalledWith(
             'You have unsaved changes. Are you sure you want to leave?'

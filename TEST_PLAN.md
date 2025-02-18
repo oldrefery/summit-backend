@@ -109,6 +109,9 @@ Test helper functions in /lib/ directory.
    - Follow AAA pattern (Arrange, Act, Assert)
    - Test edge cases
    - Ensure proper error handling
+   - Wrap all state-changing operations in act()
+   - Use proper assertions for styles and attributes
+   - Handle async operations correctly with await/waitFor
 
 3. Maintain high test coverage:
    - Aim for >80% coverage
@@ -118,4 +121,28 @@ Test helper functions in /lib/ directory.
 4. Use consistent testing patterns:
    - Use React Testing Library
    - Follow component testing best practices
-   - Maintain consistent test structure 
+   - Maintain consistent test structure
+
+## Common Issues and Solutions
+
+1. React State Updates:
+   - Always wrap state-changing operations in act()
+   - This includes: form submissions, input changes, button clicks
+   - Example:
+     ```typescript
+     await act(async () => {
+       fireEvent.change(input, { target: { value: 'test' } });
+       await fireEvent.submit(form);
+     });
+     ```
+
+2. Style Testing:
+   - Don't test implementation details (like class names) directly
+   - Test visual states through proper selectors and attributes
+   - Use proper matchers for style assertions
+
+3. Async Operations:
+   - Always use proper async/await patterns
+   - Use waitFor for assertions that may take time
+   - Handle promises correctly in tests
+
