@@ -42,7 +42,7 @@ Components to test:
 - [x] skeleton.tsx ✅ (all checks passed)
 - [x] label.tsx ✅ (all checks passed)
 - [x] input-search.tsx ✅ (all checks passed)
-- [ ] card.tsx
+- [x] card.tsx ✅ (all checks passed)
 - [ ] toaster.tsx
 
 ### 2. Feature Components Testing
