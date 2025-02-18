@@ -16,9 +16,8 @@
 
 ## Verification Process
 For each component, we must verify:
-1. Tests pass successfully: `npx vitest run [test-file]`
-2. ESLint passes: `npx eslint [test-file]`
-3. TypeScript checks pass: `npx tsc --noEmit`
+1. Tests pass successfully without warnings: `npx vitest run [test-file]`
+2. Production build succeeds: `npm run build` (includes ESLint and TypeScript checks)
 
 Only after all these checks pass, we can mark the component as completed.
 
@@ -39,8 +38,8 @@ Components to test:
 - [x] image-upload.tsx ✅ (all checks passed)
 - [x] badge.tsx ✅ (all checks passed)
 - [x] confirm-delete.tsx ✅ (all checks passed)
-- [ ] alert-dialog.tsx
-- [ ] skeleton.tsx
+- [x] alert-dialog.tsx ✅ (all checks passed)
+- [x] skeleton.tsx ✅ (all checks passed)
 - [ ] label.tsx
 - [ ] toaster.tsx
 - [ ] input-search.tsx
