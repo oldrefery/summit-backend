@@ -1,0 +1,117 @@
+# Testing Plan
+
+## Current Status
+✅ All hooks tests are completed and working:
+- use-announcements.test.ts
+- use-changes.test.ts
+- use-events.test.ts
+- use-locations.test.ts
+- use-markdown.test.ts
+- use-people.test.ts
+- use-push.test.ts
+- use-resources.test.ts
+- use-sections.test.ts
+- use-sort-filter.test.ts
+- use-versions.test.ts
+
+## Verification Process
+For each component, we must verify:
+1. Tests pass successfully: `npx vitest [test-file]`
+2. ESLint passes: `npx eslint [test-file]`
+3. TypeScript checks pass: `npx tsc --noEmit`
+
+Only after all these checks pass, we can mark the component as completed.
+
+## Testing Roadmap
+
+### 1. UI Components Testing
+Priority: High
+These components are used throughout the application and should be tested first.
+
+Components to test:
+- [x] button.tsx ✅ (all checks passed)
+- [x] input.tsx ✅ (all checks passed)
+- [x] select.tsx ✅ (all checks passed)
+- [x] textarea.tsx ✅ (all checks passed)
+- [ ] table.tsx
+- [ ] dialog.tsx
+- [ ] toast.tsx
+- [ ] image-upload.tsx
+- [ ] badge.tsx
+- [ ] confirm-delete.tsx
+- [ ] alert-dialog.tsx
+- [ ] skeleton.tsx
+- [ ] label.tsx
+- [ ] toaster.tsx
+- [ ] input-search.tsx
+- [ ] card.tsx
+
+### 2. Feature Components Testing
+Priority: Medium
+Test forms and components in each functional area.
+
+#### Sections
+- [ ] section-form.tsx
+- [ ] sections-table.tsx
+- [ ] section-filters.tsx
+
+#### Locations
+- [ ] location-form.tsx
+- [ ] locations-table.tsx
+
+#### Events
+- [ ] event-form.tsx
+- [ ] events-table.tsx
+- [ ] event-filters.tsx
+
+#### Resources
+- [ ] resource-form.tsx
+- [ ] resources-table.tsx
+
+### 3. Provider Components Testing
+Priority: High
+Test application providers as they are crucial for app functionality.
+
+- [ ] toast-provider
+- [ ] Other providers
+
+### 4. Page Components Testing
+Priority: Medium
+Test page components in /app/ directory.
+
+- [ ] Layout components
+- [ ] Page components
+- [ ] Client components
+
+### 5. Utility Functions Testing
+Priority: Medium
+Test helper functions in /lib/ directory.
+
+- [ ] supabase.ts
+- [ ] Other utility functions
+
+## Testing Guidelines
+
+1. Each component test should include:
+   - Rendering tests
+   - User interaction tests
+   - Props validation
+   - State management tests
+   - Error handling tests
+
+2. Use best practices:
+   - Mock external dependencies
+   - Use beforeEach for test isolation
+   - Follow AAA pattern (Arrange, Act, Assert)
+   - Test edge cases
+   - Ensure proper error handling
+
+3. Maintain high test coverage:
+   - Aim for >80% coverage
+   - Focus on critical paths
+   - Include error scenarios
+
+4. Use consistent testing patterns:
+   - Use React Testing Library
+   - Follow component testing best practices
+   - Maintain consistent test structure 
