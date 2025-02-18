@@ -16,7 +16,7 @@
 
 ## Verification Process
 For each component, we must verify:
-1. Tests pass successfully: `npx vitest [test-file]`
+1. Tests pass successfully: `npx vitest run [test-file]`
 2. ESLint passes: `npx eslint [test-file]`
 3. TypeScript checks pass: `npx tsc --noEmit`
 
@@ -33,8 +33,8 @@ Components to test:
 - [x] input.tsx ✅ (all checks passed)
 - [x] select.tsx ✅ (all checks passed)
 - [x] textarea.tsx ✅ (all checks passed)
-- [ ] table.tsx
-- [ ] dialog.tsx
+- [x] table.tsx ✅ (all checks passed)
+- [x] dialog.tsx ✅ (all checks passed)
 - [ ] toast.tsx
 - [ ] image-upload.tsx
 - [ ] badge.tsx
