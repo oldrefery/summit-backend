@@ -55,8 +55,9 @@ Test forms and components in each functional area.
 - [x] section-filters.tsx ✅ (all checks passed)
 
 #### Locations
-- [ ] location-form.tsx
-- [ ] locations-table.tsx
+- [x] location-form.tsx ✅ (all checks passed)
+- [x] locations-table.tsx ✅ (all checks passed)
+- [x] location-filters.tsx ✅ (all checks passed)
 
 #### Events
 - [ ] event-form.tsx
