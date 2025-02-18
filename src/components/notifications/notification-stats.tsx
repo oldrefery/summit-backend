@@ -3,15 +3,10 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/supabase';
-import type { PushStatistics } from '@/types/push';
+import { usePushStatistics } from '@/hooks/use-push';
 
 export function NotificationStats() {
-  const { data: stats, isLoading } = useQuery<PushStatistics>({
-    queryKey: ['push_statistics'],
-    queryFn: () => api.push.getStatistics(),
-  });
+  const { data: stats, isLoading } = usePushStatistics();
 
   if (isLoading) {
     return <Skeleton className="h-28" />;

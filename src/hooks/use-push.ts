@@ -7,6 +7,7 @@ import type { NotificationFormData } from '@/types/push';
 export interface PushStatistics {
   active_tokens: number;
   active_users: number;
+  total_users: number;
 }
 
 export interface PushNotification {
@@ -63,7 +64,7 @@ export function usePushStatistics() {
   });
 
   return {
-    data: statisticsQuery.data ?? { active_tokens: 0, active_users: 0 } as PushStatisticsWithRelations,
+    data: statisticsQuery.data ?? { active_tokens: 0, active_users: 0, total_users: 0 } as PushStatisticsWithRelations,
     isLoading: statisticsQuery.isLoading,
     isError: statisticsQuery.isError,
     error: statisticsQuery.error,

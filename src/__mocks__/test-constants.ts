@@ -67,6 +67,7 @@ export const TEST_DATA = {
     PUSH_STATISTICS: {
         ACTIVE_TOKENS: 100,
         ACTIVE_USERS: 50,
+        TOTAL_USERS: 150,
         TOTAL_NOTIFICATIONS: 1000,
         TOTAL_SENT: 500,
         TOTAL_DELIVERED: 450,
