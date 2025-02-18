@@ -26,7 +26,6 @@ export function ImageUpload({ onChange, value, className }: ImageUploadProps) {
       } else {
         // otherwise create full url
         const fullUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${value}`;
-        console.log('Setting preview URL:', fullUrl);
         setPreview(fullUrl);
       }
     } else {
@@ -113,6 +112,7 @@ export function ImageUpload({ onChange, value, className }: ImageUploadProps) {
               accept="image/jpeg,image/png"
               onChange={handleFileChange}
               className="hidden"
+              data-testid="photo-upload"
             />
           </label>
         )}

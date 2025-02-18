@@ -719,6 +719,22 @@ export const api = {
       return data as (Announcement & { person: Person })[];
     },
 
+    async getById(id: number) {
+      const { data, error } = await supabase
+        .from('announcements')
+        .select(
+          `
+          *,
+          person:people(*)
+        `
+        )
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      return data as Announcement & { person: Person };
+    },
+
     async create(announcement: Omit<Announcement, 'id' | 'created_at'>) {
       const { data, error } = await supabase
         .from('announcements')
@@ -733,6 +749,27 @@ export const api = {
 
       if (error) {
         console.error('Failed to create announcement:', error);
+        throw error;
+      }
+
+      return data as Announcement & { person: Person };
+    },
+
+    async update(id: number, updates: Partial<Omit<Announcement, 'id' | 'created_at'>>) {
+      const { data, error } = await supabase
+        .from('announcements')
+        .update(updates)
+        .eq('id', id)
+        .select(
+          `
+          *,
+          person:people(*)
+        `
+        )
+        .single();
+
+      if (error) {
+        console.error('Failed to update announcement:', error);
         throw error;
       }
 

@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { useToastContext } from '@/components/providers/toast-provider';
 import { EXCEL_IMPORT } from '@/app/constants';
@@ -142,14 +143,20 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Import People from Excel</DialogTitle>
+          <DialogDescription>
+            Upload an Excel file with people data. The file should include required columns.
+          </DialogDescription>
         </DialogHeader>
         <div className="py-6">
+          <label htmlFor="file-upload" className="sr-only">Choose file</label>
           <input
+            id="file-upload"
             type="file"
             accept=".xlsx,.xls"
             onChange={handleFileUpload}
             disabled={isProcessing}
             className="w-full"
+            aria-label="file"
           />
           <p className="text-sm text-muted-foreground mt-2">
             Excel file should have columns: Name*, Role, Title, Company,

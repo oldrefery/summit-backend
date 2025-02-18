@@ -49,7 +49,7 @@ export function SectionFilters({
             className="min-w-[100px]"
           >
             Name{' '}
-            {sortKey === 'name' && <ArrowUpDown className="h-4 w-4 ml-2" />}
+            {sortKey === 'name' && <ArrowUpDown data-testid="arrow-icon" className="h-4 w-4 ml-2" />}
           </Button>
           <Button
             variant={sortKey === 'date' ? 'default' : 'outline'}

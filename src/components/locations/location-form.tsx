@@ -114,7 +114,7 @@ export function LocationForm({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form role="form" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
               <Label htmlFor="name">

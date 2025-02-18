@@ -66,13 +66,13 @@ export default function PagesPage() {
       <div className="p-8">
         <Card>
           <CardHeader>
-            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-8 w-48" role="status" />
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <Skeleton className="h-10 w-full max-w-md" />
+              <Skeleton className="h-10 w-full max-w-md" role="status" />
               {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
+                <Skeleton key={i} className="h-16 w-full" role="status" />
               ))}
             </div>
           </CardContent>

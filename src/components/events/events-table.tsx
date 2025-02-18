@@ -27,11 +27,23 @@ interface EventsTableProps {
 export function EventsTable({ events, onDeleteAction }: EventsTableProps) {
   const formatEventTime = (time: string) => {
     try {
+      // Если время невалидное, возвращаем сообщение об ошибке
+      if (!time || time === 'invalid') {
+        return 'Invalid time';
+      }
+
       // Проверяем, является ли время полной ISO строкой
       if (time.includes('T')) {
         const dateTime = parseISO(time);
         return format(dateTime, 'HH:mm');
       }
+
+      // Проверяем формат времени (HH:mm:ss)
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
+      if (!timeRegex.test(time)) {
+        return 'Invalid time';
+      }
+
       // Если это просто время, добавляем фиктивную дату
       const dateTime = parse(time, 'HH:mm:ss', new Date());
       return format(dateTime, 'HH:mm');
@@ -72,6 +84,7 @@ export function EventsTable({ events, onDeleteAction }: EventsTableProps) {
                     size="icon"
                     variant="ghost"
                     onClick={() => onDeleteAction(event)}
+                    aria-label="Delete event"
                   >
                     <TrashIcon className="w-4 h-4" />
                   </Button>

@@ -112,16 +112,26 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-push', () => ({
     usePushStatistics: () => ({
-      data: createTestData.pushStatistics() as PushStatisticsWithRelations,
+      data: {
+        active_tokens: TEST_DATA.PUSH_STATISTICS.ACTIVE_TOKENS,
+        active_users: TEST_DATA.PUSH_STATISTICS.ACTIVE_USERS,
+        total_users: TEST_DATA.PUSH_STATISTICS.TOTAL_USERS,
+      } as PushStatisticsWithRelations,
       isLoading: false,
+      isError: false,
+      error: null,
     }),
     useNotificationHistory: () => ({
       data: [createTestData.pushNotification()] as PushNotificationWithRelations[],
       isLoading: false,
+      isError: false,
+      error: null,
     }),
     usePushUsers: () => ({
       data: [createTestData.pushUser()] as PushUserWithRelations[],
       isLoading: false,
+      isError: false,
+      error: null,
     }),
     useSendNotification: () => defaultMutationResult,
   }));

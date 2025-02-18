@@ -263,7 +263,7 @@ export function PersonForm({
               : 'Add new person details below.'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
+        <form role="form" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <ImageUpload
               onChange={handlePhotoChange}

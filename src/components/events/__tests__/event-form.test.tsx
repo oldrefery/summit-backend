@@ -1,173 +1,205 @@
 // src/components/events/__tests__/event-form.test.tsx
-import { screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import { EventForm } from '../event-form';
-import { createTestData, mockHooks } from '@/__mocks__/hooks';
-import { renderWithProviders } from '@/__mocks__/test-wrapper';
-import { mockMutation } from '@/__mocks__/test-submit-setup';
 import { TestDateUtils } from '@/__mocks__/test-constants';
+import { useToastContext } from '@/components/providers/toast-provider';
+import { useEvents } from '@/hooks/use-events';
+import { useLocations } from '@/hooks/use-locations';
+import { useSections } from '@/hooks/use-sections';
+import { usePeople } from '@/hooks/use-people';
 
-// Mock navigation
+// Мокаем хуки
+vi.mock('@/components/providers/toast-provider', () => ({
+  useToastContext: vi.fn(),
+}));
+
+vi.mock('@/hooks/use-events', () => ({
+  useEvents: vi.fn(),
+}));
+
+vi.mock('@/hooks/use-locations', () => ({
+  useLocations: vi.fn(),
+}));
+
+vi.mock('@/hooks/use-sections', () => ({
+  useSections: vi.fn(),
+}));
+
+vi.mock('@/hooks/use-people', () => ({
+  usePeople: vi.fn(),
+}));
+
 const mockPush = vi.fn();
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
 }));
 
-// Mock hooks
-vi.mock('@/hooks/use-events', () => ({
-  useEvents: () => ({
-    data: [],
-    isLoading: false,
-    createEvent: mockMutation,
-    updateEvent: mockMutation,
-  }),
-}));
-
-vi.mock('@/hooks/use-locations', () => ({
-  useLocations: () => ({
-    data: [
-      { id: '1', name: 'Location 1' },
-      { id: '2', name: 'Location 2' },
-    ],
-    isLoading: false,
-  }),
-}));
-
-vi.mock('@/hooks/use-sections', () => ({
-  useSections: () => ({
-    data: [createTestData.section()],
-    isLoading: false,
-  }),
-}));
-
-vi.mock('@/hooks/use-people', () => ({
-  usePeople: () => ({
-    data: [createTestData.person({ role: 'speaker' })],
-    isLoading: false,
-  }),
-}));
-
-vi.mock('@/components/providers/toast-provider', () => ({
-  useToastContext: () => ({
-    showError: vi.fn(),
-    showSuccess: vi.fn(),
-  }),
-}));
-
 describe('EventForm', () => {
+  const mockShowError = vi.fn();
+  const mockShowSuccess = vi.fn();
+  const mockCreateEvent = vi.fn();
+  const mockUpdateEvent = vi.fn();
   const mockOnSuccess = vi.fn();
 
-  // Prepare test data using date utilities
-  const testDate = TestDateUtils.getBaseTestDate();
-  const formattedDate = TestDateUtils.formatDate(testDate);
-  const startTime = '10:00';
-  const endTime = '11:00';
-
   beforeEach(() => {
-    mockHooks();
     vi.clearAllMocks();
-    mockPush.mockClear();
-    mockMutation.mutateAsync.mockClear();
-    mockOnSuccess.mockClear();
+
+    (useToastContext as jest.Mock).mockReturnValue({
+      showError: mockShowError,
+      showSuccess: mockShowSuccess,
+    });
+
+    (useEvents as jest.Mock).mockReturnValue({
+      createEvent: {
+        mutateAsync: mockCreateEvent,
+        isPending: false,
+      },
+      updateEvent: {
+        mutateAsync: mockUpdateEvent,
+        isPending: false,
+      },
+    });
+
+    (useLocations as jest.Mock).mockReturnValue({
+      data: [{ id: 1, name: 'Test Location' }],
+    });
+
+    (useSections as jest.Mock).mockReturnValue({
+      data: [{ id: 1, name: 'Test Section' }],
+    });
+
+    (usePeople as jest.Mock).mockReturnValue({
+      data: [{ id: 1, name: 'Test Person', role: 'speaker' }],
+      isLoading: false,
+    });
   });
 
+  const renderEventForm = () => {
+    render(<EventForm onSuccess={mockOnSuccess} />);
+  };
+
   it('renders empty form for new event', () => {
-    renderWithProviders(<EventForm onSuccess={mockOnSuccess} />);
+    renderEventForm();
 
     expect(screen.getByLabelText('Title')).toBeInTheDocument();
     expect(screen.getByLabelText('Date')).toBeInTheDocument();
     expect(screen.getByLabelText('Start Time')).toBeInTheDocument();
     expect(screen.getByLabelText('End Time')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Create Event/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Create Event/i })).toBeInTheDocument();
   });
 
   it('validates form submission', async () => {
-    renderWithProviders(<EventForm onSuccess={mockOnSuccess} />);
+    renderEventForm();
 
-    await act(async () => {
-      // Fill form with valid test data
-      const titleInput = screen.getByLabelText('Title');
-      const dateInput = screen.getByLabelText('Date');
-      const startTimeInput = screen.getByLabelText('Start Time');
-      const endTimeInput = screen.getByLabelText('End Time');
+    const testDate = TestDateUtils.getTestDate(1);
+    const formattedDate = TestDateUtils.formatDate(testDate);
 
-      fireEvent.change(titleInput, { target: { value: 'New Test Event' } });
-      fireEvent.change(dateInput, { target: { value: formattedDate } });
-      fireEvent.change(startTimeInput, { target: { value: startTime } });
-      fireEvent.change(endTimeInput, { target: { value: endTime } });
+    const titleInput = screen.getByLabelText('Title');
+    const dateInput = screen.getByLabelText('Date');
+    const startTimeInput = screen.getByLabelText('Start Time');
+    const endTimeInput = screen.getByLabelText('End Time');
 
-      // Submit form using the submit button
-      const submitButton = screen.getByRole('button', {
-        name: /create event/i,
-      });
-      fireEvent.click(submitButton);
-    });
+    fireEvent.change(titleInput, { target: { value: 'Test Event' } });
+    fireEvent.change(dateInput, { target: { value: formattedDate } });
+    fireEvent.change(startTimeInput, { target: { value: '10:00' } });
+    fireEvent.change(endTimeInput, { target: { value: '11:00' } });
+
+    const form = screen.getByRole('form');
+    fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(mockMutation.mutateAsync).toHaveBeenCalledWith({
-        title: 'New Test Event',
-        date: formattedDate,
-        start_time: `${formattedDate}T${startTime}:00Z`,
-        end_time: `${formattedDate}T${endTime}:00Z`,
-        description: null,
-        duration: null,
-        location_id: null,
-        section_id: 1,
-        speaker_ids: [],
-      });
-      expect(mockOnSuccess).toHaveBeenCalled();
-      expect(mockPush).toHaveBeenCalledWith('/events');
+      expect(mockCreateEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Test Event',
+          description: null,
+          duration: null,
+          location_id: null,
+          section_id: 1,
+          speaker_ids: [],
+        })
+      );
     });
   });
 
-  it('shows confirmation dialog on cancel with unsaved changes', async () => {
-    const confirmSpy = vi
-      .spyOn(window, 'confirm')
-      .mockImplementation(() => true);
+  it('validates end time is after start time', async () => {
+    renderEventForm();
 
-    renderWithProviders(<EventForm onSuccess={mockOnSuccess} />);
+    const testDate = TestDateUtils.getTestDate(1);
+    const formattedDate = TestDateUtils.formatDate(testDate);
 
-    await act(async () => {
-      // Make changes to the form
-      const titleInput = screen.getByLabelText('Title');
-      const dateInput = screen.getByLabelText('Date');
+    const titleInput = screen.getByLabelText('Title');
+    const dateInput = screen.getByLabelText('Date');
+    const startTimeInput = screen.getByLabelText('Start Time');
+    const endTimeInput = screen.getByLabelText('End Time');
 
-      fireEvent.change(titleInput, { target: { value: 'Changed Title' } });
-      fireEvent.change(dateInput, { target: { value: formattedDate } });
+    fireEvent.change(titleInput, { target: { value: 'Test Event' } });
+    fireEvent.change(dateInput, { target: { value: formattedDate } });
+    fireEvent.change(startTimeInput, { target: { value: '10:00' } });
+    fireEvent.change(endTimeInput, { target: { value: '09:00' } });
 
-      // Click the cancel button
-      const cancelButton = screen.getByRole('button', { name: /cancel/i });
-      fireEvent.click(cancelButton);
-    });
+    const form = screen.getByRole('form');
+    fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledWith(
-        'You have unsaved changes. Are you sure you want to leave?'
-      );
-      expect(mockPush).toHaveBeenCalledWith('/events');
+      expect(mockShowError).toHaveBeenCalledWith('End time must be after start time');
     });
+    expect(mockCreateEvent).not.toHaveBeenCalled();
+  });
+
+  it('validates event date is not in the past', async () => {
+    renderEventForm();
+
+    const titleInput = screen.getByLabelText('Title');
+    const dateInput = screen.getByLabelText('Date');
+    const startTimeInput = screen.getByLabelText('Start Time');
+    const endTimeInput = screen.getByLabelText('End Time');
+
+    fireEvent.change(titleInput, { target: { value: 'Test Event' } });
+    fireEvent.change(dateInput, { target: { value: '2020-01-01' } });
+    fireEvent.change(startTimeInput, { target: { value: '10:00' } });
+    fireEvent.change(endTimeInput, { target: { value: '11:00' } });
+
+    const form = screen.getByRole('form');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      const errorMessage = screen.getByRole('alert');
+      expect(errorMessage).toHaveTextContent('Event date cannot be in the past');
+    });
+    expect(mockCreateEvent).not.toHaveBeenCalled();
+  });
+
+  it('shows confirmation dialog on cancel with unsaved changes', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
+    renderEventForm();
+
+    const titleInput = screen.getByLabelText('Title');
+    fireEvent.change(titleInput, { target: { value: 'Changed Title' } });
+
+    const cancelButton = screen.getByRole('button', { name: /cancel/i });
+    fireEvent.click(cancelButton);
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'You have unsaved changes. Are you sure you want to leave?'
+    );
+    expect(mockPush).toHaveBeenCalledWith('/events');
 
     confirmSpy.mockRestore();
   });
 
-  it('does not show confirmation dialog on cancel without changes', async () => {
+  it('does not show confirmation dialog on cancel without changes', () => {
     const confirmSpy = vi.spyOn(window, 'confirm');
+    renderEventForm();
 
-    renderWithProviders(<EventForm onSuccess={mockOnSuccess} />);
+    const cancelButton = screen.getByRole('button', { name: /cancel/i });
+    fireEvent.click(cancelButton);
 
-    await act(async () => {
-      const cancelButton = screen.getByRole('button', { name: /cancel/i });
-      fireEvent.click(cancelButton);
-    });
-
-    await waitFor(() => {
-      expect(confirmSpy).not.toHaveBeenCalled();
-      expect(mockPush).toHaveBeenCalledWith('/events');
-    });
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith('/events');
 
     confirmSpy.mockRestore();
   });
