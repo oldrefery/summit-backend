@@ -25,7 +25,7 @@ interface ProvidersProps {
   children: React.ReactNode;
 }
 
-function Providers({ children }: ProvidersProps) {
+export function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>{children}</ToastProvider>

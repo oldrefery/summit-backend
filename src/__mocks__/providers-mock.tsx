@@ -9,8 +9,8 @@ interface ToastContextType {
 }
 
 // Initialize mock functions with proper types
-const showSuccessMock = vi.fn(() => void 0);
-const showErrorMock = vi.fn(() => void 0);
+export const showSuccessMock = vi.fn();
+export const showErrorMock = vi.fn();
 
 export const toastContext = {
   showSuccess: showSuccessMock,
@@ -30,3 +30,6 @@ vi.mock('@/components/providers/toast-provider', () => ({
   ToastProvider,
   useToastContext: () => toastContext,
 }));
+
+// Export mockToast for direct use in tests
+export const mockToast = vi.fn();

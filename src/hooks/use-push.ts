@@ -55,7 +55,8 @@ export function usePushStatistics() {
     queryKey: ['push_statistics'],
     queryFn: async () => {
       try {
-        return await api.push.getStatistics();
+        const data = await api.push.getStatistics();
+        return data || { active_tokens: 0, active_users: 0, total_users: 0 };
       } catch (error) {
         showError(error);
         throw error;
@@ -78,7 +79,8 @@ export function useNotificationHistory() {
     queryKey: ['push_notifications'],
     queryFn: async () => {
       try {
-        return await api.push.getNotificationHistory();
+        const data = await api.push.getNotificationHistory();
+        return data || [];
       } catch (error) {
         showError(error);
         throw error;
@@ -101,7 +103,8 @@ export function usePushUsers() {
     queryKey: ['push_users'],
     queryFn: async () => {
       try {
-        return await api.push.getUsers();
+        const data = await api.push.getUsers();
+        return data || [];
       } catch (error) {
         showError(error);
         throw error;
