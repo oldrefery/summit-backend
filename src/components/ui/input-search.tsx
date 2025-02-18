@@ -8,7 +8,10 @@ interface InputSearchProps extends InputHTMLAttributes<HTMLInputElement> {
 export function InputSearch({ className, ...props }: InputSearchProps) {
   return (
     <div className="relative">
-      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+      <Search
+        data-testid="search-icon"
+        className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"
+      />
       <Input
         {...props}
         className={`pl-8 ${className}`}

@@ -41,9 +41,9 @@ Components to test:
 - [x] alert-dialog.tsx ✅ (all checks passed)
 - [x] skeleton.tsx ✅ (all checks passed)
 - [x] label.tsx ✅ (all checks passed)
-- [ ] toaster.tsx
-- [ ] input-search.tsx
+- [x] input-search.tsx ✅ (all checks passed)
 - [ ] card.tsx
+- [ ] toaster.tsx
 
 ### 2. Feature Components Testing
 Priority: Medium
