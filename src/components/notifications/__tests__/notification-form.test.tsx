@@ -2,7 +2,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import { NotificationForm } from '../notification-form';
 import { usePushUsers, useSendNotification } from '@/hooks/use-push';
-import { createTestData } from '@/__mocks__/hooks';
 
 // Mock the hooks
 vi.mock('@/hooks/use-push', () => ({
@@ -44,8 +43,8 @@ describe('NotificationForm', () => {
     const mockOnOpenChangeAction = vi.fn();
     const mockSendNotification = vi.fn();
     const mockUsers = [
-        createTestData.pushUser({ id: 1 }),
-        createTestData.pushUser({ id: 2 }),
+        { id: 1, device_info: { deviceName: 'Device 1', osName: 'iOS' } },
+        { id: 2, device_info: { deviceName: 'Device 2', osName: 'Android' } },
     ];
 
     beforeEach(() => {

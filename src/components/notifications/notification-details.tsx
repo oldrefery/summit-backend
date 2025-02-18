@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import type { NotificationHistory } from '@/types/push';
 import { format } from 'date-fns';
@@ -28,6 +29,9 @@ export function NotificationDetails({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Notification Details</DialogTitle>
+          <DialogDescription>
+            View detailed information about the notification
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
