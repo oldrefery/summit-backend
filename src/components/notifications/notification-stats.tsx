@@ -9,7 +9,7 @@ export function NotificationStats() {
   const { data: stats, isLoading } = usePushStatistics();
 
   if (isLoading) {
-    return <Skeleton className="h-28" />;
+    return <Skeleton className="h-28" role="status" />;
   }
 
   const metrics = [

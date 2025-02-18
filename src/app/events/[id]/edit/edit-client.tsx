@@ -16,15 +16,15 @@ export default function EditEventClient({ id }: EditEventClientProps) {
   if (isLoading) {
     return (
       <div className="p-8">
-        <Skeleton className="h-8 w-64 mb-8" />
+        <Skeleton className="h-8 w-64 mb-8" role="status" />
         <Card>
           <CardHeader>
-            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-6 w-3/4" role="status" />
           </CardHeader>
           <CardContent className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" role="status" />
+            <Skeleton className="h-10 w-full" role="status" />
+            <Skeleton className="h-10 w-full" role="status" />
           </CardContent>
         </Card>
       </div>

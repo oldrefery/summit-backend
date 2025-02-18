@@ -125,7 +125,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   {stat.loading ? (
-                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-8 w-20" role="status" />
                   ) : (
                     <>
                       <div className="text-2xl font-bold">{stat.value}</div>
@@ -157,9 +157,9 @@ export default function DashboardPage() {
           <CardContent>
             {changesLoading ? (
               <div className="space-y-2">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" role="status" />
+                <Skeleton className="h-12 w-full" role="status" />
+                <Skeleton className="h-12 w-full" role="status" />
               </div>
             ) : Object.entries(changes).some(([, count]) => count > 0) ? (
               <div className="space-y-4">

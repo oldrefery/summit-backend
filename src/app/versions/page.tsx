@@ -24,7 +24,7 @@ export default function VersionsPage() {
           {isLoading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-20 w-full" />
+                <Skeleton key={i} className="h-20 w-full" role="status" />
               ))}
             </div>
           ) : (
