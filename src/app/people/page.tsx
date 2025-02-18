@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { usePeople } from '@/hooks/use-query';
+import { usePeople } from '@/hooks/use-people';
 import { Person } from '@/types';
 import { PersonForm } from '@/components/people/person-form';
 import { Button } from '@/components/ui/button';

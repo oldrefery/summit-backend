@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { X, Upload } from 'lucide-react';
 import Image from 'next/image';
 import { useToastContext } from '@/components/providers/toast-provider';
-import { MAX_FILE_SIZE_BYTES } from '@/app/constants';
+import { FILE_LIMITS } from '@/app/constants';
 
 interface ImageUploadProps {
   onChange: (file: File | null) => void;
@@ -43,9 +43,9 @@ export function ImageUpload({ onChange, value, className }: ImageUploadProps) {
       }
 
       // size validation
-      if (file.size > MAX_FILE_SIZE_BYTES) {
+      if (file.size > FILE_LIMITS.DEFAULT) {
         showError(
-          `File size should not exceed ${Math.floor(MAX_FILE_SIZE_BYTES / (1024 * 1024))}MB`
+          `File size should not exceed ${Math.floor(FILE_LIMITS.DEFAULT / (1024 * 1024))}MB`
         );
         return;
       }

@@ -3,7 +3,7 @@
 
 import { ChangeEvent, useState } from 'react';
 import readXlsxFile from 'read-excel-file';
-import { usePeople } from '@/hooks/use-query';
+import { usePeople } from '@/hooks/use-people';
 import { PersonFormData, PersonRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +14,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useToastContext } from '@/components/providers/toast-provider';
-import { IMPORT_DIALOG } from '@/app/constants';
+import { EXCEL_IMPORT } from '@/app/constants';
 
 interface ImportDialogProps {
   open: boolean;
@@ -27,7 +27,7 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const validateRole = (role: string): PersonRole => {
-    return role.toLowerCase() === 'speaker' ? 'speaker' : IMPORT_DIALOG.DEFAULT_ROLE;
+    return role.toLowerCase() === 'speaker' ? 'speaker' : EXCEL_IMPORT.DEFAULT_ROLE;
   };
 
   // Convert name to lowercase and remove extra spaces
@@ -37,7 +37,7 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > IMPORT_DIALOG.MAX_FILE_SIZE) {
+    if (file.size > EXCEL_IMPORT.MAX_FILE_SIZE) {
       showError('File size exceeds 5MB limit');
       return;
     }
@@ -55,7 +55,7 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
       const headers = rows[0] as string[];
       const dataRows = rows.slice(1);
 
-      if (!IMPORT_DIALOG.EXPECTED_HEADERS.every(h => headers.includes(h))) {
+      if (!EXCEL_IMPORT.HEADERS.every((header: string) => headers.includes(header))) {
         showError('Invalid Excel file structure. Please check column headers');
         return;
       }
@@ -74,7 +74,7 @@ export function ImportDialog({ open, onOpenChangeAction }: ImportDialogProps) {
 
         return {
           name: name?.toString() || '',
-          role: validateRole(role?.toString() || IMPORT_DIALOG.DEFAULT_ROLE),
+          role: validateRole(role?.toString() || EXCEL_IMPORT.DEFAULT_ROLE),
           title: title?.toString() || null,
           company: company?.toString() || null,
           country: country?.toString() || null,

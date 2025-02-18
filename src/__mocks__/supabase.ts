@@ -85,6 +85,12 @@ export const api = {
       active_users: 0,
     }),
   },
+  announcements: {
+    getAll: vi.fn().mockResolvedValue([]),
+    create: vi.fn().mockResolvedValue({}),
+    update: vi.fn().mockResolvedValue({}),
+    delete: vi.fn().mockResolvedValue({}),
+  },
   versions: {
     getAll: vi.fn().mockResolvedValue([]),
     rollback: vi.fn().mockResolvedValue({}),

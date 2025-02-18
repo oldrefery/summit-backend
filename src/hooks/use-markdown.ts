@@ -1,35 +1,49 @@
 // src/hooks/use-markdown.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/supabase';
-import type { MarkdownPage } from '@/types';
 import { useToastContext } from '@/components/providers/toast-provider';
+import type { MarkdownPage } from '@/types';
 
-interface MarkdownPageFormData
-  extends Omit<MarkdownPage, 'id' | 'created_at' | 'updated_at'> {
-  slug: string;
-  title: string;
-  content: string;
-  published: boolean;
-}
+export type MarkdownPageWithRelations = MarkdownPage;
 
-export function useMarkdownPages() {
-  const { showError, showSuccess } = useToastContext();
-  const {
-    data = [],
-    isLoading,
-    isError,
-    error,
-  } = useQuery({
-    queryKey: ['pages'],
-    queryFn: () => api.markdown.getAll(),
+export type MarkdownPageFormData = Omit<MarkdownPage, 'id' | 'created_at' | 'updated_at'>;
+
+export function useMarkdownPages<T extends string | undefined = undefined>(slug?: T) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToastContext();
+
+  // Query for all pages
+  const pagesQuery = useQuery({
+    queryKey: ['markdown_pages'],
+    queryFn: async () => {
+      try {
+        return await api.markdown.getAll();
+      } catch (error) {
+        showError(error);
+        throw error;
+      }
+    },
   });
 
-  const queryClient = useQueryClient();
+  // Query for single page by slug
+  const pageQuery = useQuery({
+    queryKey: ['markdown_pages', slug],
+    queryFn: async () => {
+      if (!slug) return null;
+      try {
+        return await api.markdown.getBySlug(slug);
+      } catch (error) {
+        showError(error);
+        throw error;
+      }
+    },
+    enabled: !!slug,
+  });
 
   const createMarkdownPage = useMutation({
     mutationFn: (page: MarkdownPageFormData) => api.markdown.create(page),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['pages'] });
+      await queryClient.invalidateQueries({ queryKey: ['markdown_pages'] });
       showSuccess('Page created successfully');
     },
     onError: error => {
@@ -46,7 +60,7 @@ export function useMarkdownPages() {
       data: Partial<MarkdownPageFormData>;
     }) => api.markdown.update(id, data),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['pages'] });
+      await queryClient.invalidateQueries({ queryKey: ['markdown_pages'] });
       showSuccess('Page updated successfully');
     },
     onError: error => {
@@ -55,9 +69,9 @@ export function useMarkdownPages() {
   });
 
   const deleteMarkdownPage = useMutation({
-    mutationFn: (id: number) => api.markdown.delete(id),
+    mutationFn: api.markdown.delete,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['pages'] });
+      await queryClient.invalidateQueries({ queryKey: ['markdown_pages'] });
       showSuccess('Page deleted successfully');
     },
     onError: error => {
@@ -66,20 +80,14 @@ export function useMarkdownPages() {
   });
 
   return {
-    data,
-    isLoading,
-    isError,
-    error,
+    // Return single page data if slug is provided, otherwise return array
+    data: (slug ? pageQuery.data : pagesQuery.data ?? []) as T extends string ? MarkdownPageWithRelations | null : MarkdownPageWithRelations[],
+    isLoading: slug ? pageQuery.isLoading : pagesQuery.isLoading,
+    isError: slug ? pageQuery.isError : pagesQuery.isError,
+    error: slug ? pageQuery.error : pagesQuery.error,
+    // CRUD operations
     createMarkdownPage,
     updateMarkdownPage,
     deleteMarkdownPage,
   };
-}
-
-export function useMarkdownPage(slug: string) {
-  return useQuery({
-    queryKey: ['pages', slug],
-    queryFn: () => api.markdown.getBySlug(slug),
-    enabled: !!slug,
-  });
 }

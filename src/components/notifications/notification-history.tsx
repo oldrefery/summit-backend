@@ -13,7 +13,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNotificationHistory } from '@/hooks/use-push';
-import type { NotificationHistory as NotificationHistoryType } from '@/types/push';
+import type { NotificationHistory } from '@/types/push';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { NotificationDetails } from './notification-details';
 
 export function NotificationHistory() {
   const { data: notifications = [], isLoading } = useNotificationHistory();
@@ -29,9 +32,10 @@ export function NotificationHistory() {
         <TableHeader>
           <TableRow>
             <TableHead>Title</TableHead>
-            <TableHead>Target</TableHead>
             <TableHead>Sent At</TableHead>
+            <TableHead>Target</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -48,45 +52,48 @@ export function NotificationHistory() {
 }
 
 interface NotificationRowProps {
-  notification: NotificationHistoryType;
+  notification: NotificationHistory;
 }
 
-function NotificationRow({ notification }: NotificationRowProps) {
-  const total = notification.success_count + notification.failure_count;
-  const successRate =
-    total > 0 ? Math.round((notification.success_count / total) * 100) : 0;
+export function NotificationRow({ notification }: NotificationRowProps) {
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   return (
     <TableRow>
-      <TableCell>
-        <div>
-          <div className="font-medium">{notification.title}</div>
-          <div className="text-sm text-muted-foreground">
-            {notification.body}
-          </div>
-        </div>
-      </TableCell>
-      <TableCell>
-        {notification.target_type === 'all' ? (
-          <Badge>All Users</Badge>
-        ) : (
-          <Badge variant="secondary">
-            {notification.target_users.length} users
-          </Badge>
-        )}
-      </TableCell>
+      <TableCell>{notification.title}</TableCell>
       <TableCell>{format(new Date(notification.sent_at), 'PPp')}</TableCell>
       <TableCell>
-        <div className="space-y-1">
-          <Badge variant={successRate >= 90 ? 'default' : 'destructive'}>
-            {successRate}% delivered
+        {notification.target_type === 'all'
+          ? 'All Users'
+          : `${notification.target_users.length} users`}
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <Badge variant="default">
+            {notification.success_count} delivered
           </Badge>
-          <div className="text-xs text-muted-foreground">
-            {notification.success_count} successful,{' '}
-            {notification.failure_count} failed
-          </div>
+          {notification.failure_count > 0 && (
+            <Badge variant="destructive">
+              {notification.failure_count} failed
+            </Badge>
+          )}
         </div>
       </TableCell>
+      <TableCell>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsDetailsOpen(true)}
+        >
+          View Details
+        </Button>
+      </TableCell>
+
+      <NotificationDetails
+        notification={notification}
+        open={isDetailsOpen}
+        onOpenChangeAction={setIsDetailsOpen}
+      />
     </TableRow>
   );
 }

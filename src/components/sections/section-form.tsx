@@ -55,18 +55,22 @@ export function SectionForm({
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      showError('Name is required');
+      showError(FORM_VALIDATION.NAME_REQUIRED_MESSAGE);
       return false;
     }
 
     if (!formData.date) {
-      showError('Date is required');
+      showError(FORM_VALIDATION.DATE_REQUIRED_MESSAGE);
       return false;
     }
 
-    // Validate date format (YYYY-MM-DD)
-    if (!FORM_VALIDATION.DATE_FORMAT.test(formData.date)) {
-      showError('Invalid date format. Use YYYY-MM-DD');
+    // Проверяем, что дата не в прошлом
+    const selectedDate = new Date(formData.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Сбрасываем время для корректного сравнения дат
+
+    if (selectedDate < today) {
+      showError('Date cannot be in the past');
       return false;
     }
 
@@ -122,7 +126,7 @@ export function SectionForm({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form role="form" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
               <Label htmlFor="name">
@@ -148,7 +152,8 @@ export function SectionForm({
                 type="date"
                 value={formData.date}
                 onChange={e => {
-                  setFormData(prev => ({ ...prev, date: e.target.value }));
+                  const value = e.target.value;
+                  setFormData(prev => ({ ...prev, date: value }));
                   setIsDirty(true);
                 }}
                 required

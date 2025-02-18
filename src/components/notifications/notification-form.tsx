@@ -45,8 +45,8 @@ export function NotificationForm({
   });
 
   const userOptions = users.map(user => ({
-    value: user.id,
     label: `${user.device_info.deviceName} (${user.device_info.osName})`,
+    value: user.id.toString(),
   }));
 
   const handleSubmit = (e: FormEvent) => {

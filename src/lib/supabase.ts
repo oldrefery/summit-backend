@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { MAX_FILE_SIZE_BYTES } from '@/app/constants';
+import { FILE_LIMITS } from '@/app/constants';
 import type {
   Person,
   Event,
@@ -67,20 +67,23 @@ export const storage = {
     try {
       await ensureAuthenticated();
 
-      if (file.size > MAX_FILE_SIZE_BYTES) {
+      if (file.size > FILE_LIMITS.DEFAULT) {
         showToastError(
-          'File size should not exceed ' + MAX_FILE_SIZE_BYTES + ' bytes'
+          `File size should not exceed ${Math.floor(FILE_LIMITS.DEFAULT / (1024 * 1024))}MB`
         );
+        return null;
       }
 
       if (!file.type.startsWith('image/')) {
         showToastError('File must be an image');
+        return null;
       }
 
       const fileExt = file.name.split('.').pop()?.toLowerCase();
 
       if (!fileExt || !['jpg', 'jpeg', 'png'].includes(fileExt)) {
         showToastError('Only JPG and PNG files are allowed');
+        return null;
       }
 
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
@@ -95,16 +98,19 @@ export const storage = {
       if (uploadError) {
         console.error('Upload error details:', uploadError);
         showToastError(uploadError.message);
+        return null;
       }
 
       if (!uploadData?.path) {
         showToastError('Upload successful but path is missing');
+        return null;
       }
 
       return getPublicFileUrl('avatars', fileName);
     } catch (error) {
       console.error('Error in uploadAvatar:', error);
-      throw error;
+      showToastError('Failed to upload avatar');
+      return null;
     }
   },
 
@@ -127,9 +133,8 @@ export const storage = {
       }
     } catch (error) {
       console.error('Error in removeAvatar:', error);
-      throw error;
+      showToastError('Failed to remove avatar');
     }
-    showToastError('non_existing_table');
   },
 };
 

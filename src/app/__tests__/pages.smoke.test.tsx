@@ -16,56 +16,118 @@ import ResourcesPage from '@/app/resources/page';
 import SectionsPage from '@/app/sections/page';
 import VersionsPage from '@/app/versions/page';
 
-beforeEach(() => {
-  mockHooks();
-});
-
 describe('Smoke tests for pages', () => {
-  it('Dashboard page renders without crashing', () => {
-    renderWithProviders(<DashboardPage />);
+  beforeEach(() => {
+    mockHooks();
+    // Reset window.location for each test
+    Object.defineProperty(window, 'location', {
+      value: { pathname: '/' },
+      writable: true,
+    });
   });
 
-  it('Events page renders without crashing', () => {
-    renderWithProviders(<EventsPage />);
+  // Dashboard tests
+  describe('DashboardPage', () => {
+    it('renders without crashing', () => {
+      renderWithProviders(<DashboardPage />);
+    });
   });
 
-  it('New Event page renders without crashing', () => {
-    renderWithProviders(<NewEventPage />);
+  // Events page tests
+  describe('EventsPage', () => {
+    it('renders without crashing', () => {
+      renderWithProviders(<EventsPage />);
+    });
+
+    it('renders new event page without crashing', () => {
+      renderWithProviders(<NewEventPage />);
+    });
   });
 
-  it('Locations page renders without crashing', () => {
-    renderWithProviders(<LocationsPage />);
+  // Locations page tests
+  describe('LocationsPage', () => {
+    it('renders without crashing', () => {
+      renderWithProviders(<LocationsPage />);
+    });
   });
 
-  it('Login page renders without crashing', () => {
-    renderWithProviders(<LoginPage />);
+  // Login page tests
+  describe('LoginPage', () => {
+    it('renders without crashing', () => {
+      renderWithProviders(<LoginPage />);
+    });
+
+    it('renders with correct test credentials', () => {
+      const { getByPlaceholderText } = renderWithProviders(<LoginPage />);
+      const emailInput = getByPlaceholderText(/email/i);
+      const passwordInput = getByPlaceholderText(/password/i);
+
+      expect(emailInput).toHaveValue('');
+      expect(passwordInput).toHaveValue('');
+    });
   });
 
-  it('Notifications page renders without crashing', () => {
-    renderWithProviders(<NotificationsPage />);
+  // Notifications page tests
+  describe('NotificationsPage', () => {
+    it('renders without crashing', () => {
+      renderWithProviders(<NotificationsPage />);
+    });
+
+    it('displays test notification data', () => {
+      const { getByText } = renderWithProviders(<NotificationsPage />);
+      expect(getByText('Push Notifications')).toBeInTheDocument();
+      expect(getByText('Notification History')).toBeInTheDocument();
+    });
   });
 
-  it('Pages page renders without crashing', () => {
-    renderWithProviders(<PagesPage />);
+  // Content pages tests
+  describe('PagesPage', () => {
+    it('renders pages list without crashing', () => {
+      renderWithProviders(<PagesPage />);
+    });
+
+    it('renders new page form without crashing', () => {
+      renderWithProviders(<NewPage />);
+    });
   });
 
-  it('New Page renders without crashing', () => {
-    renderWithProviders(<NewPage />);
+  // People page tests
+  describe('PeoplePage', () => {
+    it('renders without crashing', () => {
+      renderWithProviders(<PeoplePage />);
+    });
   });
 
-  it('People page renders without crashing', () => {
-    renderWithProviders(<PeoplePage />);
+  // Resources page tests
+  describe('ResourcesPage', () => {
+    it('renders without crashing', () => {
+      renderWithProviders(<ResourcesPage />);
+    });
   });
 
-  it('Resources page renders without crashing', () => {
-    renderWithProviders(<ResourcesPage />);
+  // Sections page tests
+  describe('SectionsPage', () => {
+    it('renders without crashing', () => {
+      renderWithProviders(<SectionsPage />);
+    });
+
+    it('displays test section data', () => {
+      const { getByText } = renderWithProviders(<SectionsPage />);
+      expect(getByText('Test Item')).toBeInTheDocument();
+      expect(getByText('No date')).toBeInTheDocument();
+    });
   });
 
-  it('Sections page renders without crashing', () => {
-    renderWithProviders(<SectionsPage />);
-  });
+  // Versions page tests
+  describe('VersionsPage', () => {
+    it('renders without crashing', () => {
+      renderWithProviders(<VersionsPage />);
+    });
 
-  it('Versions page renders without crashing', () => {
-    renderWithProviders(<VersionsPage />);
+    it('displays test version data', () => {
+      const { getByText } = renderWithProviders(<VersionsPage />);
+      expect(getByText(/Version 1.0.0/)).toBeInTheDocument();
+      expect(getByText(/Latest/)).toBeInTheDocument();
+    });
   });
 });

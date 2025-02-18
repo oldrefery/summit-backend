@@ -1,6 +1,6 @@
 // src/lib/expo-push.ts
 import { NotificationFormData } from '@/types/push';
-import { EXPO_MAX_NOTIFICATIONS_PER_REQUEST, EXPO_PUSH_API_URL } from '@/app/constants';
+import { API } from '@/app/constants';
 
 interface ExpoPushMessage {
   to: string;
@@ -32,12 +32,12 @@ export async function sendPushNotifications(
     priority: 'high',
   }));
 
-  const chunks = chunkArray(messages, EXPO_MAX_NOTIFICATIONS_PER_REQUEST);
+  const chunks = chunkArray(messages, API.EXPO.BATCH_SIZE);
   const results = { successful: [] as string[], failed: [] as string[] };
 
   for (const chunk of chunks) {
     try {
-      const response = await fetch(EXPO_PUSH_API_URL, {
+      const response = await fetch(API.EXPO.PUSH_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

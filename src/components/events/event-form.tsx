@@ -24,18 +24,15 @@ import {
 } from '@/components/ui/select';
 import ReactSelect, { MultiValue } from 'react-select';
 import { useLocations } from '@/hooks/use-locations';
-import { usePeople } from '@/hooks/use-query';
-import type { Event, EventFormData, EventPerson, Person } from '@/types';
 import { useSections } from '@/hooks/use-sections';
-import { useToastContext } from '@/components/providers/toast-provider';
+import { usePeople } from '@/hooks/use-people';
 import { useEvents } from '@/hooks/use-events';
+import type { EventFormData } from '@/types';
+import type { EventWithRelations } from '@/hooks/use-events';
+import { useToastContext } from '@/components/providers/toast-provider';
 
 interface EventFormProps {
-  initialData?: Event & {
-    event_people?: (EventPerson & {
-      person: Person;
-    })[];
-  };
+  initialData?: EventWithRelations;
   onSuccess?: () => void;
 }
 

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, parse } from 'date-fns';
 import {
   PencilIcon,
   TrashIcon,
@@ -27,7 +27,13 @@ interface EventsTableProps {
 export function EventsTable({ events, onDeleteAction }: EventsTableProps) {
   const formatEventTime = (time: string) => {
     try {
-      const dateTime = parseISO(`2000-01-01T${time}`);
+      // Проверяем, является ли время полной ISO строкой
+      if (time.includes('T')) {
+        const dateTime = parseISO(time);
+        return format(dateTime, 'HH:mm');
+      }
+      // Если это просто время, добавляем фиктивную дату
+      const dateTime = parse(time, 'HH:mm:ss', new Date());
       return format(dateTime, 'HH:mm');
     } catch (error) {
       console.error('Error formatting time:', error);
