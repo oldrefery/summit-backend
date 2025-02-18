@@ -137,6 +137,9 @@ describe('SectionsTable', () => {
     });
 
     it('handles invalid dates gracefully', () => {
+        // Подавляем ошибку в консоли для этого теста
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+
         const sectionsWithInvalidDates: Section[] = [
             {
                 id: 1,
@@ -155,5 +158,68 @@ describe('SectionsTable', () => {
         );
 
         expect(screen.getByText('Invalid date')).toBeInTheDocument();
+
+        // Проверяем, что ошибка была перехвачена
+        expect(consoleSpy).toHaveBeenCalled();
+
+        // Восстанавливаем console.error
+        consoleSpy.mockRestore();
+    });
+
+    it('renders empty state when no sections provided', () => {
+        render(
+            <SectionsTable
+                sections={[]}
+                onEditAction={mockOnEditAction}
+                onDeleteAction={mockOnDeleteAction}
+            />
+        );
+
+        const tableBody = screen.getAllByRole('rowgroup')[1]; // Get the tbody element
+        expect(tableBody.children).toHaveLength(0);
+    });
+
+    it('handles undefined dates correctly', () => {
+        const sectionWithUndefinedDates: Partial<Section>[] = [
+            {
+                id: 1,
+                name: 'Undefined Dates Section',
+                date: undefined,
+                created_at: undefined,
+            },
+        ];
+
+        render(
+            <SectionsTable
+                sections={sectionWithUndefinedDates as Section[]}
+                onEditAction={mockOnEditAction}
+                onDeleteAction={mockOnDeleteAction}
+            />
+        );
+
+        const noDates = screen.getAllByText('No date');
+        expect(noDates).toHaveLength(2); // Should find 'No date' twice - for date and created_at
+    });
+
+    it('formats created_at date correctly', () => {
+        const specificDate = '2024-03-15T10:00:00Z';
+        const sectionWithSpecificCreatedDate: Section[] = [
+            {
+                id: 1,
+                name: 'Test Section',
+                date: testDate,
+                created_at: specificDate,
+            },
+        ];
+
+        render(
+            <SectionsTable
+                sections={sectionWithSpecificCreatedDate}
+                onEditAction={mockOnEditAction}
+                onDeleteAction={mockOnDeleteAction}
+            />
+        );
+
+        expect(screen.getByText('Mar 15, 2024')).toBeInTheDocument();
     });
 }); 
