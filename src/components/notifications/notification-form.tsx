@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -64,6 +65,9 @@ export function NotificationForm({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Send Push Notification</DialogTitle>
+          <DialogDescription>
+            Fill in the notification details below.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
