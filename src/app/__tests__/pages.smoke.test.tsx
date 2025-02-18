@@ -1,7 +1,6 @@
 // src/app/__tests__/pages.smoke.test.tsx
 import { mockHooks } from '@/__mocks__/hooks';
 import { renderWithProviders } from '@/__mocks__/test-wrapper';
-import { TEST_DATA } from '@/__mocks__/test-constants';
 
 // Import all application pages for smoke testing
 import DashboardPage from '@/app/page';

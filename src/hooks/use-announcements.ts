@@ -1,10 +1,10 @@
 // src/hooks/use-announcements.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useToastContext } from '@/components/providers/toast-provider';
-import type { Announcement } from '@/types';
+import type { Announcement, Person } from '@/types';
 
-export type AnnouncementWithRelations = Announcement;
+export type AnnouncementWithRelations = Announcement & { person: Person };
 
 export type AnnouncementFormData = Omit<Announcement, 'id' | 'created_at'>;
 
@@ -17,7 +17,13 @@ export function useAnnouncements<T extends number | undefined = undefined>(id?: 
     queryKey: ['announcements'],
     queryFn: async () => {
       try {
-        return await api.announcements.getAll();
+        const { data, error } = await supabase
+          .from('announcements')
+          .select('*, person:people(*)')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data as AnnouncementWithRelations[];
       } catch (error) {
         showError(error);
         throw error;
@@ -31,8 +37,14 @@ export function useAnnouncements<T extends number | undefined = undefined>(id?: 
     queryFn: async () => {
       if (!id) return null;
       try {
-        const announcements = await api.announcements.getAll();
-        return announcements.find(a => a.id === id) || null;
+        const { data, error } = await supabase
+          .from('announcements')
+          .select('*, person:people(*)')
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        return data as AnnouncementWithRelations;
       } catch (error) {
         showError(error);
         throw error;
@@ -42,7 +54,16 @@ export function useAnnouncements<T extends number | undefined = undefined>(id?: 
   });
 
   const createAnnouncement = useMutation({
-    mutationFn: (announcement: AnnouncementFormData) => api.announcements.create(announcement),
+    mutationFn: async (announcement: AnnouncementFormData) => {
+      const { data, error } = await supabase
+        .from('announcements')
+        .insert([announcement])
+        .select('*, person:people(*)')
+        .single();
+
+      if (error) throw error;
+      return data as AnnouncementWithRelations;
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['announcements'] });
       showSuccess('Announcement created successfully');
@@ -53,13 +74,23 @@ export function useAnnouncements<T extends number | undefined = undefined>(id?: 
   });
 
   const updateAnnouncement = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       id,
       data,
     }: {
       id: number;
       data: Partial<AnnouncementFormData>;
-    }) => api.announcements.update(id, data),
+    }) => {
+      const { data: updatedData, error } = await supabase
+        .from('announcements')
+        .update(data)
+        .eq('id', id)
+        .select('*, person:people(*)')
+        .single();
+
+      if (error) throw error;
+      return updatedData as AnnouncementWithRelations;
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['announcements'] });
       showSuccess('Announcement updated successfully');
@@ -70,7 +101,14 @@ export function useAnnouncements<T extends number | undefined = undefined>(id?: 
   });
 
   const deleteAnnouncement = useMutation({
-    mutationFn: api.announcements.delete,
+    mutationFn: async (id: number) => {
+      const { error } = await supabase
+        .from('announcements')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['announcements'] });
       showSuccess('Announcement deleted successfully');

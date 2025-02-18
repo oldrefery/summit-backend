@@ -4,7 +4,7 @@ import { SectionForm } from '../section-form';
 import { mockHooks } from '@/__mocks__/hooks';
 import { renderWithProviders } from '@/__mocks__/test-wrapper';
 import { mockMutation } from '@/__mocks__/test-submit-setup';
-import { TestDateUtils, TEST_DATA } from '@/__mocks__/test-constants';
+import { TestDateUtils } from '@/__mocks__/test-constants';
 import { FORM_VALIDATION } from '@/app/constants';
 
 // Mock toast context

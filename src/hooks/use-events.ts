@@ -6,6 +6,7 @@ import type { Event, EventPerson, Person } from '@/types';
 import type { EventFormData } from '@/types';
 
 export type EventWithRelations = Event & {
+  location: Location | null;
   event_people: (EventPerson & { person: Person })[];
 };
 

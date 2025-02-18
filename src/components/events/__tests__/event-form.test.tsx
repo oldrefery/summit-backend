@@ -6,7 +6,6 @@ import { createTestData, mockHooks } from '@/__mocks__/hooks';
 import { renderWithProviders } from '@/__mocks__/test-wrapper';
 import { mockMutation } from '@/__mocks__/test-submit-setup';
 import { TestDateUtils } from '@/__mocks__/test-constants';
-import { FORM_VALIDATION } from '@/app/constants';
 
 // Mock navigation
 const mockPush = vi.fn();
@@ -26,16 +25,36 @@ vi.mock('@/hooks/use-events', () => ({
   }),
 }));
 
-const mockShowError = vi.fn();
+vi.mock('@/hooks/use-locations', () => ({
+  useLocations: () => ({
+    data: [
+      { id: '1', name: 'Location 1' },
+      { id: '2', name: 'Location 2' },
+    ],
+    isLoading: false,
+  }),
+}));
 
-const mockLocations = [
-  { id: '1', name: 'Location 1' },
-  { id: '2', name: 'Location 2' },
-];
+vi.mock('@/hooks/use-sections', () => ({
+  useSections: () => ({
+    data: [createTestData.section()],
+    isLoading: false,
+  }),
+}));
 
-// Initialize test data using mock factories with dynamic dates
-const mockSections = [createTestData.section()];
-const mockPeople = [createTestData.person({ role: 'speaker' })];
+vi.mock('@/hooks/use-people', () => ({
+  usePeople: () => ({
+    data: [createTestData.person({ role: 'speaker' })],
+    isLoading: false,
+  }),
+}));
+
+vi.mock('@/components/providers/toast-provider', () => ({
+  useToastContext: () => ({
+    showError: vi.fn(),
+    showSuccess: vi.fn(),
+  }),
+}));
 
 describe('EventForm', () => {
   const mockOnSuccess = vi.fn();
@@ -45,27 +64,6 @@ describe('EventForm', () => {
   const formattedDate = TestDateUtils.formatDate(testDate);
   const startTime = '10:00';
   const endTime = '11:00';
-
-  vi.mock('@/hooks/use-locations', () => ({
-    useLocations: () => ({
-      data: mockLocations,
-      isLoading: false,
-    }),
-  }));
-
-  vi.mock('@/hooks/use-sections', () => ({
-    useSections: () => ({
-      data: [createTestData.section()],
-      isLoading: false,
-    }),
-  }));
-
-  vi.mock('@/hooks/use-people', () => ({
-    usePeople: () => ({
-      data: mockPeople,
-      isLoading: false,
-    }),
-  }));
 
   beforeEach(() => {
     mockHooks();

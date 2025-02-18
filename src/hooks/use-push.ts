@@ -30,6 +30,19 @@ export interface PushUser {
   };
 }
 
+export interface NotificationHistory {
+  id: number;
+  title: string;
+  body: string;
+  sent_at: string;
+  data: Record<string, unknown>;
+  sent_by: string;
+  target_type: 'all' | 'specific_users';
+  target_users: string[];
+  success_count: number;
+  failure_count: number;
+}
+
 export type PushStatisticsWithRelations = PushStatistics;
 export type PushNotificationWithRelations = PushNotification;
 export type PushUserWithRelations = PushUser;
@@ -73,7 +86,7 @@ export function useNotificationHistory() {
   });
 
   return {
-    data: notificationsQuery.data ?? [] as PushNotificationWithRelations[],
+    data: notificationsQuery.data ?? [] as NotificationHistory[],
     isLoading: notificationsQuery.isLoading,
     isError: notificationsQuery.isError,
     error: notificationsQuery.error,
