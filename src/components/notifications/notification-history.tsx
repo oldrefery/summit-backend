@@ -22,7 +22,7 @@ export function NotificationHistory() {
   const { data: notifications = [], isLoading } = useNotificationHistory();
 
   if (isLoading) {
-    return <Skeleton className="h-64" />;
+    return <Skeleton className="h-64" data-testid="skeleton" />;
   }
 
   return (
