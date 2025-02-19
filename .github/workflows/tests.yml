@@ -34,10 +34,7 @@ jobs:
       - name: Run linter
         run: npm run lint
         
-      - name: Run tests
-        run: npm run test
-        
-      - name: Generate coverage report
+      - name: Run tests with coverage
         run: npm run coverage
         
       - name: Upload coverage reports
@@ -48,9 +45,23 @@ jobs:
           
       - name: Check coverage threshold
         run: |
-          COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
+          if [ ! -f "coverage/coverage-summary.json" ]; then
+            echo "Converting Vitest coverage to summary format..."
+            # Convert coverage/coverage-final.json to summary format if needed
+            COVERAGE=$(cat coverage/coverage-final.json | jq -r '[.. | objects | select(.lines?) | .lines.pct] | add / length')
+          else
+            COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
+          fi
+          
+          if [ -z "$COVERAGE" ] || [ "$COVERAGE" = "null" ]; then
+            echo "Failed to extract coverage percentage"
+            exit 1
+          fi
+          
           if (( $(echo "$COVERAGE < 80" | bc -l) )); then
             echo "Coverage is below 80%: $COVERAGE%"
             exit 1
+          else
+            echo "Coverage is $COVERAGE%"
           fi
         shell: bash 
