@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest",
+    "test": "vitest run",
+    "watch": "vitest --watch",
     "coverage": "vitest run --coverage",
-    "sync:prod:test": "bash ./sync_prod_to_test.sh"
+    "sync:prod:test": "bash ./sync_prod_to_test.sh",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.5",
