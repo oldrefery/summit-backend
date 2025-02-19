@@ -9,6 +9,17 @@ const limiter = new RateLimiter();
 export async function POST(request: Request) {
   const ip = request.headers.get('x-forwarded-for') || 'unknown';
 
+  let body;
+  try {
+    body = await request.json();
+  } catch (error: unknown) {
+    console.error('Failed to parse request body:', error);
+    return NextResponse.json(
+      { message: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+
   // Check the attempts limit
   if (await limiter.isRateLimited(ip)) {
     return NextResponse.json(
@@ -18,7 +29,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
     const { email, password } = body;
 
     // Check the credentials from the env
@@ -34,7 +44,8 @@ export async function POST(request: Request) {
       };
 
       // Set secure HTTP-only cookie with session data
-      (await cookies()).set(AUTH.COOKIE.NAME, JSON.stringify(session), {
+      const cookieStore = await cookies();
+      cookieStore.set(AUTH.COOKIE.NAME, JSON.stringify(session), {
         ...AUTH.COOKIE.OPTIONS,
         secure: process.env.NODE_ENV === 'production',
         expires: new Date(session.expires),

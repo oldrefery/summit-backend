@@ -12,14 +12,13 @@
 1. Mark task with 🚧 before starting work
 2. Implement changes
 3. Run tests and build
-4. If successful - mark with ✔️
-5. After commit - mark with ✅
+4. If successful - mark with ✅
 
 ## General Instructions and Principles
 
 ### Code Style and Communication
 - All code comments must be in English
-- Team communication in Russian
+- Team communication in Russian (as per project requirements)
 - Follow SOLID principles:
   - Single Responsibility Principle
   - Open/Closed Principle
@@ -43,6 +42,25 @@
 
 ## Implementation Plan
 
+## Test Execution
+
+### Running All Tests
+```bash
+npx vitest run
+```
+
+### Running Specific Tests
+```bash
+# Run specific test file
+npx vitest run src/lib/__tests__/rate-limiter.test.ts
+
+# Run tests by pattern
+npx vitest run src/lib/__tests__/*.test.ts
+
+# Run tests by name
+npx vitest run --test-name="RateLimiter"
+```
+
 ### Critical Improvements (Priority 1)
 
 #### Testing Infrastructure
@@ -52,6 +70,7 @@
 - ⏳ Fix security vulnerabilities in dependencies
 - ✔️ Set up GitHub Actions for automated testing
 - ⏳ Configure pre-commit hooks for tests
+- ✅ Fix build issues with test files
 
 #### Notes
 - Using legacy-peer-deps due to React 19 compatibility
@@ -61,10 +80,27 @@
   - Coverage reports generation
   - Coverage threshold check (70%)
   - Node.js 18.x environment
+- Build issues fixed:
+  - Resolved type issues in Supabase mocks
+  - Fixed cookies() implementation
+  - Cleaned up unused imports
+  - Added proper error handling
 
 #### Critical Component Coverage
-- ⏳ Authentication/Authorization tests
+- ✅ Authentication/Authorization tests
+  - ✅ Login API tests
+  - ✅ Rate limiting tests
+  - ✅ Cookie handling tests
+  - ⏳ Protected routes tests
 - 🚧 Supabase integration tests
+  - ✅ Basic CRUD operations
+  - ✅ Authentication flows
+  - ✅ Storage operations
+  - ✅ Type issues:
+    - ✅ AuthError implementation
+    - ✅ StorageFileApi interface
+    - ✅ PostgrestQueryBuilder types
+    - ✅ MFA API methods
 - ⏳ Excel data processing tests (read-excel-file)
 - ⏳ Markdown editor tests (@uiw/react-md-editor)
 
@@ -163,12 +199,3 @@ npm update @testing-library/react @testing-library/dom jsdom
 ```
 
 ## Session Requirements
-- Always mark task status before starting work
-- Run tests and build after changes
-- Update plan with new requirements/notes
-- Use Russian for communication
-- Use English for code and comments
-- Follow SOLID, DRY, and KISS principles
-- Keep track of progress with status indicators
-
-Last Updated: February 18, 2024 

@@ -1,6 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMockSupabaseClient, mockPerson, mockEvent } from './supabase.mocks';
+import { createMockSupabaseClient, mockPerson, mockEvent, mockSession, mockAuthError } from './supabase.mocks';
 import { supabase } from '../supabase';
+
+// Mock Supabase module
+vi.mock('@supabase/supabase-js', async () => {
+    const actual = await vi.importActual('@supabase/supabase-js');
+    return {
+        ...actual,
+        AuthError: class extends Error {
+            constructor(message: string) {
+                super(message);
+                this.name = 'AuthError';
+            }
+        },
+    };
+});
 
 // Mock Supabase client
 vi.mock('../supabase', () => ({
@@ -24,8 +38,13 @@ describe('Supabase Client', () => {
 
     describe('Authentication', () => {
         it('should sign in with email and password', async () => {
-            const mockSession = { user: { id: '1', email: 'test@example.com' } };
-            (supabase.auth.signInWithPassword as any).mockResolvedValue({ data: { session: mockSession }, error: null });
+            vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
+                data: {
+                    user: mockSession.user,
+                    session: mockSession,
+                },
+                error: null,
+            });
 
             const result = await supabase.auth.signInWithPassword({
                 email: 'test@example.com',
@@ -37,8 +56,13 @@ describe('Supabase Client', () => {
         });
 
         it('should handle sign in errors', async () => {
-            const mockError = { message: 'Invalid credentials' };
-            (supabase.auth.signInWithPassword as any).mockResolvedValue({ data: { session: null }, error: mockError });
+            vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
+                data: {
+                    user: null,
+                    session: null,
+                },
+                error: mockAuthError,
+            });
 
             const result = await supabase.auth.signInWithPassword({
                 email: 'test@example.com',
@@ -46,7 +70,7 @@ describe('Supabase Client', () => {
             });
 
             expect(result.data.session).toBeNull();
-            expect(result.error).toEqual(mockError);
+            expect(result.error).toEqual(mockAuthError);
         });
     });
 
@@ -59,7 +83,7 @@ describe('Supabase Client', () => {
             const mockUploadResponse = { data: { path: filePath }, error: null };
             const mockUpload = vi.fn().mockResolvedValue(mockUploadResponse);
             const mockStorageFrom = vi.fn(() => ({ upload: mockUpload }));
-            (supabase.storage.from as any) = mockStorageFrom;
+            vi.mocked(supabase.storage.from).mockImplementation(mockStorageFrom);
 
             const result = await supabase.storage.from(bucket).upload(filePath, mockFile);
 
@@ -73,7 +97,7 @@ describe('Supabase Client', () => {
             const mockUploadResponse = { data: null, error: mockError };
             const mockUpload = vi.fn().mockResolvedValue(mockUploadResponse);
             const mockStorageFrom = vi.fn(() => ({ upload: mockUpload }));
-            (supabase.storage.from as any) = mockStorageFrom;
+            vi.mocked(supabase.storage.from).mockImplementation(mockStorageFrom);
 
             const result = await supabase.storage.from(bucket).upload(filePath, mockFile);
 
@@ -92,7 +116,7 @@ describe('Supabase Client', () => {
                 const mockOrder = vi.fn().mockResolvedValue(mockResponse);
                 const mockSelect = vi.fn().mockReturnValue({ order: mockOrder });
                 const mockFrom = vi.fn(() => ({ select: mockSelect }));
-                (supabase.from as any) = mockFrom;
+                vi.mocked(supabase.from).mockImplementation(mockFrom);
 
                 const result = await supabase.from(table).select('*').order('name', { ascending: true });
 
@@ -109,7 +133,7 @@ describe('Supabase Client', () => {
                 const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
                 const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
                 const mockFrom = vi.fn(() => ({ insert: mockInsert }));
-                (supabase.from as any) = mockFrom;
+                vi.mocked(supabase.from).mockImplementation(mockFrom);
 
                 const result = await supabase.from(table).insert(newPerson).select('*').single();
 
@@ -129,7 +153,7 @@ describe('Supabase Client', () => {
                 const mockEq = vi.fn().mockReturnValue({ select: mockSelect });
                 const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
                 const mockFrom = vi.fn(() => ({ update: mockUpdate }));
-                (supabase.from as any) = mockFrom;
+                vi.mocked(supabase.from).mockImplementation(mockFrom);
 
                 const result = await supabase.from(table).update(updates).eq('id', mockPerson.id).select('*').single();
 
@@ -146,7 +170,7 @@ describe('Supabase Client', () => {
                 const mockEq = vi.fn().mockResolvedValue(mockResponse);
                 const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
                 const mockFrom = vi.fn(() => ({ delete: mockDelete }));
-                (supabase.from as any) = mockFrom;
+                vi.mocked(supabase.from).mockImplementation(mockFrom);
 
                 const result = await supabase.from(table).delete().eq('id', mockPerson.id);
 
@@ -166,7 +190,7 @@ describe('Supabase Client', () => {
                 const mockOrder = vi.fn().mockResolvedValue(mockResponse);
                 const mockSelect = vi.fn().mockReturnValue({ order: mockOrder });
                 const mockFrom = vi.fn(() => ({ select: mockSelect }));
-                (supabase.from as any) = mockFrom;
+                vi.mocked(supabase.from).mockImplementation(mockFrom);
 
                 const result = await supabase.from(table)
                     .select(`
