@@ -1,5 +1,20 @@
 # Testing Plan and Guidelines
 
+## Status Indicators
+- ✅ - Completed
+- 🚧 - In Progress (Started working on it)
+- ❌ - Blocked/Failed
+- ⏳ - Pending
+- 🔄 - In Review/Testing
+- ✔️ - Verified (Tests & Build passed)
+
+## Workflow Requirements
+1. Mark task with 🚧 before starting work
+2. Implement changes
+3. Run tests and build
+4. If successful - mark with ✔️
+5. After commit - mark with ✅
+
 ## General Instructions and Principles
 
 ### Code Style and Communication
@@ -18,7 +33,6 @@
 - Use TypeScript for all code
 - Use ESLint for code quality
 
-
 ### Testing Guidelines
 - Write tests using AAA pattern (Arrange-Act-Assert)
 - Keep tests simple and focused
@@ -32,12 +46,12 @@
 ### Critical Improvements (Priority 1)
 
 #### Testing Infrastructure
-- [✅] Update @testing-library/react (updated to 14.2.1)
-- [✅] Update @testing-library/dom (updated to 9.3.4)
-- [✅] Update jsdom (updated to 24.0.0)
-- [ ] Fix security vulnerabilities in dependencies
-- [✅] Set up GitHub Actions for automated testing
-- [ ] Configure pre-commit hooks for tests
+- ✅ Update @testing-library/react (updated to 14.2.1)
+- ✅ Update @testing-library/dom (updated to 9.3.4)
+- ✅ Update jsdom (updated to 24.0.0)
+- ⏳ Fix security vulnerabilities in dependencies
+- ✔️ Set up GitHub Actions for automated testing
+- ⏳ Configure pre-commit hooks for tests
 
 #### Notes
 - Using legacy-peer-deps due to React 19 compatibility
@@ -45,71 +59,71 @@
 - GitHub Actions configured with:
   - Automated testing on push and PR
   - Coverage reports generation
-  - Coverage threshold check (80%)
+  - Coverage threshold check (70%)
   - Node.js 18.x environment
 
 #### Critical Component Coverage
-- [ ] Authentication/Authorization tests
-- [ ] Supabase integration tests
-- [ ] Excel data processing tests (read-excel-file)
-- [ ] Markdown editor tests (@uiw/react-md-editor)
+- ⏳ Authentication/Authorization tests
+- 🚧 Supabase integration tests
+- ⏳ Excel data processing tests (read-excel-file)
+- ⏳ Markdown editor tests (@uiw/react-md-editor)
 
 ### High Priority (Priority 2)
 
 #### Existing Tests Improvement
-- [ ] Radix UI components tests
-- [ ] React Query hooks tests
-- [ ] API error handling tests
-- [ ] Form validation tests
+- ⏳ Radix UI components tests
+- ⏳ React Query hooks tests
+- ⏳ API error handling tests
+- ⏳ Form validation tests
 
 #### Integration Testing
-- [ ] E2E tests for main user scenarios
-- [ ] date-fns integration tests
-- [ ] Notification system (toast) tests
+- ⏳ E2E tests for main user scenarios
+- ⏳ date-fns integration tests
+- ⏳ Notification system (toast) tests
 
 ### Medium Priority (Priority 3)
 
 #### Code Quality
-- [ ] Add eslint-plugin-testing-library rules
-- [ ] Create common test helpers
-- [ ] Add tests for tailwind/styling utilities
+- ⏳ Add eslint-plugin-testing-library rules
+- ⏳ Create common test helpers
+- ⏳ Add tests for tailwind/styling utilities
 
 #### Documentation
-- [ ] Create testing infrastructure README.md
-- [ ] Add JSDoc comments to test utilities
-- [ ] Create testing examples for different component types
+- ⏳ Create testing infrastructure README.md
+- ⏳ Add JSDoc comments to test utilities
+- ⏳ Create testing examples for different component types
 
 ### Low Priority (Priority 4)
 
 #### Optimization
-- [ ] Optimize test execution time
-- [ ] Configure parallel test execution
-- [ ] Add UI component visual testing
+- ⏳ Optimize test execution time
+- ⏳ Configure parallel test execution
+- ⏳ Add UI component visual testing
 
 ## Current Issues
 
 ### Security and Dependencies
-- [ ] Fix moderate severity vulnerabilities in esbuild
-- [ ] Update vite and related packages
-- [ ] Review and update other dependencies with known issues
-- [ ] Resolve React version compatibility issues
+- ⏳ Fix moderate severity vulnerabilities in esbuild
+- ⏳ Update vite and related packages
+- ⏳ Review and update other dependencies with known issues
+- ⏳ Resolve React version compatibility issues
 
 ### Outdated Dependencies
-- [✅] @testing-library/react (updated to 14.2.1)
-- [✅] @testing-library/dom (updated to 9.3.4)
-- [✅] jsdom (updated to 24.0.0)
+- ✅ @testing-library/react (updated to 14.2.1)
+- ✅ @testing-library/dom (updated to 9.3.4)
+- ✅ jsdom (updated to 24.0.0)
 
 ### Missing Tests
-- [ ] Radix UI components
-- [ ] React Query integration
-- [ ] Excel file handling
-- [ ] Markdown editor
-- [ ] Notification system
+- ⏳ Radix UI components
+- ⏳ React Query integration
+- ⏳ Excel file handling
+- ⏳ Markdown editor
+- ⏳ Notification system
 
 ### Infrastructure Improvements
-- [✅] CI/CD automation (GitHub Actions)
-- [ ] Pre-commit hooks
-- [ ] Visual testing setup
+- ✅ CI/CD automation (GitHub Actions)
+- ⏳ Pre-commit hooks
+- ⏳ Visual testing setup
 
 ## Implementation Recommendations
 
@@ -131,10 +145,10 @@ npm update @testing-library/react @testing-library/dom jsdom
 ```
 
 ### 3. Base Test Utilities
-- [ ] Supabase mocks
-- [ ] React Query mocks
-- [ ] Form testing utilities
-- [ ] Notification testing utilities
+- 🚧 Supabase mocks
+- ⏳ React Query mocks
+- ⏳ Form testing utilities
+- ⏳ Notification testing utilities
 
 ### 4. GitHub Actions Configuration
 ```yaml
@@ -143,15 +157,18 @@ npm update @testing-library/react @testing-library/dom jsdom
 # - Runs on push to main/develop
 # - Runs on PR to main/develop
 # - Includes coverage reports
-# - Enforces 80% coverage threshold
+# - Enforces 70% coverage threshold
 # - Uses Node.js 18.x
 # - Caches npm dependencies
 ```
 
-## Progress Tracking
-- ✅ - Completed
-- 🚧 - In Progress
-- ❌ - Blocked
-- ⏳ - Pending
+## Session Requirements
+- Always mark task status before starting work
+- Run tests and build after changes
+- Update plan with new requirements/notes
+- Use Russian for communication
+- Use English for code and comments
+- Follow SOLID, DRY, and KISS principles
+- Keep track of progress with status indicators
 
 Last Updated: February 18, 2024 
