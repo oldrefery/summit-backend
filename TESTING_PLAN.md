@@ -91,7 +91,7 @@ npx vitest run --test-name="RateLimiter"
   - ✅ Login API tests
   - ✅ Rate limiting tests
   - ✅ Cookie handling tests
-  - ⏳ Protected routes tests
+  - ✅ Protected routes tests
 - 🚧 Supabase integration tests
   - ✅ Basic CRUD operations
   - ✅ Authentication flows

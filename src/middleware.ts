@@ -2,13 +2,16 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+// Паттерны для исключения из проверки
+const EXCLUDED_PATTERNS = [
+  /^\/api\//,
+  /^\/_next\//,
+  /^\/favicon\.ico$/
+];
+
 export function middleware(request: NextRequest) {
-  // Skip requests to API and static files
-  if (
-    request.nextUrl.pathname.startsWith('/api') ||
-    request.nextUrl.pathname.startsWith('/_next') ||
-    request.nextUrl.pathname.startsWith('/static')
-  ) {
+  // Проверяем исключенные пути
+  if (EXCLUDED_PATTERNS.some(pattern => pattern.test(request.nextUrl.pathname))) {
     return NextResponse.next();
   }
 
