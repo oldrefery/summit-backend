@@ -14,11 +14,10 @@ import {
   Users,
   Layers,
 } from 'lucide-react';
-import type { Event, EventPerson, Person, Location } from '@/types';
+import type { Event, EventPerson, Person } from '@/types';
 
 interface EventsTableProps {
   events: (Event & {
-    location: Location | null;
     event_people: (EventPerson & { person: Person })[];
   })[];
   onDeleteAction: (event: Event) => void;
