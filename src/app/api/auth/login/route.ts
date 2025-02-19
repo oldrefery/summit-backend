@@ -13,7 +13,10 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch (error: unknown) {
-    console.error('Failed to parse request body:', error);
+    // Логируем ошибку только в продакшене и разработке
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Failed to parse request body:', error);
+    }
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }
