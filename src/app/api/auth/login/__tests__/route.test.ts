@@ -119,4 +119,61 @@ describe('Login API', () => {
         expect(response.status).toBe(500);
         expect(data).toEqual({ message: 'Internal server error' });
     });
+
+    it('should handle missing email or password', async () => {
+        const requestWithoutEmail = new NextRequest('http://localhost/api/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ password: 'test-password' }),
+            headers: {
+                'content-type': 'application/json',
+                'x-forwarded-for': '127.0.0.1',
+            },
+        });
+
+        const requestWithoutPassword = new NextRequest('http://localhost/api/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email: 'test@example.com' }),
+            headers: {
+                'content-type': 'application/json',
+                'x-forwarded-for': '127.0.0.1',
+            },
+        });
+
+        const responseWithoutEmail = await POST(requestWithoutEmail);
+        const dataWithoutEmail = await responseWithoutEmail.json();
+
+        expect(responseWithoutEmail.status).toBe(400);
+        expect(dataWithoutEmail).toEqual({ message: 'Email and password are required' });
+
+        const responseWithoutPassword = await POST(requestWithoutPassword);
+        const dataWithoutPassword = await responseWithoutPassword.json();
+
+        expect(responseWithoutPassword.status).toBe(400);
+        expect(dataWithoutPassword).toEqual({ message: 'Email and password are required' });
+    });
+
+    it('should handle cookie setting failure', async () => {
+        // Мокаем ошибку при установке cookie
+        mockSet.mockImplementationOnce(() => {
+            throw new Error('Failed to set cookie');
+        });
+
+        const request = new NextRequest('http://localhost/api/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({
+                email: 'test@example.com',
+                password: 'test-password',
+            }),
+            headers: {
+                'content-type': 'application/json',
+                'x-forwarded-for': '127.0.0.1',
+            },
+        });
+
+        const response = await POST(request);
+        const data = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(data).toEqual({ message: 'Failed to create session' });
+    });
 }); 
