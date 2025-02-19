@@ -1,5 +1,16 @@
 import { vi } from 'vitest';
-import { SupabaseClient, AuthError, Session, User } from '@supabase/supabase-js';
+import {
+    AuthError,
+    Session,
+    User,
+    AuthMFAEnrollResponse,
+    AuthMFAChallengeResponse,
+    AuthMFAVerifyResponse,
+    AuthMFAUnenrollResponse,
+    AuthMFAListFactorsResponse,
+    AuthMFAGetAuthenticatorAssuranceLevelResponse,
+    SupabaseClientOptions
+} from '@supabase/supabase-js';
 import type { Database } from '../../types/database';
 
 // TODO: Fix type issues with Supabase mocks
@@ -51,8 +62,22 @@ export const mockSession: Session = {
 
 export const mockAuthError = new AuthError('Invalid credentials');
 
+interface MockStorageBucket {
+    upload: ReturnType<typeof vi.fn>;
+    remove: ReturnType<typeof vi.fn>;
+    createSignedUrl: ReturnType<typeof vi.fn>;
+    createSignedUploadUrl: ReturnType<typeof vi.fn>;
+    download: ReturnType<typeof vi.fn>;
+    getPublicUrl: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+    move: ReturnType<typeof vi.fn>;
+    copy: ReturnType<typeof vi.fn>;
+    uploadToSignedUrl: ReturnType<typeof vi.fn>;
+    info: ReturnType<typeof vi.fn>;
+}
+
 // Helper to create a mock storage bucket
-function createMockStorageBucket() {
+function createMockStorageBucket(): MockStorageBucket {
     return {
         upload: vi.fn().mockResolvedValue({ data: { path: 'test-path' }, error: null }),
         remove: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -68,8 +93,19 @@ function createMockStorageBucket() {
     };
 }
 
+interface MockQueryBuilder {
+    select: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+    eq: ReturnType<typeof vi.fn>;
+    order: ReturnType<typeof vi.fn>;
+    single: ReturnType<typeof vi.fn>;
+    then: ReturnType<typeof vi.fn>;
+}
+
 // Helper to create a mock query builder
-function createMockQueryBuilder() {
+function createMockQueryBuilder(): MockQueryBuilder {
     const mockChain = {
         select: vi.fn().mockReturnThis(),
         insert: vi.fn().mockReturnThis(),
@@ -84,8 +120,43 @@ function createMockQueryBuilder() {
     return mockChain;
 }
 
-export function createMockSupabaseClient(): Partial<SupabaseClient<Database>> {
-    const mockAuth = {
+type MockSupabaseAuth = {
+    getSession: ReturnType<typeof vi.fn>;
+    signInWithPassword: ReturnType<typeof vi.fn>;
+    signOut: ReturnType<typeof vi.fn>;
+    onAuthStateChange: ReturnType<typeof vi.fn>;
+    getUser: ReturnType<typeof vi.fn>;
+    mfa: {
+        enroll: ReturnType<typeof vi.fn>;
+        challenge: ReturnType<typeof vi.fn>;
+        verify: ReturnType<typeof vi.fn>;
+        unenroll: ReturnType<typeof vi.fn>;
+        listFactors: ReturnType<typeof vi.fn>;
+        challengeAndVerify: ReturnType<typeof vi.fn>;
+        getAuthenticatorAssuranceLevel: ReturnType<typeof vi.fn>;
+    };
+};
+
+type MockSupabaseStorage = {
+    from: ReturnType<typeof vi.fn>;
+};
+
+type MockSupabaseClient = {
+    auth: MockSupabaseAuth;
+    storage: MockSupabaseStorage;
+    from: ReturnType<typeof vi.fn>;
+};
+
+interface MockSupabaseClientOptions extends Partial<SupabaseClientOptions<Database>> {
+    auth?: {
+        autoRefreshToken?: boolean;
+        persistSession?: boolean;
+        detectSessionInUrl?: boolean;
+    };
+}
+
+export function createMockSupabaseClient(options: MockSupabaseClientOptions = {}): MockSupabaseClient {
+    const mockAuth: MockSupabaseAuth = {
         getSession: vi.fn().mockResolvedValue({ data: { session: mockSession }, error: null }),
         signInWithPassword: vi.fn().mockResolvedValue({
             data: {
@@ -98,40 +169,24 @@ export function createMockSupabaseClient(): Partial<SupabaseClient<Database>> {
         onAuthStateChange: vi.fn(),
         getUser: vi.fn().mockResolvedValue({ data: { user: mockSession.user }, error: null }),
         mfa: {
-            enroll: vi.fn(),
-            challenge: vi.fn(),
-            verify: vi.fn(),
-            unenroll: vi.fn(),
-            listFactors: vi.fn(),
-            challengeAndVerify: vi.fn(),
-            getAuthenticatorAssuranceLevel: vi.fn(),
+            enroll: vi.fn().mockResolvedValue({} as AuthMFAEnrollResponse),
+            challenge: vi.fn().mockResolvedValue({} as AuthMFAChallengeResponse),
+            verify: vi.fn().mockResolvedValue({} as AuthMFAVerifyResponse),
+            unenroll: vi.fn().mockResolvedValue({} as AuthMFAUnenrollResponse),
+            listFactors: vi.fn().mockResolvedValue({} as AuthMFAListFactorsResponse),
+            challengeAndVerify: vi.fn().mockResolvedValue({} as AuthMFAVerifyResponse),
+            getAuthenticatorAssuranceLevel: vi.fn().mockResolvedValue({} as AuthMFAGetAuthenticatorAssuranceLevelResponse),
         },
-        // Добавляем необходимые свойства для SupabaseAuthClient
-        instanceID: 'test-instance',
-        admin: {},
-        storageKey: 'test-storage-key',
-        flowType: 'implicit',
     };
 
-    const mockStorage = {
+    const mockStorage: MockSupabaseStorage = {
         from: vi.fn().mockReturnValue(createMockStorageBucket()),
-        // Добавляем необходимые свойства для StorageClient
-        url: 'https://test.storage.com',
-        headers: {},
-        fetch: vi.fn(),
-        listBuckets: vi.fn(),
-        getBucket: vi.fn(),
-        createBucket: vi.fn(),
-        updateBucket: vi.fn(),
-        deleteBucket: vi.fn(),
-        emptyBucket: vi.fn(),
     };
 
     return {
-        // @ts-expect-error - временно отключаем проверку типов для моков
         auth: mockAuth,
-        // @ts-expect-error - временно отключаем проверку типов для моков
         storage: mockStorage,
         from: vi.fn().mockReturnValue(createMockQueryBuilder()),
-    };
+        ...options,
+    } as MockSupabaseClient;
 } 
