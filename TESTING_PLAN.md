@@ -109,46 +109,50 @@
       - Добавить user_id
       - Настроить триггер
       - Настроить RLS политики
-  - 🚧 Announcements table policies
-    - ✅ Тесты написаны
-    - ⏳ SQL скрипт подготовлен
-    - Required Schema Changes:
-      ```sql
-      -- Add user_id column
-      ALTER TABLE announcements 
-      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
-      
-      -- Create trigger for auto-filling user_id
-      CREATE OR REPLACE FUNCTION public.set_announcement_user_id()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.user_id = auth.uid();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql SECURITY DEFINER;
-      
-      CREATE TRIGGER set_announcements_user_id
-        BEFORE INSERT ON announcements
-        FOR EACH ROW
-        EXECUTE FUNCTION public.set_announcement_user_id();
-      ```
-    - RLS Policies:
-      ```sql
-      -- Enable RLS
-      ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
-      
-      -- Deny policies for anon
-      CREATE POLICY "deny_anon_select_announcements" ON announcements FOR SELECT TO anon USING (false);
-      CREATE POLICY "deny_anon_insert_announcements" ON announcements FOR INSERT TO anon WITH CHECK (false);
-      CREATE POLICY "deny_anon_update_announcements" ON announcements FOR UPDATE TO anon USING (false);
-      CREATE POLICY "deny_anon_delete_announcements" ON announcements FOR DELETE TO anon USING (false);
-      
-      -- Allow policies for authenticated
-      CREATE POLICY "allow_auth_select_announcements" ON announcements FOR SELECT TO authenticated USING (true);
-      CREATE POLICY "allow_auth_insert_announcements" ON announcements FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-      CREATE POLICY "allow_auth_update_announcements" ON announcements FOR UPDATE TO authenticated USING (user_id = auth.uid());
-      CREATE POLICY "allow_auth_delete_announcements" ON announcements FOR DELETE TO authenticated USING (user_id = auth.uid());
-      ```
+  - ⏳ Event People table policies
+    - Требуется аналогичная структура:
+      - Добавить user_id
+      - Настроить триггер
+      - Настроить RLS политики
+      - Особое внимание на связь с events
+  - ⏳ Sections table policies
+    - Требуется аналогичная структура:
+      - Добавить user_id
+      - Настроить триггер
+      - Настроить RLS политики
+      - Особое внимание на связь с events
+  - ⏳ Markdown Pages table policies
+    - Требуется аналогичная структура:
+      - Добавить user_id
+      - Настроить триггер
+      - Настроить RLS политики
+  - ⏳ Social Feed Posts table policies
+    - Требуется аналогичная структура:
+      - Добавить user_id
+      - Настроить триггер
+      - Настроить RLS политики
+  - ⏳ Push Tokens table policies
+    - Требуется аналогичная структура:
+      - Добавить user_id
+      - Настроить триггер
+      - Настроить RLS политики
+      - Особое внимание на связь с app_users
+  - ⏳ Notification History table policies
+    - Требуется аналогичная структура:
+      - Добавить user_id
+      - Настроить триггер
+      - Настроить RLS политики
+  - ⏳ App Users table policies
+    - Требуется аналогичная структура:
+      - Добавить user_id
+      - Настроить триггер
+      - Настроить RLS политики
+      - Особое внимание на связь с auth.users
+  - ⏳ JSON Versions table policies
+    - Требуется аналогичная структура:
+      - Добавить user_id
+      - Настроить триггер
+      - Настроить RLS политики
   - ✅ Locations table policies
     - ✅ Тесты написаны
     - ✅ SQL скрипт выполнен
