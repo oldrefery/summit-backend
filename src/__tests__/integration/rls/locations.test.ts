@@ -43,11 +43,17 @@ describe('Locations Table RLS Policies', () => {
     });
 
     test('anonymous user cannot create location records', async () => {
+        // Create a new Supabase client for anonymous user
+        const anonSupabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+
         // Verify we're not authenticated
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await anonSupabase.auth.getSession();
         expect(session).toBeNull();
 
-        const { data, error } = await supabase
+        const { data, error } = await anonSupabase
             .from('locations')
             .insert([testLocation])
             .select()
@@ -59,15 +65,20 @@ describe('Locations Table RLS Policies', () => {
     });
 
     test('anonymous user cannot read location records', async () => {
+        // Create a new Supabase client for anonymous user
+        const anonSupabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+
         // Verify we're not authenticated
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await anonSupabase.auth.getSession();
         expect(session).toBeNull();
 
-        const { data, error } = await supabase
+        const { data, error } = await anonSupabase
             .from('locations')
             .select('*');
 
-        // Для анонимного пользователя должны вернуться пустые данные
         expect(data).toEqual([]);
         expect(error).toBeNull();
     });

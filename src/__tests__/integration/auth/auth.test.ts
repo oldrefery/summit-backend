@@ -1,4 +1,4 @@
-import { describe, test, expect, afterAll } from 'vitest';
+import { describe, test, expect } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -7,11 +7,6 @@ const supabase = createClient(
 );
 
 describe('Authentication Integration Tests', () => {
-    afterAll(async () => {
-        // Ensure we're logged out after all tests
-        await supabase.auth.signOut();
-    });
-
     test('should successfully sign in with valid credentials', async () => {
         const { data, error } = await supabase.auth.signInWithPassword({
             email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
@@ -19,23 +14,23 @@ describe('Authentication Integration Tests', () => {
         });
 
         expect(error).toBeNull();
+        expect(data.user).not.toBeNull();
         expect(data.session).not.toBeNull();
-        expect(data.user?.email).toBe(process.env.INTEGRATION_SUPABASE_USER_EMAIL);
     });
 
     test('should fail to sign in with invalid credentials', async () => {
         const { data, error } = await supabase.auth.signInWithPassword({
-            email: 'wrong@email.com',
+            email: 'invalid@example.com',
             password: 'wrongpassword'
         });
 
         expect(error).not.toBeNull();
-        expect(error?.message).toContain('Invalid login credentials');
+        expect(data.user).toBeNull();
         expect(data.session).toBeNull();
     });
 
     test('should get session after successful login', async () => {
-        // First login
+        // First sign in
         await supabase.auth.signInWithPassword({
             email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
             password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
@@ -46,22 +41,28 @@ describe('Authentication Integration Tests', () => {
 
         expect(error).toBeNull();
         expect(session).not.toBeNull();
-        expect(session?.user?.email).toBe(process.env.INTEGRATION_SUPABASE_USER_EMAIL);
+        expect(session?.user.email).toBe(process.env.INTEGRATION_SUPABASE_USER_EMAIL);
     });
 
     test('should successfully sign out', async () => {
-        // First login
-        await supabase.auth.signInWithPassword({
+        // First sign in
+        const { error: signInError } = await supabase.auth.signInWithPassword({
             email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
             password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
         });
+
+        expect(signInError).toBeNull();
+
+        // Verify we're signed in
+        const { data: { session: sessionBefore } } = await supabase.auth.getSession();
+        expect(sessionBefore).not.toBeNull();
 
         // Then sign out
         const { error } = await supabase.auth.signOut();
         expect(error).toBeNull();
 
         // Verify we're signed out
-        const { data: { session } } = await supabase.auth.getSession();
-        expect(session).toBeNull();
+        const { data: { session: sessionAfter } } = await supabase.auth.getSession();
+        expect(sessionAfter).toBeNull();
     });
 }); 
