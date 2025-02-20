@@ -11,7 +11,8 @@
     "watch": "vitest --watch",
     "coverage": "vitest run --coverage",
     "sync:prod:test": "bash ./sync_prod_to_test.sh",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.5",

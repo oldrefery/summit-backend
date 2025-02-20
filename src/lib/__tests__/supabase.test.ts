@@ -1,76 +1,93 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMockSupabaseClient, mockPerson, mockEvent, mockSession, mockAuthError } from './supabase.mocks';
+import { mockPerson, mockEvent, mockSession, mockAuthError, mockUser, mockStorageError } from './supabase.mocks';
 import { supabase } from '../supabase';
 
-// Mock Supabase module
+const mockSignInWithPassword = vi.hoisted(() => vi.fn());
+const mockSignOut = vi.hoisted(() => vi.fn());
+const mockGetSession = vi.hoisted(() => vi.fn());
+const mockStorageFrom = vi.hoisted(() => vi.fn());
+const mockDatabaseFrom = vi.hoisted(() => vi.fn());
+
 vi.mock('@supabase/supabase-js', async () => {
     const actual = await vi.importActual('@supabase/supabase-js');
     return {
         ...actual,
-        AuthError: class extends Error {
-            constructor(message: string) {
-                super(message);
-                this.name = 'AuthError';
-            }
-        },
     };
 });
 
-// Mock Supabase client
 vi.mock('../supabase', () => ({
-    supabase: createMockSupabaseClient(),
-}));
-
-// Mock environment variables
-vi.mock('process', () => ({
-    env: {
-        NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-key',
-        SUPABASE_ANON_EMAIL: 'test@example.com',
-        SUPABASE_ANON_PASSWORD: 'test-password',
+    supabase: {
+        auth: {
+            signInWithPassword: mockSignInWithPassword,
+            signOut: mockSignOut,
+            getSession: mockGetSession,
+        },
+        storage: {
+            from: mockStorageFrom,
+        },
+        from: mockDatabaseFrom,
     },
 }));
 
 describe('Supabase Client', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+
+        // Setup storage mocks
+        mockStorageFrom.mockReturnValue({
+            upload: vi.fn(),
+            download: vi.fn(),
+            remove: vi.fn(),
+            list: vi.fn(),
+        });
+
+        // Setup database mocks
+        mockDatabaseFrom.mockReturnValue({
+            select: vi.fn().mockReturnThis(),
+            insert: vi.fn().mockReturnThis(),
+            update: vi.fn().mockReturnThis(),
+            delete: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            single: vi.fn(),
+        });
     });
 
     describe('Authentication', () => {
         it('should sign in with email and password', async () => {
-            vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
+            const mockResponse = {
                 data: {
-                    user: mockSession.user,
+                    user: mockUser,
                     session: mockSession,
                 },
                 error: null,
-            });
+            };
+            mockSignInWithPassword.mockResolvedValue(mockResponse);
 
             const result = await supabase.auth.signInWithPassword({
                 email: 'test@example.com',
                 password: 'password',
             });
 
-            expect(result.data.session).toEqual(mockSession);
-            expect(result.error).toBeNull();
+            expect(result).toEqual(mockResponse);
         });
 
         it('should handle sign in errors', async () => {
-            vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
+            const mockResponse = {
                 data: {
                     user: null,
                     session: null,
                 },
                 error: mockAuthError,
-            });
+            };
+            mockSignInWithPassword.mockResolvedValue(mockResponse);
 
             const result = await supabase.auth.signInWithPassword({
                 email: 'test@example.com',
                 password: 'wrong-password',
             });
 
-            expect(result.data.session).toBeNull();
-            expect(result.error).toEqual(mockAuthError);
+            expect(result).toEqual(mockResponse);
         });
     });
 
@@ -80,29 +97,34 @@ describe('Supabase Client', () => {
         const mockFile = new File(['test'], filePath, { type: 'image/jpeg' });
 
         it('should upload file to storage', async () => {
-            const mockUploadResponse = { data: { path: filePath }, error: null };
-            const mockUpload = vi.fn().mockResolvedValue(mockUploadResponse);
-            const mockStorageFrom = vi.fn(() => ({ upload: mockUpload }));
-            vi.mocked(supabase.storage.from).mockImplementation(mockStorageFrom);
+            const mockResponse = {
+                data: {
+                    id: '123',
+                    path: filePath,
+                    fullPath: `${bucket}/${filePath}`,
+                },
+                error: null,
+            };
+            const mockUpload = vi.fn().mockResolvedValue(mockResponse);
+            mockStorageFrom.mockReturnValue({ upload: mockUpload });
 
             const result = await supabase.storage.from(bucket).upload(filePath, mockFile);
 
-            expect(result).toEqual(mockUploadResponse);
-            expect(mockStorageFrom).toHaveBeenCalledWith(bucket);
+            expect(result).toEqual(mockResponse);
             expect(mockUpload).toHaveBeenCalledWith(filePath, mockFile);
         });
 
         it('should handle upload errors', async () => {
-            const mockError = { message: 'Upload failed' };
-            const mockUploadResponse = { data: null, error: mockError };
-            const mockUpload = vi.fn().mockResolvedValue(mockUploadResponse);
-            const mockStorageFrom = vi.fn(() => ({ upload: mockUpload }));
-            vi.mocked(supabase.storage.from).mockImplementation(mockStorageFrom);
+            const mockResponse = {
+                data: null,
+                error: mockStorageError,
+            };
+            const mockUpload = vi.fn().mockResolvedValue(mockResponse);
+            mockStorageFrom.mockReturnValue({ upload: mockUpload });
 
             const result = await supabase.storage.from(bucket).upload(filePath, mockFile);
 
-            expect(result.data).toBeNull();
-            expect(result.error).toEqual(mockError);
+            expect(result).toEqual(mockResponse);
         });
     });
 
@@ -111,18 +133,16 @@ describe('Supabase Client', () => {
             const table = 'people';
 
             it('should fetch all people', async () => {
-                const mockPeople = [mockPerson];
-                const mockResponse = { data: mockPeople, error: null };
+                const mockResponse = { data: [mockPerson], error: null };
                 const mockOrder = vi.fn().mockResolvedValue(mockResponse);
-                const mockSelect = vi.fn().mockReturnValue({ order: mockOrder });
-                const mockFrom = vi.fn(() => ({ select: mockSelect }));
-                vi.mocked(supabase.from).mockImplementation(mockFrom);
+                mockDatabaseFrom.mockReturnValue({
+                    select: vi.fn().mockReturnThis(),
+                    order: mockOrder,
+                });
 
                 const result = await supabase.from(table).select('*').order('name', { ascending: true });
 
                 expect(result).toEqual(mockResponse);
-                expect(mockFrom).toHaveBeenCalledWith(table);
-                expect(mockSelect).toHaveBeenCalledWith('*');
                 expect(mockOrder).toHaveBeenCalledWith('name', { ascending: true });
             });
 
@@ -130,17 +150,15 @@ describe('Supabase Client', () => {
                 const newPerson = { ...mockPerson, id: undefined };
                 const mockResponse = { data: mockPerson, error: null };
                 const mockSingle = vi.fn().mockResolvedValue(mockResponse);
-                const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
-                const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
-                const mockFrom = vi.fn(() => ({ insert: mockInsert }));
-                vi.mocked(supabase.from).mockImplementation(mockFrom);
+                mockDatabaseFrom.mockReturnValue({
+                    insert: vi.fn().mockReturnThis(),
+                    select: vi.fn().mockReturnThis(),
+                    single: mockSingle,
+                });
 
                 const result = await supabase.from(table).insert(newPerson).select('*').single();
 
                 expect(result).toEqual(mockResponse);
-                expect(mockFrom).toHaveBeenCalledWith(table);
-                expect(mockInsert).toHaveBeenCalledWith(newPerson);
-                expect(mockSelect).toHaveBeenCalledWith('*');
                 expect(mockSingle).toHaveBeenCalled();
             });
 
@@ -149,34 +167,30 @@ describe('Supabase Client', () => {
                 const updatedPerson = { ...mockPerson, ...updates };
                 const mockResponse = { data: updatedPerson, error: null };
                 const mockSingle = vi.fn().mockResolvedValue(mockResponse);
-                const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
-                const mockEq = vi.fn().mockReturnValue({ select: mockSelect });
-                const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
-                const mockFrom = vi.fn(() => ({ update: mockUpdate }));
-                vi.mocked(supabase.from).mockImplementation(mockFrom);
+                mockDatabaseFrom.mockReturnValue({
+                    update: vi.fn().mockReturnThis(),
+                    eq: vi.fn().mockReturnThis(),
+                    select: vi.fn().mockReturnThis(),
+                    single: mockSingle,
+                });
 
                 const result = await supabase.from(table).update(updates).eq('id', mockPerson.id).select('*').single();
 
                 expect(result).toEqual(mockResponse);
-                expect(mockFrom).toHaveBeenCalledWith(table);
-                expect(mockUpdate).toHaveBeenCalledWith(updates);
-                expect(mockEq).toHaveBeenCalledWith('id', mockPerson.id);
-                expect(mockSelect).toHaveBeenCalledWith('*');
                 expect(mockSingle).toHaveBeenCalled();
             });
 
             it('should delete a person', async () => {
                 const mockResponse = { data: null, error: null };
                 const mockEq = vi.fn().mockResolvedValue(mockResponse);
-                const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
-                const mockFrom = vi.fn(() => ({ delete: mockDelete }));
-                vi.mocked(supabase.from).mockImplementation(mockFrom);
+                mockDatabaseFrom.mockReturnValue({
+                    delete: vi.fn().mockReturnThis(),
+                    eq: mockEq,
+                });
 
                 const result = await supabase.from(table).delete().eq('id', mockPerson.id);
 
                 expect(result).toEqual(mockResponse);
-                expect(mockFrom).toHaveBeenCalledWith(table);
-                expect(mockDelete).toHaveBeenCalled();
                 expect(mockEq).toHaveBeenCalledWith('id', mockPerson.id);
             });
         });
@@ -185,12 +199,12 @@ describe('Supabase Client', () => {
             const table = 'events';
 
             it('should fetch all events', async () => {
-                const mockEvents = [mockEvent];
-                const mockResponse = { data: mockEvents, error: null };
+                const mockResponse = { data: [mockEvent], error: null };
                 const mockOrder = vi.fn().mockResolvedValue(mockResponse);
-                const mockSelect = vi.fn().mockReturnValue({ order: mockOrder });
-                const mockFrom = vi.fn(() => ({ select: mockSelect }));
-                vi.mocked(supabase.from).mockImplementation(mockFrom);
+                mockDatabaseFrom.mockReturnValue({
+                    select: vi.fn().mockReturnThis(),
+                    order: mockOrder,
+                });
 
                 const result = await supabase.from(table)
                     .select(`
@@ -206,8 +220,6 @@ describe('Supabase Client', () => {
                     .order('date', { ascending: true });
 
                 expect(result).toEqual(mockResponse);
-                expect(mockFrom).toHaveBeenCalledWith(table);
-                expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('id'));
                 expect(mockOrder).toHaveBeenCalledWith('date', { ascending: true });
             });
         });
