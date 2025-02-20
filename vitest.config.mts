@@ -13,7 +13,15 @@ export default defineConfig({
     restoreMocks: true,
     clearMocks: true,
     include: ['**/*.test.{ts,tsx}'],
-    exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
+    exclude: [
+      'node_modules',
+      'dist',
+      '.idea',
+      '.git',
+      '.cache',
+      'src/__tests__/integration/**',
+      'src/__tests__/e2e/**'
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'json-summary', 'html'],

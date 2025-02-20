@@ -46,7 +46,7 @@
 ## Integration Tests Implementation Plan
 
 ### Phase 1: Authentication and RLS
-- 🚧 Basic authentication tests
+- 🚧 Basic authentication tests (starting with minimal smoke test)
 - ⏳ RLS policy verification
 - ⏳ User roles and permissions
 
