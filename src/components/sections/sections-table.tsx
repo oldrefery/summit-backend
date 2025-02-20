@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { format, isToday, isYesterday, isTomorrow, parseISO, parse } from 'date-fns';
+import { format, isToday, isYesterday, isTomorrow, parseISO, isValid } from 'date-fns';
 import type { Section } from '@/types';
 
 interface SectionsTableProps {
@@ -27,7 +27,11 @@ export function SectionsTable({
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr) return 'No date';
     try {
-      const date = parse(dateStr, 'yyyy-MM-dd', new Date());
+      const date = parseISO(dateStr);
+      if (!isValid(date)) {
+        console.error('Invalid date:', dateStr);
+        return 'Invalid date';
+      }
       if (isToday(date)) return 'Today';
       if (isYesterday(date)) return 'Yesterday';
       if (isTomorrow(date)) return 'Tomorrow';
@@ -42,6 +46,10 @@ export function SectionsTable({
     if (!dateStr) return 'No date';
     try {
       const date = parseISO(dateStr);
+      if (!isValid(date)) {
+        console.error('Invalid date:', dateStr);
+        return 'Invalid date';
+      }
       return format(date, 'MMM d, yyyy');
     } catch (error) {
       console.error('Error formatting created date:', error);

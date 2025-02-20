@@ -7,10 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest",
+    "test": "vitest run",
+    "watch": "vitest --watch",
     "coverage": "vitest run --coverage",
-    "sync:prod:test": "bash ./sync_prod_to_test.sh"
-
+    "sync:prod:test": "bash ./sync_prod_to_test.sh",
+    "prepare": "husky install",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.5",
@@ -60,18 +62,21 @@
     "@typescript-eslint/eslint-plugin": "^8.24.1",
     "@typescript-eslint/parser": "^8.24.1",
     "@vitejs/plugin-react": "^4.3.4",
-    "@vitest/coverage-v8": "^3.0.5",
+    "@vitest/coverage-v8": "^3.0.6",
     "dotenv": "^16.4.7",
+    "esbuild": "^0.25.0",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "eslint-plugin-jest-dom": "^5.5.0",
     "eslint-plugin-testing-library": "^7.1.1",
-    "jsdom": "^26.0.0",
+    "husky": "^9.1.7",
+    "jsdom": "^24.0.0",
     "postcss": "^8",
     "supabase": "^2.12.1",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
+    "vite": "^6.1.1",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.0.5"
+    "vitest": "^3.0.6"
   }
 }

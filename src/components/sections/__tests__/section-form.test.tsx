@@ -1,23 +1,43 @@
-import { screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { screen, waitFor, act, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { SectionForm } from '../section-form';
 import { renderWithProviders } from '@/__mocks__/test-wrapper';
-import { mockMutation } from '@/__mocks__/test-submit-setup';
+import { createMockMutation, UpdateSectionData, Section } from '@/__mocks__/test-submit-setup';
 import { FORM_VALIDATION } from '@/app/constants';
 
 // Mock toast context
 const mockShowError = vi.fn();
+const mockShowSuccess = vi.fn();
+
 vi.mock('@/components/providers/toast-provider', () => ({
     useToastContext: () => ({
         showError: mockShowError,
+        showSuccess: mockShowSuccess,
     }),
 }));
 
+// Mock query client
+vi.mock('@tanstack/react-query', async () => {
+    const actual = await vi.importActual('@tanstack/react-query');
+    return {
+        ...actual,
+        useQueryClient: () => ({
+            invalidateQueries: vi.fn(),
+        }),
+    };
+});
+
 // Mock sections hook
+const createSectionMock = createMockMutation<Section, Section>();
+const updateSectionMock = createMockMutation<Section, UpdateSectionData>(async (data) => {
+    return { id: data.id, ...data.data };
+});
+
 vi.mock('@/hooks/use-sections', () => ({
     useSections: () => ({
-        createSection: mockMutation,
-        updateSection: mockMutation,
+        createSection: createSectionMock,
+        updateSection: updateSectionMock,
     }),
 }));
 
@@ -27,9 +47,9 @@ describe('SectionForm', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        mockMutation.mutateAsync.mockClear();
         mockOnOpenChangeAction.mockClear();
         mockShowError.mockClear();
+        mockShowSuccess.mockClear();
     });
 
     it('renders empty form for new section', () => {
@@ -70,14 +90,23 @@ describe('SectionForm', () => {
             <SectionForm open={true} onOpenChangeAction={mockOnOpenChangeAction} />
         );
 
+        const nameInput = screen.getByLabelText(/name/i);
+        const dateInput = screen.getByLabelText(/date/i);
+
+        await act(async () => {
+            fireEvent.change(nameInput, { target: { value: '' } });
+            fireEvent.change(dateInput, { target: { value: '' } });
+        });
+
         await act(async () => {
             const form = screen.getByRole('form');
-            await fireEvent.submit(form);
+            fireEvent.submit(form);
         });
 
         await waitFor(() => {
             expect(mockShowError).toHaveBeenCalledWith(FORM_VALIDATION.NAME_REQUIRED_MESSAGE);
-            expect(mockMutation.mutateAsync).not.toHaveBeenCalled();
+            expect(createSectionMock.mutateAsync).not.toHaveBeenCalled();
+            expect(updateSectionMock.mutateAsync).not.toHaveBeenCalled();
         });
     });
 
@@ -86,21 +115,19 @@ describe('SectionForm', () => {
             <SectionForm open={true} onOpenChangeAction={mockOnOpenChangeAction} />
         );
 
-        await act(async () => {
-            const nameInput = screen.getByLabelText(/name/i);
-            const dateInput = screen.getByLabelText(/date/i);
-            const pastDate = '2020-01-01';
+        const nameInput = screen.getByLabelText(/name/i);
+        const dateInput = screen.getByLabelText(/date/i);
+        const submitButton = screen.getByRole('button', { name: /create/i });
+        const pastDate = '2020-01-01';
 
-            fireEvent.change(nameInput, { target: { value: 'Test Section' } });
-            fireEvent.change(dateInput, { target: { value: pastDate } });
-
-            const form = screen.getByRole('form');
-            await fireEvent.submit(form);
-        });
+        fireEvent.change(nameInput, { target: { value: 'Test Section' } });
+        fireEvent.change(dateInput, { target: { value: pastDate } });
+        await userEvent.click(submitButton);
 
         await waitFor(() => {
             expect(mockShowError).toHaveBeenCalledWith('Date cannot be in the past');
-            expect(mockMutation.mutateAsync).not.toHaveBeenCalled();
+            expect(createSectionMock.mutateAsync).not.toHaveBeenCalled();
+            expect(updateSectionMock.mutateAsync).not.toHaveBeenCalled();
         });
     });
 
@@ -109,22 +136,22 @@ describe('SectionForm', () => {
             <SectionForm open={true} onOpenChangeAction={mockOnOpenChangeAction} />
         );
 
-        await act(async () => {
-            const nameInput = screen.getByLabelText(/name/i);
-            const dateInput = screen.getByLabelText(/date/i);
+        const nameInput = screen.getByLabelText(/name/i);
+        const dateInput = screen.getByLabelText(/date/i);
+        const submitButton = screen.getByRole('button', { name: /create/i });
 
-            fireEvent.change(nameInput, { target: { value: 'New Section' } });
-            fireEvent.change(dateInput, { target: { value: testDate } });
-
-            const form = screen.getByRole('form');
-            await fireEvent.submit(form);
-        });
+        fireEvent.change(nameInput, { target: { value: 'New Section' } });
+        fireEvent.change(dateInput, { target: { value: testDate } });
+        await userEvent.click(submitButton);
 
         await waitFor(() => {
-            expect(mockMutation.mutateAsync).toHaveBeenCalledWith({
+            expect(createSectionMock.mutateAsync).toHaveBeenCalledWith({
                 name: 'New Section',
                 date: testDate,
             });
+        });
+
+        await waitFor(() => {
             expect(mockOnOpenChangeAction).toHaveBeenCalledWith(false);
         });
     });
@@ -145,22 +172,23 @@ describe('SectionForm', () => {
             />
         );
 
-        await act(async () => {
-            const nameInput = screen.getByLabelText(/name/i);
-            fireEvent.change(nameInput, { target: { value: 'Updated Section' } });
+        const nameInput = screen.getByLabelText(/name/i);
+        const submitButton = screen.getByRole('button', { name: /update/i });
 
-            const form = screen.getByRole('form');
-            await fireEvent.submit(form);
-        });
+        fireEvent.change(nameInput, { target: { value: 'Updated Section' } });
+        await userEvent.click(submitButton);
 
         await waitFor(() => {
-            expect(mockMutation.mutateAsync).toHaveBeenCalledWith({
+            expect(updateSectionMock.mutateAsync).toHaveBeenCalledWith({
                 id: 1,
                 data: {
                     name: 'Updated Section',
                     date: testDate,
                 },
             });
+        });
+
+        await waitFor(() => {
             expect(mockOnOpenChangeAction).toHaveBeenCalledWith(false);
         });
     });
@@ -174,13 +202,11 @@ describe('SectionForm', () => {
             <SectionForm open={true} onOpenChangeAction={mockOnOpenChangeAction} />
         );
 
-        await act(async () => {
-            const nameInput = screen.getByLabelText(/name/i);
-            fireEvent.change(nameInput, { target: { value: 'Test Section' } });
+        const nameInput = screen.getByLabelText(/name/i);
+        const cancelButton = screen.getByRole('button', { name: /cancel/i });
 
-            const cancelButton = screen.getByRole('button', { name: /cancel/i });
-            fireEvent.click(cancelButton);
-        });
+        fireEvent.change(nameInput, { target: { value: 'Test Section' } });
+        await userEvent.click(cancelButton);
 
         await waitFor(() => {
             expect(confirmSpy).toHaveBeenCalledWith(FORM_VALIDATION.UNSAVED_CHANGES_MESSAGE);

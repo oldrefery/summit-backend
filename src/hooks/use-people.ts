@@ -6,6 +6,15 @@ import type { PersonFormData } from '@/types';
 
 export type PersonWithRelations = Person;
 
+export type UsePeopleReturn = {
+    data: Person[] | null;
+    isLoading: boolean;
+    error: Error | null;
+    createPerson: {
+        mutateAsync: (person: PersonFormData) => Promise<Person>;
+    };
+};
+
 export function usePeople<T extends number | undefined = undefined>(id?: T) {
     const queryClient = useQueryClient();
     const { showSuccess, showError } = useToastContext();

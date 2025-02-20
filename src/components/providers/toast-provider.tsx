@@ -5,7 +5,7 @@ import { createContext, useContext, useCallback, ReactNode } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { isToastActive, useToast } from '@/components/ui/use-toast';
 
-type ToastContextType = {
+export type ToastContextType = {
   showSuccess: (message: string) => void;
   showError: (error: unknown) => void;
 };
