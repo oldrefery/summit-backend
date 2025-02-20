@@ -25,7 +25,6 @@ export function useChanges() {
     queryFn: async () => {
       try {
         const result = await api.changes.getAll();
-        console.log('Changes API response:', result);
         return result;
       } catch (error) {
         showError(error);
@@ -33,8 +32,7 @@ export function useChanges() {
       }
     },
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    refetchInterval: 1000,
+    refetchOnWindowFocus: true
   });
 
   const publishVersion = useMutation({
