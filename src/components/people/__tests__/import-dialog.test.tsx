@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ImportDialog } from '../import-dialog';
 import { useToastContext, ToastContextType } from '@/components/providers/toast-provider';
-import { usePeople, UsePeopleReturn } from '@/hooks/use-people';
+import { usePeople } from '@/hooks/use-people';
 import readXlsxFile from 'read-excel-file';
 import { EXCEL_IMPORT } from '@/app/constants';
+import type { Person, PersonFormData } from '@/types';
+import type { UseMutationResult } from '@tanstack/react-query';
 
 // Мокаем зависимости
 vi.mock('read-excel-file');
@@ -16,6 +18,27 @@ describe('ImportDialog', () => {
     const mockShowError = vi.fn();
     const mockShowSuccess = vi.fn();
     const mockCreatePerson = vi.fn();
+    const mockUpdatePerson = vi.fn();
+    const mockDeletePerson = vi.fn();
+
+    const createMockMutation = <TData, TVariables>(mutateAsyncFn: (variables: TVariables) => Promise<TData>): UseMutationResult<TData, Error, TVariables, unknown> => ({
+        mutateAsync: mutateAsyncFn,
+        mutate: vi.fn(),
+        data: undefined,
+        error: null,
+        failureCount: 0,
+        failureReason: null,
+        isError: false,
+        isPaused: false,
+        isSuccess: false,
+        isIdle: true,
+        isPending: false,
+        reset: vi.fn(),
+        status: 'idle',
+        submittedAt: 0,
+        variables: undefined,
+        context: undefined
+    });
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -27,11 +50,14 @@ describe('ImportDialog', () => {
         } as ToastContextType);
 
         vi.mocked(usePeople).mockReturnValue({
-            createPerson: { mutateAsync: mockCreatePerson },
+            createPerson: createMockMutation<Person, PersonFormData>(mockCreatePerson),
+            updatePerson: createMockMutation<Person, { id: number; data: Partial<PersonFormData> }>(mockUpdatePerson),
+            deletePerson: createMockMutation<void, number>(mockDeletePerson),
             data: [],
             isLoading: false,
+            isError: false,
             error: null,
-        } as UsePeopleReturn);
+        });
     });
 
     it('renders correctly when open', () => {
@@ -106,13 +132,28 @@ describe('ImportDialog', () => {
     });
 
     it('handles duplicate records', async () => {
-        const existingPeople = [{ name: 'John Doe', role: 'speaker' }];
+        const existingPeople: Person[] = [{
+            id: 1,
+            name: 'John Doe',
+            role: 'speaker',
+            created_at: new Date().toISOString(),
+            email: 'john@example.com',
+            title: 'Developer',
+            company: 'Company',
+            country: 'US',
+            mobile: '123456',
+            bio: 'Bio'
+        }];
+
         vi.mocked(usePeople).mockReturnValue({
-            createPerson: { mutateAsync: mockCreatePerson },
+            createPerson: createMockMutation<Person, PersonFormData>(mockCreatePerson),
+            updatePerson: createMockMutation<Person, { id: number; data: Partial<PersonFormData> }>(mockUpdatePerson),
+            deletePerson: createMockMutation<void, number>(mockDeletePerson),
             data: existingPeople,
             isLoading: false,
+            isError: false,
             error: null,
-        } as UsePeopleReturn);
+        });
 
         const mockData = [
             ['Name', 'Role', 'Title', 'Company', 'Country', 'Email', 'Mobile', 'Bio'],
