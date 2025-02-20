@@ -24,12 +24,15 @@ export function useChanges() {
     queryKey: ['changes'],
     queryFn: async () => {
       try {
-        return await api.changes.getAll();
+        const result = await api.changes.getAll();
+        return result;
       } catch (error) {
         showError(error);
         throw error;
       }
     },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   const publishVersion = useMutation({

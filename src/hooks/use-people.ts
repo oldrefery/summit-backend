@@ -55,6 +55,7 @@ export function usePeople<T extends number | undefined = undefined>(id?: T) {
                 queryClient.invalidateQueries({ queryKey: ['people'] }),
                 queryClient.invalidateQueries({ queryKey: ['changes'] })
             ]);
+            await queryClient.refetchQueries({ queryKey: ['changes'] });
             showSuccess('Person created successfully');
         },
         onError: error => {
@@ -75,6 +76,7 @@ export function usePeople<T extends number | undefined = undefined>(id?: T) {
                 queryClient.invalidateQueries({ queryKey: ['people'] }),
                 queryClient.invalidateQueries({ queryKey: ['changes'] })
             ]);
+            await queryClient.refetchQueries({ queryKey: ['changes'] });
             showSuccess('Person updated successfully');
         },
         onError: error => {
@@ -89,6 +91,7 @@ export function usePeople<T extends number | undefined = undefined>(id?: T) {
                 queryClient.invalidateQueries({ queryKey: ['people'] }),
                 queryClient.invalidateQueries({ queryKey: ['changes'] })
             ]);
+            await queryClient.refetchQueries({ queryKey: ['changes'] });
             showSuccess('Person deleted successfully');
         },
         onError: error => {
