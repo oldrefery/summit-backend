@@ -101,11 +101,47 @@
       - Добавить user_id
       - Настроить триггер
       - Настроить RLS политики
-  - ⏳ Locations table policies
-    - Требуется аналогичная структура:
-      - Добавить user_id
-      - Настроить триггер
-      - Настроить RLS политики
+  - ✅ Locations table policies
+    - ✅ Тесты написаны
+    - ✅ SQL скрипт выполнен
+    - ✅ Тесты пройдены успешно
+    - Required Schema Changes:
+      ```sql
+      -- Add user_id column
+      ALTER TABLE locations 
+      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+      
+      -- Create trigger for auto-filling user_id
+      CREATE OR REPLACE FUNCTION public.set_location_user_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.user_id = auth.uid();
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
+      CREATE TRIGGER set_locations_user_id
+        BEFORE INSERT ON locations
+        FOR EACH ROW
+        EXECUTE FUNCTION public.set_location_user_id();
+      ```
+    - RLS Policies:
+      ```sql
+      -- Enable RLS
+      ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
+      
+      -- Deny policies for anon
+      CREATE POLICY "deny_anon_select_locations" ON locations FOR SELECT TO anon USING (false);
+      CREATE POLICY "deny_anon_insert_locations" ON locations FOR INSERT TO anon WITH CHECK (false);
+      CREATE POLICY "deny_anon_update_locations" ON locations FOR UPDATE TO anon USING (false);
+      CREATE POLICY "deny_anon_delete_locations" ON locations FOR DELETE TO anon USING (false);
+      
+      -- Allow policies for authenticated
+      CREATE POLICY "allow_auth_select_locations" ON locations FOR SELECT TO authenticated USING (true);
+      CREATE POLICY "allow_auth_insert_locations" ON locations FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+      CREATE POLICY "allow_auth_update_locations" ON locations FOR UPDATE TO authenticated USING (user_id = auth.uid());
+      CREATE POLICY "allow_auth_delete_locations" ON locations FOR DELETE TO authenticated USING (user_id = auth.uid());
+      ```
   - ⏳ Resources table policies
     - Требуется аналогичная структура:
       - Добавить user_id
