@@ -29,21 +29,21 @@ CLEANUP_SQL='DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
 
 echo "=== Step 1) Connecting to PROD project for DB and Storage"
 # Using input redirection to pass an empty password
-supabase link --project-ref "$PROD_PROJECT" <<< ""
+npx supabase link --project-ref "$PROD_PROJECT" <<< ""
 
 echo "=== Step 2) Dumping the SCHEMA (structure) from PROD"
-supabase db dump --file "$SCHEMA_FILE"
+npx supabase db dump --file "$SCHEMA_FILE"
 
 echo "=== Step 3) Dumping the DATA (inserts) from PROD"
-supabase db dump --data-only --file "$DATA_FILE"
+npx supabase db dump --data-only --file "$DATA_FILE"
 
 echo "=== Step 4) Copying files from PROD Storage to local folders"
-supabase --experimental storage cp "ss://$BUCKET1/" "./$LOCAL_AVATARS_PATH" --recursive
-supabase --experimental storage cp "ss://$BUCKET2/" "./$LOCAL_APPDATA_PATH" --recursive
+npx supabase --experimental storage cp "ss://$BUCKET1/" "./$LOCAL_AVATARS_PATH" --recursive
+npx supabase --experimental storage cp "ss://$BUCKET2/" "./$LOCAL_APPDATA_PATH" --recursive
 
 echo "=== Step 5) Connecting to TEST project (only for using storage)"
 # Using input redirection to pass an empty password
-supabase link --project-ref "$TEST_PROJECT" <<< ""
+npx supabase link --project-ref "$TEST_PROJECT" <<< ""
 
 echo "=== Step 6) Cleaning TEST DB: deleting the public schema"
 PGPASSWORD="$TEST_DB_PASS" psql \
@@ -70,7 +70,7 @@ PGPASSWORD="$TEST_DB_PASS" psql \
   --file="$DATA_FILE"
 
 echo "=== Step 9) Copying local folders to TEST Storage"
-supabase --experimental storage cp "./$LOCAL_AVATARS_PATH" "ss://$BUCKET1/" --recursive
-supabase --experimental storage cp "./$LOCAL_APPDATA_PATH" "ss://$BUCKET2/" --recursive
+npx supabase --experimental storage cp "./$LOCAL_AVATARS_PATH" "ss://$BUCKET1/" --recursive
+npx supabase --experimental storage cp "./$LOCAL_APPDATA_PATH" "ss://$BUCKET2/" --recursive
 
 echo "=== Synchronization completed! ==="
