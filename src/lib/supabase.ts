@@ -793,7 +793,6 @@ export const api = {
     async getAll() {
       await ensureAuthenticated();
 
-      // Use database function instead of direct counts
       const { data, error } = await supabase.rpc(
         'get_changes_since_last_version'
       );

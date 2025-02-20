@@ -51,7 +51,11 @@ export function usePeople<T extends number | undefined = undefined>(id?: T) {
     const createPerson = useMutation({
         mutationFn: (person: PersonFormData) => api.people.create(person),
         onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: ['people'] });
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['people'] }),
+                queryClient.invalidateQueries({ queryKey: ['changes'] })
+            ]);
+            await queryClient.refetchQueries({ queryKey: ['changes'] });
             showSuccess('Person created successfully');
         },
         onError: error => {
@@ -68,7 +72,11 @@ export function usePeople<T extends number | undefined = undefined>(id?: T) {
             data: Partial<PersonFormData>;
         }) => api.people.update(id, data),
         onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: ['people'] });
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['people'] }),
+                queryClient.invalidateQueries({ queryKey: ['changes'] })
+            ]);
+            await queryClient.refetchQueries({ queryKey: ['changes'] });
             showSuccess('Person updated successfully');
         },
         onError: error => {
@@ -79,7 +87,11 @@ export function usePeople<T extends number | undefined = undefined>(id?: T) {
     const deletePerson = useMutation({
         mutationFn: api.people.delete,
         onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: ['people'] });
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['people'] }),
+                queryClient.invalidateQueries({ queryKey: ['changes'] })
+            ]);
+            await queryClient.refetchQueries({ queryKey: ['changes'] });
             showSuccess('Person deleted successfully');
         },
         onError: error => {
