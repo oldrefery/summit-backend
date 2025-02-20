@@ -1,8 +1,11 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-echo "Running tests..."
+echo "Running unit tests..."
 npx vitest run
+
+echo "Running integration tests..."
+npm run test:integration
 
 echo "Checking types..."
 npm run typecheck
