@@ -55,6 +55,14 @@
   - ✅ Session management
   - ✅ Logout functionality
 - 🚧 RLS policy verification
+  - Общие требования:
+    - Каждая таблица должна иметь колонку user_id типа UUID со ссылкой на auth.users(id)
+    - Для каждой таблицы должен быть создан триггер для автозаполнения user_id
+    - RLS должен быть включен для каждой таблицы
+    - Анонимные пользователи не должны иметь доступа к данным
+    - Аутентифицированные пользователи должны иметь доступ только к своим записям (кроме чтения)
+    - Все изменения должны быть покрыты тестами
+    - SQL скрипты должны быть идемпотентными (безопасными для повторного выполнения)
   - ✅ People table policies
     - ✅ Anonymous access restrictions
     - ✅ Authenticated user permissions
@@ -142,11 +150,53 @@
       CREATE POLICY "allow_auth_update_locations" ON locations FOR UPDATE TO authenticated USING (user_id = auth.uid());
       CREATE POLICY "allow_auth_delete_locations" ON locations FOR DELETE TO authenticated USING (user_id = auth.uid());
       ```
-  - ⏳ Resources table policies
-    - Требуется аналогичная структура:
-      - Добавить user_id
-      - Настроить триггер
-      - Настроить RLS политики
+  - ✅ Resources table policies
+    - ✅ Тесты написаны
+    - ✅ SQL скрипт выполнен
+    - ✅ Тесты пройдены успешно
+    - ✅ Проверено:
+      - Анонимные пользователи не могут читать/создавать/обновлять/удалять записи
+      - Аутентифицированные пользователи могут читать все записи
+      - Аутентифицированные пользователи могут создавать новые записи
+      - Аутентифицированные пользователи могут обновлять/удалять только свои записи
+      - Поле user_id заполняется автоматически при создании записи
+    - Required Schema Changes:
+      ```sql
+      -- Add user_id column
+      ALTER TABLE resources 
+      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+      
+      -- Create trigger for auto-filling user_id
+      CREATE OR REPLACE FUNCTION public.set_resource_user_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.user_id = auth.uid();
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
+      CREATE TRIGGER set_resources_user_id
+        BEFORE INSERT ON resources
+        FOR EACH ROW
+        EXECUTE FUNCTION public.set_resource_user_id();
+      ```
+    - RLS Policies:
+      ```sql
+      -- Enable RLS
+      ALTER TABLE resources ENABLE ROW LEVEL SECURITY;
+      
+      -- Deny policies for anon
+      CREATE POLICY "deny_anon_select_resources" ON resources FOR SELECT TO anon USING (false);
+      CREATE POLICY "deny_anon_insert_resources" ON resources FOR INSERT TO anon WITH CHECK (false);
+      CREATE POLICY "deny_anon_update_resources" ON resources FOR UPDATE TO anon USING (false);
+      CREATE POLICY "deny_anon_delete_resources" ON resources FOR DELETE TO anon USING (false);
+      
+      -- Allow policies for authenticated
+      CREATE POLICY "allow_auth_select_resources" ON resources FOR SELECT TO authenticated USING (true);
+      CREATE POLICY "allow_auth_insert_resources" ON resources FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+      CREATE POLICY "allow_auth_update_resources" ON resources FOR UPDATE TO authenticated USING (user_id = auth.uid());
+      CREATE POLICY "allow_auth_delete_resources" ON resources FOR DELETE TO authenticated USING (user_id = auth.uid());
+      ```
   - ⏳ Announcements table policies
     - Требуется аналогичная структура:
       - Добавить user_id
