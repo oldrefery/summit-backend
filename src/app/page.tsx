@@ -46,6 +46,8 @@ export default function DashboardPage() {
   } = useChanges();
   const { data: pushStats, isLoading: pushStatsLoading } = usePushStatistics();
 
+  console.log('Raw changes data:', changes);
+
   const stats: StatItem[] = [
     {
       title: 'People',
@@ -106,6 +108,7 @@ export default function DashboardPage() {
   ];
 
   const totalChanges = Object.values(changes).reduce((a, b) => a + b, 0);
+  console.log('Total changes:', totalChanges);
 
   return (
     <div className="p-8">

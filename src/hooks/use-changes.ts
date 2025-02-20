@@ -24,12 +24,17 @@ export function useChanges() {
     queryKey: ['changes'],
     queryFn: async () => {
       try {
-        return await api.changes.getAll();
+        const result = await api.changes.getAll();
+        console.log('Changes API response:', result);
+        return result;
       } catch (error) {
         showError(error);
         throw error;
       }
     },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchInterval: 1000,
   });
 
   const publishVersion = useMutation({
