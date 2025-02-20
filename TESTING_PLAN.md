@@ -62,10 +62,17 @@
    - Status: Fixed by improving mock implementation
    - Verification: All tests pass, build succeeds
 
-3. ❌ Tests in sections-table.test.tsx fail
+3. ✅ Tests in sections-table.test.tsx fail
    - Issue: Date formatting tests failing ("Today" and "Tomorrow" not found)
    - Required fix: Review date formatting logic in table component
-   - Next step: Start implementation after verification
+   - Status: Fixed by improving date parsing and validation
+   - Changes made:
+     - Заменили parse на parseISO для корректной работы с ISO датами
+     - Добавили проверку валидности дат через isValid
+     - Улучшили обработку ошибок
+   - Verification:
+     - Все тесты (9) проходят успешно
+     - Сборка проходит без ошибок
 
 ### Required Actions
 1. ✅ Fix mock implementation in test-submit-setup.tsx
@@ -83,10 +90,17 @@
    - Status: Verified through passing tests
    - Verification: All tests pass, build succeeds
 
-3. 🚧 Update date formatting in sections-table component
+3. ✅ Update date formatting in sections-table component
    - Review date comparison logic
    - Update display format implementation
-   - Status: Ready to start implementation
+   - Status: Completed and verified
+   - Changes made:
+     - Улучшено форматирование дат
+     - Добавлена валидация
+     - Исправлена обработка ошибок
+   - Verification:
+     - Все тесты компонента проходят
+     - Сборка успешна
 
 ### Test Execution Instructions
 
