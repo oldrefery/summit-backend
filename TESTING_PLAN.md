@@ -404,17 +404,200 @@
       - Добавить user_id
       - Настроить триггер
       - Настроить RLS политики
+  - ✅ Notification History table policies
+    - ✅ Тесты написаны
+    - ✅ SQL скрипт выполнен
+    - ✅ Тесты пройдены успешно
+    - ✅ Проверено:
+      - Анонимные пользователи не могут читать/создавать/обновлять/удалять записи
+      - Аутентифицированные пользователи могут читать все записи
+      - Аутентифицированные пользователи могут создавать новые записи
+      - Аутентифицированные пользователи могут обновлять/удалять только свои записи
+      - Поле user_id заполняется автоматически при создании записи
+    - Required Schema Changes:
+      ```sql
+      -- Add user_id column
+      ALTER TABLE notification_history 
+      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+      
+      -- Create trigger function for auto-filling user_id
+      CREATE OR REPLACE FUNCTION public.set_notification_history_user_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.user_id = auth.uid();
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
+      DROP TRIGGER IF EXISTS set_notification_history_user_id ON notification_history;
+      CREATE TRIGGER set_notification_history_user_id
+        BEFORE INSERT ON notification_history
+        FOR EACH ROW
+        EXECUTE FUNCTION public.set_notification_history_user_id();
+      ```
+    - RLS Policies:
+      ```sql
+      -- Enable RLS
+      ALTER TABLE notification_history ENABLE ROW LEVEL SECURITY;
+      
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.notification_history;
+      DROP POLICY IF EXISTS "Enable insert access for authenticated users only" ON public.notification_history;
+      DROP POLICY IF EXISTS "Enable update access for users based on user_id" ON public.notification_history;
+      DROP POLICY IF EXISTS "Enable delete access for users based on user_id" ON public.notification_history;
+      DROP POLICY IF EXISTS "Deny access for anonymous users" ON public.notification_history;
+      
+      -- Create policies
+      CREATE POLICY "Enable read access for authenticated users" ON public.notification_history
+      FOR SELECT TO authenticated USING (true);
+      
+      CREATE POLICY "Enable insert access for authenticated users only" ON public.notification_history
+      FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+      
+      CREATE POLICY "Enable update access for users based on user_id" ON public.notification_history
+      FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+      
+      CREATE POLICY "Enable delete access for users based on user_id" ON public.notification_history
+      FOR DELETE TO authenticated USING (auth.uid() = user_id);
+      
+      -- Deny access for anonymous users
+      CREATE POLICY "Deny access for anonymous users" ON public.notification_history
+      FOR ALL TO anon USING (false);
+      ```
   - ⏳ App Users table policies
     - Требуется аналогичная структура:
       - Добавить user_id
       - Настроить триггер
       - Настроить RLS политики
       - Особое внимание на связь с auth.users
-  - ⏳ JSON Versions table policies
-    - Требуется аналогичная структура:
-      - Добавить user_id
-      - Настроить триггер
-      - Настроить RLS политики
+  - ✅ App Users table policies
+    - ✅ Тесты написаны
+    - ✅ SQL скрипт выполнен
+    - ✅ Тесты пройдены успешно
+    - ✅ Проверено:
+      - Анонимные пользователи не могут читать/создавать/обновлять/удалять записи
+      - Аутентифицированные пользователи могут читать все записи
+      - Аутентифицированные пользователи могут создавать новые записи
+      - Аутентифицированные пользователи могут обновлять/удалять только свои записи
+      - Поле user_id заполняется автоматически при создании записи
+      - Связь с auth.users работает корректно
+    - Required Schema Changes:
+      ```sql
+      -- Add user_id column
+      ALTER TABLE app_users 
+      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+      
+      -- Create trigger function for auto-filling user_id
+      CREATE OR REPLACE FUNCTION public.set_app_user_user_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.user_id = auth.uid();
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
+      DROP TRIGGER IF EXISTS set_app_users_user_id ON app_users;
+      CREATE TRIGGER set_app_users_user_id
+        BEFORE INSERT ON app_users
+        FOR EACH ROW
+        EXECUTE FUNCTION public.set_app_user_user_id();
+      ```
+    - RLS Policies:
+      ```sql
+      -- Enable RLS
+      ALTER TABLE app_users ENABLE ROW LEVEL SECURITY;
+      
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.app_users;
+      DROP POLICY IF EXISTS "Enable insert access for authenticated users only" ON public.app_users;
+      DROP POLICY IF EXISTS "Enable update access for users based on user_id" ON public.app_users;
+      DROP POLICY IF EXISTS "Enable delete access for users based on user_id" ON public.app_users;
+      DROP POLICY IF EXISTS "Deny access for anonymous users" ON public.app_users;
+      
+      -- Create policies
+      CREATE POLICY "Enable read access for authenticated users" ON public.app_users
+      FOR SELECT TO authenticated USING (true);
+      
+      CREATE POLICY "Enable insert access for authenticated users only" ON public.app_users
+      FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+      
+      CREATE POLICY "Enable update access for users based on user_id" ON public.app_users
+      FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+      
+      CREATE POLICY "Enable delete access for users based on user_id" ON public.app_users
+      FOR DELETE TO authenticated USING (auth.uid() = user_id);
+      
+      -- Deny access for anonymous users
+      CREATE POLICY "Deny access for anonymous users" ON public.app_users
+      FOR ALL TO anon USING (false);
+      ```
+  - ✅ JSON Versions table policies
+    - ✅ Тесты написаны
+    - ✅ SQL скрипт выполнен
+    - ✅ Тесты пройдены успешно
+    - ✅ Проверено:
+      - Анонимные пользователи не могут читать/создавать/обновлять/удалять записи
+      - Аутентифицированные пользователи могут читать все записи
+      - Аутентифицированные пользователи могут создавать новые записи
+      - Аутентифицированные пользователи могут обновлять/удалять только свои записи
+      - Поле user_id заполняется автоматически при создании записи
+    - Required Schema Changes:
+      ```sql
+      -- Включаем RLS
+      ALTER TABLE public.json_versions ENABLE ROW LEVEL SECURITY;
+
+      -- Удаляем существующие политики
+      DROP POLICY IF EXISTS "Allow auth insert" ON public.json_versions;
+      DROP POLICY IF EXISTS "Allow public read access" ON public.json_versions;
+      DROP POLICY IF EXISTS "Deny access for anonymous users" ON public.json_versions;
+      DROP POLICY IF EXISTS "Enable delete access for users based on user_id" ON public.json_versions;
+      DROP POLICY IF EXISTS "Enable insert access for authenticated users only" ON public.json_versions;
+      DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.json_versions;
+      DROP POLICY IF EXISTS "Enable update access for users based on user_id" ON public.json_versions;
+
+      -- Создаем новые политики
+      -- Запрещаем доступ для анонимных пользователей
+      CREATE POLICY "deny_anon_access" ON public.json_versions
+      FOR ALL TO anon
+      USING (false);
+
+      -- Разрешаем чтение для аутентифицированных пользователей
+      CREATE POLICY "allow_auth_select" ON public.json_versions
+      FOR SELECT TO authenticated
+      USING (true);
+
+      -- Разрешаем создание записей аутентифицированным пользователям
+      CREATE POLICY "allow_auth_insert" ON public.json_versions
+      FOR INSERT TO authenticated
+      WITH CHECK (auth.uid() = user_id);
+
+      -- Разрешаем обновление своих записей
+      CREATE POLICY "allow_auth_update" ON public.json_versions
+      FOR UPDATE TO authenticated
+      USING (auth.uid() = user_id)
+      WITH CHECK (auth.uid() = user_id);
+
+      -- Разрешаем удаление своих записей
+      CREATE POLICY "allow_auth_delete" ON public.json_versions
+      FOR DELETE TO authenticated
+      USING (auth.uid() = user_id);
+
+      -- Создаем триггер для автозаполнения user_id
+      CREATE OR REPLACE FUNCTION public.set_json_version_user_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.user_id = auth.uid();
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+      -- Создаем триггер
+      DROP TRIGGER IF EXISTS set_json_versions_user_id ON json_versions;
+      CREATE TRIGGER set_json_versions_user_id
+        BEFORE INSERT ON json_versions
+        FOR EACH ROW
+        EXECUTE FUNCTION public.set_json_version_user_id();
+      ```
   - ✅ Locations table policies
     - ✅ Тесты написаны
     - ✅ SQL скрипт выполнен
