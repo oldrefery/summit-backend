@@ -70,6 +70,8 @@ export interface SocialFeedPost extends BaseEntity {
   content: string;
   timestamp: string;
   image_urls: string[];
+  updated_at: string;
+  user_id: string;
 }
 
 export interface MarkdownPage extends BaseEntity {

@@ -228,63 +228,31 @@
         ON DELETE RESTRICT;
       ```
   - ✅ Sections table policies
-    - ✅ Тесты написаны
-    - ✅ SQL скрипт выполнен
-    - ✅ Тесты пройдены успешно
-    - ✅ Проверено:
-      - Анонимные пользователи не могут читать/создавать/обновлять/удалять записи
-      - Аутентифицированные пользователи могут читать все записи
-      - Аутентифицированные пользователи могут создавать новые записи
-      - Аутентифицированные пользователи могут обновлять/удалять только свои записи
-      - Поле user_id заполняется автоматически при создании записи
-      - Проверка связей с таблицей events работает
-    - Required Schema Changes:
-      ```sql
-      -- Add user_id column
-      ALTER TABLE sections 
-      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
-      
-      -- Create trigger for auto-filling user_id
-      CREATE OR REPLACE FUNCTION public.set_section_user_id()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.user_id = auth.uid();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql SECURITY DEFINER;
-      
-      DROP TRIGGER IF EXISTS set_sections_user_id ON sections;
-      CREATE TRIGGER set_sections_user_id
-        BEFORE INSERT ON sections
-        FOR EACH ROW
-        EXECUTE FUNCTION public.set_section_user_id();
-      ```
-    - RLS Policies:
-      ```sql
-      -- Enable RLS
-      ALTER TABLE sections ENABLE ROW LEVEL SECURITY;
-      
-      -- Drop existing policies if they exist
-      DROP POLICY IF EXISTS "deny_anon_select_sections" ON sections;
-      DROP POLICY IF EXISTS "deny_anon_insert_sections" ON sections;
-      DROP POLICY IF EXISTS "deny_anon_update_sections" ON sections;
-      DROP POLICY IF EXISTS "deny_anon_delete_sections" ON sections;
-      DROP POLICY IF EXISTS "allow_auth_select_sections" ON sections;
-      DROP POLICY IF EXISTS "allow_auth_insert_sections" ON sections;
-      DROP POLICY IF EXISTS "allow_auth_update_sections" ON sections;
-      DROP POLICY IF EXISTS "allow_auth_delete_sections" ON sections;
-      
-      -- Create policies
-      CREATE POLICY "deny_anon_select_sections" ON sections FOR SELECT TO anon USING (false);
-      CREATE POLICY "deny_anon_insert_sections" ON sections FOR INSERT TO anon WITH CHECK (false);
-      CREATE POLICY "deny_anon_update_sections" ON sections FOR UPDATE TO anon USING (false);
-      CREATE POLICY "deny_anon_delete_sections" ON sections FOR DELETE TO anon USING (false);
-      
-      CREATE POLICY "allow_auth_select_sections" ON sections FOR SELECT TO authenticated USING (true);
-      CREATE POLICY "allow_auth_insert_sections" ON sections FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-      CREATE POLICY "allow_auth_update_sections" ON sections FOR UPDATE TO authenticated USING (user_id = auth.uid());
-      CREATE POLICY "allow_auth_delete_sections" ON sections FOR DELETE TO authenticated USING (user_id = auth.uid());
-      ```
+    - Tests written and passed successfully
+    - SQL scripts executed
+    - Verified:
+      - Anonymous users cannot create or read records
+      - Authenticated users can create their own sections
+      - Authenticated users can read only their own sections
+      - Authenticated users can update their own sections
+      - Authenticated users can delete their own sections
+    - Required schema changes:
+      - Added trigger function `set_section_user_id()` to auto-fill user_id
+      - Enabled RLS
+      - Added policies:
+        ```sql
+        CREATE POLICY "Enable read access for authenticated users" ON public.sections
+        FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+        CREATE POLICY "Enable insert access for authenticated users only" ON public.sections
+        FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+
+        CREATE POLICY "Enable update access for users based on user_id" ON public.sections
+        FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+        CREATE POLICY "Enable delete access for users based on user_id" ON public.sections
+        FOR DELETE TO authenticated USING (auth.uid() = user_id);
+        ```
   - ✅ Markdown Pages table policies
     - ✅ Тесты написаны
     - ✅ SQL скрипт выполнен
@@ -336,10 +304,31 @@
         USING (auth.uid() = user_id);
       ```
   - 🚧 Social Feed Posts table policies
-    - Требуется аналогичная структура:
-      - Добавить user_id
-      - Настроить триггер
-      - Настроить RLS политики
+    - Tests written and passed successfully
+    - SQL scripts executed
+    - Verified:
+      - Anonymous users cannot create or read records
+      - Authenticated users can create their own posts
+      - Authenticated users can read all posts
+      - Authenticated users can update their own posts
+      - Authenticated users can delete their own posts
+    - Required schema changes:
+      - Added trigger function `set_social_feed_post_user_id()` to auto-fill user_id
+      - Enabled RLS
+      - Added policies:
+        ```sql
+        CREATE POLICY "Enable read access for authenticated users" ON public.social_feed_posts
+        FOR SELECT TO authenticated USING (true);
+
+        CREATE POLICY "Enable insert access for authenticated users only" ON public.social_feed_posts
+        FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+
+        CREATE POLICY "Enable update access for users based on user_id" ON public.social_feed_posts
+        FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+        CREATE POLICY "Enable delete access for users based on user_id" ON public.social_feed_posts
+        FOR DELETE TO authenticated USING (auth.uid() = user_id);
+        ```
   - ⏳ Push Tokens table policies
     - Требуется аналогичная структура:
       - Добавить user_id
