@@ -13,6 +13,10 @@
 - Use TypeScript
 - Use ESLint
 - NEVER ignore TypeScript or ESLint errors
+- ALWAYS use unique names in tests to prevent conflicts (especially for tables with unique constraints)
+  - Add timestamp or random suffix to test data names
+  - This prevents parallel test execution conflicts
+  - Allows running tests multiple times without DB cleanup
 
 ## Test Environment
 - Production Supabase: iabwkgppahudnaouwaep
