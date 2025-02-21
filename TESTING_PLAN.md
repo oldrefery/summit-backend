@@ -165,12 +165,57 @@
       - Настроить триггер
       - Настроить RLS политики
       - Особое внимание на связь с events
-  - ⏳ Markdown Pages table policies
-    - Требуется аналогичная структура:
-      - Добавить user_id
-      - Настроить триггер
-      - Настроить RLS политики
-  - ⏳ Social Feed Posts table policies
+  - ✅ Markdown Pages table policies
+    - ✅ Тесты написаны
+    - ✅ SQL скрипт выполнен
+    - ✅ Тесты пройдены успешно
+    - Required Schema Changes:
+      ```sql
+      -- Add user_id column
+      ALTER TABLE markdown_pages 
+      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+      
+      -- Create trigger for auto-filling user_id
+      CREATE OR REPLACE FUNCTION public.set_markdown_page_user_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.user_id = auth.uid();
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
+      CREATE TRIGGER set_markdown_pages_user_id
+        BEFORE INSERT ON markdown_pages
+        FOR EACH ROW
+        EXECUTE FUNCTION public.set_markdown_page_user_id();
+      ```
+    - RLS Policies:
+      ```sql
+      -- Enable RLS
+      ALTER TABLE markdown_pages ENABLE ROW LEVEL SECURITY;
+      
+      -- Create policies
+      CREATE POLICY "Markdown pages are viewable by everyone" ON markdown_pages
+        FOR SELECT
+        USING (
+          published = true OR 
+          (auth.uid() IS NOT NULL AND user_id = auth.uid())
+        );
+      
+      CREATE POLICY "Users can create markdown pages" ON markdown_pages
+        FOR INSERT
+        WITH CHECK (auth.uid() IS NOT NULL);
+      
+      CREATE POLICY "Users can update own markdown pages" ON markdown_pages
+        FOR UPDATE
+        USING (auth.uid() = user_id)
+        WITH CHECK (auth.uid() = user_id);
+      
+      CREATE POLICY "Users can delete own markdown pages" ON markdown_pages
+        FOR DELETE
+        USING (auth.uid() = user_id);
+      ```
+  - 🚧 Social Feed Posts table policies
     - Требуется аналогичная структура:
       - Добавить user_id
       - Настроить триггер
