@@ -303,32 +303,64 @@
         FOR DELETE
         USING (auth.uid() = user_id);
       ```
-  - 🚧 Social Feed Posts table policies
-    - Tests written and passed successfully
-    - SQL scripts executed
-    - Verified:
-      - Anonymous users cannot create or read records
-      - Authenticated users can create their own posts
-      - Authenticated users can read all posts
-      - Authenticated users can update their own posts
-      - Authenticated users can delete their own posts
-    - Required schema changes:
-      - Added trigger function `set_social_feed_post_user_id()` to auto-fill user_id
-      - Enabled RLS
-      - Added policies:
-        ```sql
-        CREATE POLICY "Enable read access for authenticated users" ON public.social_feed_posts
-        FOR SELECT TO authenticated USING (true);
-
-        CREATE POLICY "Enable insert access for authenticated users only" ON public.social_feed_posts
-        FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-
-        CREATE POLICY "Enable update access for users based on user_id" ON public.social_feed_posts
-        FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
-        CREATE POLICY "Enable delete access for users based on user_id" ON public.social_feed_posts
-        FOR DELETE TO authenticated USING (auth.uid() = user_id);
-        ```
+  - ✅ Social Feed Posts table policies
+    - ✅ Тесты написаны
+    - ✅ SQL скрипт выполнен
+    - ✅ Тесты пройдены успешно
+    - ✅ Проверено:
+      - Анонимные пользователи не могут читать/создавать/обновлять/удалять записи
+      - Аутентифицированные пользователи могут читать все записи
+      - Аутентифицированные пользователи могут создавать новые записи
+      - Аутентифицированные пользователи могут обновлять/удалять только свои записи
+      - Поле user_id заполняется автоматически при создании записи
+    - Required Schema Changes:
+      ```sql
+      -- Add user_id column if not exists
+      ALTER TABLE social_feed_posts 
+      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+      
+      -- Create trigger function for auto-filling user_id
+      CREATE OR REPLACE FUNCTION public.set_social_feed_post_user_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.user_id = auth.uid();
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
+      DROP TRIGGER IF EXISTS set_social_feed_posts_user_id ON social_feed_posts;
+      CREATE TRIGGER set_social_feed_posts_user_id
+        BEFORE INSERT ON social_feed_posts
+        FOR EACH ROW
+        EXECUTE FUNCTION public.set_social_feed_post_user_id();
+      ```
+    - RLS Policies:
+      ```sql
+      -- Enable RLS
+      ALTER TABLE social_feed_posts ENABLE ROW LEVEL SECURITY;
+      
+      -- Create policies
+      CREATE POLICY "deny_anon_access" ON public.social_feed_posts
+      FOR ALL TO anon
+      USING (false);
+      
+      CREATE POLICY "allow_auth_select" ON public.social_feed_posts
+      FOR SELECT TO authenticated
+      USING (true);
+      
+      CREATE POLICY "allow_auth_insert" ON public.social_feed_posts
+      FOR INSERT TO authenticated
+      WITH CHECK (auth.uid() = user_id);
+      
+      CREATE POLICY "allow_auth_update" ON public.social_feed_posts
+      FOR UPDATE TO authenticated
+      USING (auth.uid() = user_id)
+      WITH CHECK (auth.uid() = user_id);
+      
+      CREATE POLICY "allow_auth_delete" ON public.social_feed_posts
+      FOR DELETE TO authenticated
+      USING (auth.uid() = user_id);
+      ```
   - ✅ Push Tokens table policies
     - ✅ Тесты написаны
     - ✅ SQL скрипт выполнен
