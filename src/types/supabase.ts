@@ -49,6 +49,7 @@ export interface Location extends BaseEntity {
 export interface Section extends BaseEntity {
   name: string;
   date: string;
+  user_id?: string;
 }
 
 export interface Resource extends BaseEntity {

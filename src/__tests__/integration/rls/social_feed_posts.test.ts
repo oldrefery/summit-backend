@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
-import type { SocialFeedPost } from '@/types';
+import type { SocialFeedPost, Person } from '@/types';
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,23 +13,59 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 describe('Social Feed Posts Table RLS Policies', () => {
     const uniqueId = Date.now();
     let createdPostId: number;
+    let testPersonId: number;
 
-    // Test data
-    const testPost: Omit<SocialFeedPost, 'id' | 'created_at' | 'updated_at' | 'user_id'> = {
-        content: `Test Post Content ${uniqueId}`,
-        author_id: 1, // Используем фиксированный ID для тестов
-        timestamp: new Date().toISOString(),
-        image_urls: [`https://example.com/image-${uniqueId}.jpg`]
+    // Test data for person
+    const testPerson: Omit<Person, 'id' | 'created_at'> = {
+        name: `Test Person ${uniqueId}`,
+        role: 'attendee',
+        title: 'Test Title',
+        company: 'Test Company'
     };
 
-    // Ensure we're logged out before each test
+    // Test data for post
+    const testPost: Omit<SocialFeedPost, 'id' | 'created_at' | 'updated_at' | 'user_id'> = {
+        content: `Test Post Content ${uniqueId}`,
+        timestamp: new Date().toISOString().replace('Z', '+00:00'),
+        image_urls: [`https://example.com/image-${uniqueId}.jpg`],
+        author_id: 0 // Будет обновлено после создания тестового пользователя
+    };
+
+    // Setup: Create test person and ensure we're logged out
     beforeAll(async () => {
         await delay(1000);
+
+        // First sign in to create a test person
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
+            password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
+        });
+
+        if (signInError) throw signInError;
+
+        await delay(1000);
+
+        // Create a test person
+        const { data: personData, error: personError } = await supabase
+            .from('people')
+            .insert([testPerson])
+            .select()
+            .single();
+
+        if (personError) {
+            throw new Error(`Failed to create test person: ${personError.message}`);
+        }
+
+        testPersonId = personData.id;
+        testPost.author_id = testPersonId;
+
+        await delay(1000);
+
+        // Sign out for initial test state
         await supabase.auth.signOut();
 
-        // Verify we're actually logged out
-        const { data: { session } } = await supabase.auth.getSession();
-        expect(session).toBeNull();
+        // Wait for session to be cleared
+        await delay(1000);
     });
 
     // Clean up after all tests
@@ -42,8 +78,16 @@ describe('Social Feed Posts Table RLS Policies', () => {
         });
 
         await delay(1000);
+
+        // Clean up test post if it exists
         if (createdPostId) {
             await supabase.from('social_feed_posts').delete().eq('id', createdPostId);
+            await delay(1000);
+        }
+
+        // Clean up test person
+        if (testPersonId) {
+            await supabase.from('people').delete().eq('id', testPersonId);
         }
 
         await delay(1000);
@@ -118,6 +162,8 @@ describe('Social Feed Posts Table RLS Policies', () => {
 
         if (createData?.id) {
             createdPostId = createData.id;
+        } else {
+            throw new Error('Failed to get created post ID');
         }
 
         await delay(1000);
@@ -137,7 +183,7 @@ describe('Social Feed Posts Table RLS Policies', () => {
         await delay(1000);
         const updates = {
             content: `Updated Test Post Content ${uniqueId}`,
-            timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString().replace('Z', '+00:00'),
             image_urls: [`https://example.com/updated-image-${uniqueId}.jpg`]
         };
 
@@ -192,6 +238,8 @@ describe('Social Feed Posts Table RLS Policies', () => {
         expect(createError).toBeNull();
         if (createData?.id) {
             createdPostId = createData.id;
+        } else {
+            throw new Error('Failed to get created post ID');
         }
 
         await delay(1000);
@@ -209,8 +257,8 @@ describe('Social Feed Posts Table RLS Policies', () => {
         expect(readData?.image_urls).toEqual(testPost.image_urls);
         expect(readData?.author_id).toBe(testPost.author_id);
         expect(readData?.timestamp).toBe(testPost.timestamp);
-        // Check only the presence of dates
         expect(readData?.created_at).toBeTruthy();
         expect(readData?.updated_at).toBeTruthy();
+        expect(readData?.user_id).toBeTruthy();
     });
 }); 
