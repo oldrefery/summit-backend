@@ -277,7 +277,33 @@
         FOR EACH ROW
         EXECUTE FUNCTION public.set_markdown_page_user_id();
       ```
-  - ✅ Social Feed Posts table policies
+    - RLS Policies:
+      ```sql
+      -- Enable RLS
+      ALTER TABLE markdown_pages ENABLE ROW LEVEL SECURITY;
+      
+      -- Create policies
+      CREATE POLICY "Markdown pages are viewable by everyone" ON markdown_pages
+        FOR SELECT
+        USING (
+          published = true OR 
+          (auth.uid() IS NOT NULL AND user_id = auth.uid())
+        );
+      
+      CREATE POLICY "Users can create markdown pages" ON markdown_pages
+        FOR INSERT
+        WITH CHECK (auth.uid() IS NOT NULL);
+      
+      CREATE POLICY "Users can update own markdown pages" ON markdown_pages
+        FOR UPDATE
+        USING (auth.uid() = user_id)
+        WITH CHECK (auth.uid() = user_id);
+      
+      CREATE POLICY "Users can delete own markdown pages" ON markdown_pages
+        FOR DELETE
+        USING (auth.uid() = user_id);
+      ```
+  - 🚧 Social Feed Posts table policies
     - Tests written and passed successfully
     - SQL scripts executed
     - Verified:
@@ -303,12 +329,76 @@
         CREATE POLICY "Enable delete access for users based on user_id" ON public.social_feed_posts
         FOR DELETE TO authenticated USING (auth.uid() = user_id);
         ```
-  - ⏳ Push Tokens table policies
-    - Требуется аналогичная структура:
-      - Добавить user_id
-      - Настроить триггер
-      - Настроить RLS политики
-      - Особое внимание на связь с app_users
+  - ✅ Push Tokens table policies
+    - ✅ Тесты написаны
+    - ✅ SQL скрипт выполнен
+    - ✅ Тесты пройдены успешно
+    - ✅ Проверено:
+      - Анонимные пользователи не могут читать/создавать/обновлять/удалять записи
+      - Аутентифицированные пользователи могут читать все записи
+      - Аутентифицированные пользователи могут создавать новые записи
+      - Аутентифицированные пользователи могут обновлять/удалять только свои записи
+      - Поле user_id заполняется автоматически при создании записи
+      - Каскадное удаление при удалении app_user работает
+    - Required Schema Changes:
+      ```sql
+      -- Add required columns
+      ALTER TABLE push_tokens 
+      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id),
+      ADD COLUMN IF NOT EXISTS app_user_id UUID;
+      
+      -- Create trigger function for auto-filling user_id
+      CREATE OR REPLACE FUNCTION public.set_push_token_user_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.user_id = auth.uid();
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql SECURITY DEFINER;
+      
+      DROP TRIGGER IF EXISTS set_push_tokens_user_id ON push_tokens;
+      CREATE TRIGGER set_push_tokens_user_id
+        BEFORE INSERT ON push_tokens
+        FOR EACH ROW
+        EXECUTE FUNCTION public.set_push_token_user_id();
+      ```
+    - RLS Policies:
+      ```sql
+      -- Enable RLS
+      ALTER TABLE push_tokens ENABLE ROW LEVEL SECURITY;
+      
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.push_tokens;
+      DROP POLICY IF EXISTS "Enable insert access for authenticated users only" ON public.push_tokens;
+      DROP POLICY IF EXISTS "Enable update access for users based on user_id" ON public.push_tokens;
+      DROP POLICY IF EXISTS "Enable delete access for users based on user_id" ON public.push_tokens;
+      DROP POLICY IF EXISTS "Deny access for anonymous users" ON public.push_tokens;
+      
+      -- Create policies
+      CREATE POLICY "Enable read access for authenticated users" ON public.push_tokens
+      FOR SELECT TO authenticated USING (true);
+      
+      CREATE POLICY "Enable insert access for authenticated users only" ON public.push_tokens
+      FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+      
+      CREATE POLICY "Enable update access for users based on user_id" ON public.push_tokens
+      FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+      
+      CREATE POLICY "Enable delete access for users based on user_id" ON public.push_tokens
+      FOR DELETE TO authenticated USING (auth.uid() = user_id);
+      
+      -- Deny access for anonymous users
+      CREATE POLICY "Deny access for anonymous users" ON public.push_tokens
+      FOR ALL TO anon USING (false);
+      
+      -- Add foreign key constraint to app_users
+      ALTER TABLE push_tokens 
+      DROP CONSTRAINT IF EXISTS push_tokens_app_user_id_fkey,
+      ADD CONSTRAINT push_tokens_app_user_id_fkey 
+        FOREIGN KEY (app_user_id) 
+        REFERENCES app_users(id) 
+        ON DELETE CASCADE;
+      ```
   - ⏳ Notification History table policies
     - Требуется аналогичная структура:
       - Добавить user_id
@@ -520,10 +610,6 @@ npm run test:e2e
 - Each test file should handle its own cleanup
 - Use test database ID verification to prevent production access
 - Integration tests require valid Supabase credentials
-- SQL scripts for RLS policies should be executed manually in Supabase SQL editor
-  - No migration files
-  - No SQL files in the repository
-  - All changes must be documented in this file
 
 ## Additional Changes
 - ✅ Event People table policies
@@ -602,4 +688,4 @@ npm run test:e2e
       REFERENCES people(id) 
       ON DELETE RESTRICT;
     ```
-  - ✅ Social Feed Posts table policies
+  - 🚧 Social Feed Posts table policies
