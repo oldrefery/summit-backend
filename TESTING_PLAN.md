@@ -277,33 +277,7 @@
         FOR EACH ROW
         EXECUTE FUNCTION public.set_markdown_page_user_id();
       ```
-    - RLS Policies:
-      ```sql
-      -- Enable RLS
-      ALTER TABLE markdown_pages ENABLE ROW LEVEL SECURITY;
-      
-      -- Create policies
-      CREATE POLICY "Markdown pages are viewable by everyone" ON markdown_pages
-        FOR SELECT
-        USING (
-          published = true OR 
-          (auth.uid() IS NOT NULL AND user_id = auth.uid())
-        );
-      
-      CREATE POLICY "Users can create markdown pages" ON markdown_pages
-        FOR INSERT
-        WITH CHECK (auth.uid() IS NOT NULL);
-      
-      CREATE POLICY "Users can update own markdown pages" ON markdown_pages
-        FOR UPDATE
-        USING (auth.uid() = user_id)
-        WITH CHECK (auth.uid() = user_id);
-      
-      CREATE POLICY "Users can delete own markdown pages" ON markdown_pages
-        FOR DELETE
-        USING (auth.uid() = user_id);
-      ```
-  - 🚧 Social Feed Posts table policies
+  - ✅ Social Feed Posts table policies
     - Tests written and passed successfully
     - SQL scripts executed
     - Verified:
@@ -546,6 +520,10 @@ npm run test:e2e
 - Each test file should handle its own cleanup
 - Use test database ID verification to prevent production access
 - Integration tests require valid Supabase credentials
+- SQL scripts for RLS policies should be executed manually in Supabase SQL editor
+  - No migration files
+  - No SQL files in the repository
+  - All changes must be documented in this file
 
 ## Additional Changes
 - ✅ Event People table policies
@@ -624,4 +602,4 @@ npm run test:e2e
       REFERENCES people(id) 
       ON DELETE RESTRICT;
     ```
-  - 🚧 Social Feed Posts table policies
+  - ✅ Social Feed Posts table policies
