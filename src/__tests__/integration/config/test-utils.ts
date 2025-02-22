@@ -3,8 +3,8 @@ import type { Database } from '../../../types/database'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const TEST_USER_EMAIL = process.env.TEST_USER_EMAIL!
-const TEST_USER_PASSWORD = process.env.TEST_USER_PASSWORD!
+const TEST_USER_EMAIL = process.env.INTEGRATION_SUPABASE_USER_EMAIL!
+const TEST_USER_PASSWORD = process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
 
 /**
  * Setup test clients - both authenticated and anonymous
@@ -50,14 +50,10 @@ export async function cleanupTestData(client: ReturnType<typeof createClient<Dat
     ]
 
     for (const table of tables) {
-        const { error } = await client
+        await client
             .from(table)
             .delete()
-            .neq('id', 0) // Delete all records except system ones
-
-        if (error) {
-            console.error(`Failed to cleanup table ${table}:`, error)
-        }
+            .neq('id', 0)
     }
 }
 

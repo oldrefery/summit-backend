@@ -47,18 +47,29 @@ describe('Announcements Table RLS Policies', () => {
 
         await delay(1000); // Add delay between requests
 
-        // Create a test person
-        const { data: personData, error: personError } = await supabase
+        // Check if test person already exists
+        const { data: existingPerson } = await supabase
             .from('people')
-            .insert([testPerson])
-            .select()
+            .select('id')
+            .eq('email', testPerson.email)
             .single();
 
-        if (personError) {
-            throw new Error(`Failed to create test person: ${personError.message}`);
-        }
+        if (existingPerson) {
+            testPersonId = existingPerson.id;
+        } else {
+            // Create a test person
+            const { data: personData, error: personError } = await supabase
+                .from('people')
+                .insert([testPerson])
+                .select()
+                .single();
 
-        testPersonId = personData.id;
+            if (personError) {
+                throw new Error(`Failed to create test person: ${personError.message}`);
+            }
+
+            testPersonId = personData.id;
+        }
 
         await delay(1000); // Add delay between requests
 
@@ -194,7 +205,7 @@ describe('Announcements Table RLS Policies', () => {
         const { data, error } = await supabase
             .from('announcements')
             .update(updates)
-            .eq('id', createdAnnouncementId)
+            .eq('id', Number(createdAnnouncementId))
             .select()
             .single();
 
@@ -209,7 +220,7 @@ describe('Announcements Table RLS Policies', () => {
         const { error } = await supabase
             .from('announcements')
             .delete()
-            .eq('id', createdAnnouncementId);
+            .eq('id', Number(createdAnnouncementId));
 
         expect(error).toBeNull();
 
@@ -219,7 +230,7 @@ describe('Announcements Table RLS Policies', () => {
         const { data, error: readError } = await supabase
             .from('announcements')
             .select('*')
-            .eq('id', createdAnnouncementId)
+            .eq('id', Number(createdAnnouncementId))
             .single();
 
         expect(data).toBeNull();
