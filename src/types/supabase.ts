@@ -25,6 +25,7 @@ export interface Event extends BaseEntity {
   description?: string | null;
   duration?: string | null;
   location_id?: number | null;
+  user_id?: string;
   section?: {
     name: string;
   };
@@ -49,7 +50,6 @@ export interface Location extends BaseEntity {
 export interface Section extends BaseEntity {
   name: string;
   date: string;
-  user_id?: string;
 }
 
 export interface Resource extends BaseEntity {

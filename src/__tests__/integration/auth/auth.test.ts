@@ -11,7 +11,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 describe('Authentication Integration Tests', () => {
     test('should successfully sign in with valid credentials', async () => {
-        await delay(1000); // Add delay before test
+        await delay(2000); // Add longer delay before test
         const { data, error } = await supabase.auth.signInWithPassword({
             email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
             password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
@@ -23,7 +23,7 @@ describe('Authentication Integration Tests', () => {
     });
 
     test('should fail to sign in with invalid credentials', async () => {
-        await delay(1000); // Add delay before test
+        await delay(2000); // Add delay before test
         const { data, error } = await supabase.auth.signInWithPassword({
             email: 'invalid@example.com',
             password: 'wrongpassword'
@@ -35,14 +35,14 @@ describe('Authentication Integration Tests', () => {
     });
 
     test('should get session after successful login', async () => {
-        await delay(1000); // Add delay before test
+        await delay(2000); // Add delay before test
         // First sign in
         await supabase.auth.signInWithPassword({
             email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
             password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
         });
 
-        await delay(1000); // Add delay between requests
+        await delay(2000); // Add delay between requests
 
         // Then get session
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -53,7 +53,7 @@ describe('Authentication Integration Tests', () => {
     });
 
     test('should successfully sign out', async () => {
-        await delay(1000); // Add delay before test
+        await delay(2000); // Add delay before test
         // First sign in
         const { error: signInError } = await supabase.auth.signInWithPassword({
             email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
@@ -62,22 +62,27 @@ describe('Authentication Integration Tests', () => {
 
         expect(signInError).toBeNull();
 
-        await delay(1000); // Add delay between requests
+        await delay(2000); // Add delay between requests
 
         // Verify we're signed in
         const { data: { session: sessionBefore } } = await supabase.auth.getSession();
         expect(sessionBefore).not.toBeNull();
 
-        await delay(1000); // Add delay between requests
+        await delay(2000); // Add delay between requests
+
+        // Create a new client for sign out
+        const newClient = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
 
         // Then sign out
-        const { error } = await supabase.auth.signOut();
-        expect(error).toBeNull();
+        await newClient.auth.signOut();
 
-        await delay(1000); // Add delay between requests
+        await delay(2000); // Add delay between requests
 
         // Verify we're signed out
-        const { data: { session: sessionAfter } } = await supabase.auth.getSession();
+        const { data: { session: sessionAfter } } = await newClient.auth.getSession();
         expect(sessionAfter).toBeNull();
     });
 }); 

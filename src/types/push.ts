@@ -1,12 +1,29 @@
 // src/types/push.ts
 
-interface DeviceInfo {
-  osName: string; // 'iOS' | 'Android'
-  osVersion: string; // '15.0', '13.0', etc.
-  deviceName: string; // 'iPhone 13', 'Pixel 6', etc.
-  deviceModel: string; // Specific model identifier
-  appVersion: string; // Version of the mobile app
-  buildNumber: string; // Build number of the mobile app
+// Device info structure
+export interface DeviceInfo {
+  deviceName: string;
+  osName: string;
+  osVersion: string;
+  deviceModel: string;
+  appVersion: string;
+  buildNumber: string;
+}
+
+// User settings structure
+export interface UserSettings {
+  social_feed: boolean;
+  announcements: boolean;
+}
+
+// Main app user settings type
+export interface AppUserSettings {
+  id: string;
+  device_id: string;
+  device_info: DeviceInfo;
+  push_token?: string;
+  settings: UserSettings;
+  last_active_at: string;
 }
 
 export interface NotificationData extends Record<string, unknown> {
@@ -75,13 +92,6 @@ export interface ApiErrorResponse {
     code?: string;
     details?: string;
   };
-}
-
-export interface PushStatistics {
-  total_users: number;
-  active_users: number;
-  total_tokens: number;
-  active_tokens: number;
 }
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;

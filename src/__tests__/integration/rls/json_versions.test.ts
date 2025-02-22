@@ -197,7 +197,7 @@ describe('JSON Versions Table RLS Policies', () => {
         // Try to read all fields
         const { data: readData, error: readError } = await supabase
             .from('json_versions')
-            .select('id, version, file_path, changes, file_url, published_at, published_by, user_id')
+            .select('id, version, file_path, changes, file_url, published_at, published_by')
             .eq('id', createdVersionId)
             .single();
 
@@ -209,6 +209,5 @@ describe('JSON Versions Table RLS Policies', () => {
         expect(readData?.changes).toEqual(testVersion.changes);
         expect(readData?.file_url).toBe(testVersion.file_url);
         expect(readData?.published_at).toBeDefined();
-        expect(readData?.user_id).toBeDefined();
     });
 }); 

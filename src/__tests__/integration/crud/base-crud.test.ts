@@ -1,6 +1,8 @@
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { BaseEntity } from '@/types';
+import type { BaseEntity } from '../../../types/base';
+import type { Database } from '../../../types/database';
+import { cleanupTestData, setupTestClient } from '../config/test-utils';
 
 /**
  * Базовый интерфейс для тестовых данных
@@ -12,7 +14,6 @@ interface TestData extends BaseEntity {
     content?: string;
     description?: string;
     link?: string;
-    user_id?: string;
     role?: string;
     company?: string | null;
     bio?: string | null;
@@ -262,4 +263,76 @@ export class BaseCrudTest<T extends TestData> {
             });
         });
     }
-} 
+}
+
+// Test client with authenticated user
+let authClient: ReturnType<typeof createClient<Database>>
+
+describe('CRUD Operations Tests', () => {
+    beforeAll(async () => {
+        // Setup test clients
+        const clients = await setupTestClient()
+        authClient = clients.authClient
+    })
+
+    afterAll(async () => {
+        // Cleanup all test data
+        await cleanupTestData(authClient)
+    })
+
+    describe('Create Operations', () => {
+        it('should create new records with proper validation', async () => {
+            // TODO: Implement create tests
+        })
+
+        it('should handle validation errors properly', async () => {
+            // TODO: Implement validation error tests
+        })
+
+        it('should properly set default values', async () => {
+            // TODO: Implement default values tests
+        })
+    })
+
+    describe('Read Operations', () => {
+        it('should read records with proper filtering', async () => {
+            // TODO: Implement read tests
+        })
+
+        it('should handle pagination properly', async () => {
+            // TODO: Implement pagination tests
+        })
+
+        it('should properly join related tables', async () => {
+            // TODO: Implement join tests
+        })
+    })
+
+    describe('Update Operations', () => {
+        it('should update records with proper validation', async () => {
+            // TODO: Implement update tests
+        })
+
+        it('should handle concurrent updates properly', async () => {
+            // TODO: Implement concurrent update tests
+        })
+
+        it('should maintain data integrity during updates', async () => {
+            // TODO: Implement data integrity tests
+        })
+    })
+
+    describe('Delete Operations', () => {
+        it('should delete records with proper cascade', async () => {
+            // TODO: Implement delete tests
+        })
+
+        it('should handle foreign key constraints properly', async () => {
+            // TODO: Implement foreign key constraint tests
+        })
+
+        it('should maintain referential integrity during deletes', async () => {
+            // TODO: Implement referential integrity tests
+        })
+    })
+}) 

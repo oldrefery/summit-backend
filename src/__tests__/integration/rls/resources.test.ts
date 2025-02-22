@@ -1,189 +1,138 @@
-import { describe, test, expect, beforeAll, afterAll } from 'vitest';
-import { createClient } from '@supabase/supabase-js';
+import { describe, test, expect } from 'vitest';
+import { BaseIntegrationTest } from '../base-test';
 import type { Resource } from '@/types';
+import { delay } from '../../../utils/test-utils';
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+class ResourcesTest extends BaseIntegrationTest {
+    static async createResource(name: string) {
+        return this.initializeTestData<Resource>('resources', {
+            name,
+            link: `https://example.com/${name}`,
+            description: `Description for ${name}`,
+            is_route: false
+        });
+    }
+}
 
 describe('Resources Table RLS Policies', () => {
-    // Test data
+    let createdResourceId: number;
+    const uniqueId = Date.now();
+
     const testResource: Omit<Resource, 'id' | 'created_at'> = {
-        name: 'Test Resource',
-        link: 'https://test.com',
+        name: `Test Resource ${uniqueId}`,
+        link: `https://example.com/test-${uniqueId}`,
         description: 'Test Description',
         is_route: false
     };
 
-    let createdResourceId: number;
+    describe('Anonymous Access', () => {
+        test('cannot create records', async () => {
+            const { data, error } = await ResourcesTest.getAnonymousClient()
+                .from('resources')
+                .insert([testResource])
+                .select()
+                .single();
 
-    // Ensure we're logged out before each test
-    beforeAll(async () => {
-        await supabase.auth.signOut();
+            expect(error).not.toBeNull();
+            expect(error?.message).toMatch(/(permission denied|violates row-level security)/);
+            expect(data).toBeNull();
 
-        // Verify we're actually logged out
-        const { data: { session } } = await supabase.auth.getSession();
-        expect(session).toBeNull();
-    });
-
-    // Clean up after all tests
-    afterAll(async () => {
-        // Login to clean up
-        await supabase.auth.signInWithPassword({
-            email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
-            password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
+            await delay(1000);
         });
 
-        if (createdResourceId) {
-            await supabase.from('resources').delete().eq('id', createdResourceId);
-        }
+        test('cannot read records', async () => {
+            const { data, error } = await ResourcesTest.getAnonymousClient()
+                .from('resources')
+                .select('*');
 
-        await supabase.auth.signOut();
+            expect(data).toEqual([]);
+            expect(error).toBeNull();
+
+            await delay(1000);
+        });
     });
 
-    test('anonymous user cannot create resource records', async () => {
-        // Create a new Supabase client for anonymous user
-        const anonSupabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
+    describe('Authenticated Access', () => {
+        test('can create and read records', async () => {
+            const resource = await ResourcesTest.createResource(`Test Resource Create ${uniqueId}`);
+            createdResourceId = resource.id;
 
-        // Verify we're not authenticated
-        const { data: { session } } = await anonSupabase.auth.getSession();
-        expect(session).toBeNull();
+            expect(resource).not.toBeNull();
+            expect(resource.name).toContain('Test Resource Create');
 
-        const { data, error } = await anonSupabase
-            .from('resources')
-            .insert([testResource])
-            .select()
-            .single();
+            // Read all resources
+            const { data: readData, error: readError } = await ResourcesTest.getAuthenticatedClient()
+                .from('resources')
+                .select('*');
 
-        expect(error).not.toBeNull();
-        expect(error?.message).toMatch(/(permission denied|violates row-level security)/);
-        expect(data).toBeNull();
-    });
+            expect(readError).toBeNull();
+            expect(readData).not.toBeNull();
+            expect(Array.isArray(readData)).toBe(true);
+            expect(readData?.length).toBeGreaterThan(0);
+            expect(readData?.find(r => r.id === createdResourceId)).toBeTruthy();
 
-    test('anonymous user cannot read resource records', async () => {
-        // Create a new Supabase client for anonymous user
-        const anonSupabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-
-        // Verify we're not authenticated
-        const { data: { session } } = await anonSupabase.auth.getSession();
-        expect(session).toBeNull();
-
-        const { data, error } = await anonSupabase
-            .from('resources')
-            .select('*');
-
-        expect(data).toEqual([]);
-        expect(error).toBeNull();
-    });
-
-    test('authenticated user can create and read resource records', async () => {
-        // Login first
-        await supabase.auth.signInWithPassword({
-            email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
-            password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
+            await delay(1000);
         });
 
-        // Create a resource
-        const { data: createData, error: createError } = await supabase
-            .from('resources')
-            .insert([testResource])
-            .select()
-            .single();
+        test('can update own records', async () => {
+            const updates = {
+                name: `Updated Resource ${uniqueId}`,
+                description: 'Updated Description'
+            };
 
-        expect(createError).toBeNull();
-        expect(createData).not.toBeNull();
-        expect(createData?.name).toBe(testResource.name);
+            const { data, error } = await ResourcesTest.getAuthenticatedClient()
+                .from('resources')
+                .update(updates)
+                .eq('id', createdResourceId)
+                .select()
+                .single();
 
-        if (createData?.id) {
-            createdResourceId = createData.id;
-        }
+            expect(error).toBeNull();
+            expect(data).not.toBeNull();
+            expect(data?.name).toBe(updates.name);
+            expect(data?.description).toBe(updates.description);
 
-        // Read all resources
-        const { data: readData, error: readError } = await supabase
-            .from('resources')
-            .select('*');
+            await delay(1000);
+        });
 
-        expect(readError).toBeNull();
-        expect(readData).not.toBeNull();
-        expect(Array.isArray(readData)).toBe(true);
-        expect(readData?.length).toBeGreaterThan(0);
-        expect(readData?.find(r => r.id === createdResourceId)).toBeTruthy();
-    });
+        test('can delete own records', async () => {
+            await ResourcesTest.cleanupTestData('resources', createdResourceId);
 
-    test('authenticated user can update own records', async () => {
-        const updates = {
-            name: 'Updated Test Resource',
-            description: 'Updated Test Description'
-        };
+            // Verify deletion
+            const { data, error: readError } = await ResourcesTest.getAuthenticatedClient()
+                .from('resources')
+                .select('*')
+                .eq('id', createdResourceId)
+                .single();
 
-        const { data, error } = await supabase
-            .from('resources')
-            .update(updates)
-            .eq('id', createdResourceId)
-            .select()
-            .single();
+            expect(data).toBeNull();
+            expect(readError?.message).toContain('JSON object requested, multiple (or no) rows returned');
 
-        expect(error).toBeNull();
-        expect(data).not.toBeNull();
-        expect(data?.name).toBe(updates.name);
-        expect(data?.description).toBe(updates.description);
-    });
+            createdResourceId = 0;
 
-    test('authenticated user can delete own records', async () => {
-        const { error } = await supabase
-            .from('resources')
-            .delete()
-            .eq('id', createdResourceId);
+            await delay(1000);
+        });
 
-        expect(error).toBeNull();
+        test('has access to all fields of own records', async () => {
+            const resource = await ResourcesTest.createResource(`Test Resource Fields ${uniqueId}`);
+            createdResourceId = resource.id;
 
-        // Verify the record is deleted
-        const { data, error: readError } = await supabase
-            .from('resources')
-            .select('*')
-            .eq('id', createdResourceId)
-            .single();
+            // Try to read all fields
+            const { data: readData, error: readError } = await ResourcesTest.getAuthenticatedClient()
+                .from('resources')
+                .select('id, name, link, description, is_route')
+                .eq('id', createdResourceId)
+                .single();
 
-        expect(data).toBeNull();
-        expect(readError?.message).toContain('JSON object requested, multiple (or no) rows returned');
+            expect(readError).toBeNull();
+            expect(readData).not.toBeNull();
+            // All fields should be visible
+            expect(readData?.name).toContain('Test Resource Fields');
+            expect(readData?.link).toContain('example.com');
+            expect(readData?.description).toContain('Description for');
+            expect(readData?.is_route).toBe(false);
 
-        // Reset createdResourceId since we've deleted it
-        createdResourceId = 0;
-    });
-
-    test('authenticated user has access to all fields of own records', async () => {
-        // Create test resource with all fields
-        const { data: createData, error: createError } = await supabase
-            .from('resources')
-            .insert([testResource])
-            .select()
-            .single();
-
-        expect(createError).toBeNull();
-        if (createData?.id) {
-            createdResourceId = createData.id;
-        }
-
-        // Try to read all fields
-        const { data: readData, error: readError } = await supabase
-            .from('resources')
-            .select('id, name, link, description, is_route')
-            .eq('id', createdResourceId)
-            .single();
-
-        expect(readError).toBeNull();
-        expect(readData).not.toBeNull();
-        // All fields should be visible
-        expect(readData?.name).toBe(testResource.name);
-        expect(readData?.link).toBe(testResource.link);
-        expect(readData?.description).toBe(testResource.description);
-        expect(readData?.is_route).toBe(testResource.is_route);
+            await delay(1000);
+        });
     });
 }); 

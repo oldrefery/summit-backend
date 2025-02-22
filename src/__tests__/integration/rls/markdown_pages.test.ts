@@ -1,20 +1,23 @@
-import { describe, test, expect, beforeAll, afterAll } from 'vitest';
-import { createClient } from '@supabase/supabase-js';
+import { describe, test, expect } from 'vitest';
+import { BaseIntegrationTest } from '../base-test';
 import type { MarkdownPage } from '@/types';
+import { delay } from '../../../utils/test-utils';
 
-// Helper function to add delay between requests
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+class MarkdownPagesTest extends BaseIntegrationTest {
+    static async createPage(title: string, published: boolean = true) {
+        return this.initializeTestData<MarkdownPage>('markdown_pages', {
+            title,
+            slug: title.toLowerCase().replace(/\s+/g, '-'),
+            content: `# ${title}\n\nTest content for ${title}`,
+            published
+        });
+    }
+}
 
 describe('Markdown Pages Table RLS Policies', () => {
-    const uniqueId = Date.now();
     let createdPageId: number;
+    const uniqueId = Date.now();
 
-    // Test data
     const testPage: Omit<MarkdownPage, 'id' | 'created_at' | 'updated_at'> = {
         title: `Test Page ${uniqueId}`,
         slug: `test-page-${uniqueId}`,
@@ -22,191 +25,116 @@ describe('Markdown Pages Table RLS Policies', () => {
         published: true
     };
 
-    // Ensure we're logged out before each test
-    beforeAll(async () => {
-        await delay(1000);
-        await supabase.auth.signOut();
+    describe('Anonymous Access', () => {
+        test('cannot create records', async () => {
+            const { data, error } = await MarkdownPagesTest.getAnonymousClient()
+                .from('markdown_pages')
+                .insert([testPage])
+                .select()
+                .single();
 
-        // Verify we're actually logged out
-        const { data: { session } } = await supabase.auth.getSession();
-        expect(session).toBeNull();
-    });
+            expect(error).not.toBeNull();
+            expect(error?.message).toMatch(/(permission denied|violates row-level security)/);
+            expect(data).toBeNull();
 
-    // Clean up after all tests
-    afterAll(async () => {
-        await delay(1000);
-        // Login to clean up
-        await supabase.auth.signInWithPassword({
-            email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
-            password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
+            await delay(1000);
         });
 
-        await delay(1000);
-        if (createdPageId) {
-            await supabase.from('markdown_pages').delete().eq('id', createdPageId);
-        }
+        test('cannot read records', async () => {
+            const { data, error } = await MarkdownPagesTest.getAnonymousClient()
+                .from('markdown_pages')
+                .select('*');
 
-        await delay(1000);
-        await supabase.auth.signOut();
+            expect(data).toEqual([]);
+            expect(error).toBeNull();
+
+            await delay(1000);
+        });
     });
 
-    test('anonymous user cannot create markdown page records', async () => {
-        await delay(1000);
-        // Create a new Supabase client for anonymous user
-        const anonSupabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
+    describe('Authenticated Access', () => {
+        test('can create and read records', async () => {
+            const page = await MarkdownPagesTest.createPage(`Test Page Create ${uniqueId}`);
+            createdPageId = page.id;
 
-        // Verify we're not authenticated
-        const { data: { session } } = await anonSupabase.auth.getSession();
-        expect(session).toBeNull();
+            expect(page).not.toBeNull();
+            expect(page.title).toContain('Test Page Create');
 
-        const { data, error } = await anonSupabase
-            .from('markdown_pages')
-            .insert([testPage])
-            .select()
-            .single();
+            // Read all pages
+            const { data: readData, error: readError } = await MarkdownPagesTest.getAuthenticatedClient()
+                .from('markdown_pages')
+                .select('*');
 
-        expect(error).not.toBeNull();
-        expect(error?.message).toMatch(/(permission denied|violates row-level security)/);
-        expect(data).toBeNull();
-    });
+            expect(readError).toBeNull();
+            expect(readData).not.toBeNull();
+            expect(Array.isArray(readData)).toBe(true);
+            expect(readData?.length).toBeGreaterThan(0);
+            expect(readData?.find(p => p.id === createdPageId)).toBeTruthy();
 
-    test('anonymous user cannot read markdown page records', async () => {
-        await delay(1000);
-        // Create a new Supabase client for anonymous user
-        const anonSupabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-
-        // Verify we're not authenticated
-        const { data: { session } } = await anonSupabase.auth.getSession();
-        expect(session).toBeNull();
-
-        const { data, error } = await anonSupabase
-            .from('markdown_pages')
-            .select('*');
-
-        expect(data).toEqual([]);
-        expect(error).toBeNull();
-    });
-
-    test('authenticated user can create and read markdown page records', async () => {
-        await delay(1000);
-        // Login first
-        await supabase.auth.signInWithPassword({
-            email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
-            password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
+            await delay(1000);
         });
 
-        await delay(1000);
-        // Create a markdown page
-        const { data: createData, error: createError } = await supabase
-            .from('markdown_pages')
-            .insert([testPage])
-            .select()
-            .single();
+        test('can update own records', async () => {
+            const updates = {
+                title: `Updated Page ${uniqueId}`,
+                content: '# Updated Content'
+            };
 
-        expect(createError).toBeNull();
-        expect(createData).not.toBeNull();
-        expect(createData?.title).toBe(testPage.title);
-        expect(createData?.slug).toBe(testPage.slug);
-        expect(createData?.content).toBe(testPage.content);
-        expect(createData?.published).toBe(testPage.published);
+            const { data, error } = await MarkdownPagesTest.getAuthenticatedClient()
+                .from('markdown_pages')
+                .update(updates)
+                .eq('id', createdPageId)
+                .select()
+                .single();
 
-        if (createData?.id) {
-            createdPageId = createData.id;
-        }
+            expect(error).toBeNull();
+            expect(data).not.toBeNull();
+            expect(data?.title).toBe(updates.title);
+            expect(data?.content).toBe(updates.content);
 
-        await delay(1000);
-        // Read all markdown pages
-        const { data: readData, error: readError } = await supabase
-            .from('markdown_pages')
-            .select('*');
+            await delay(1000);
+        });
 
-        expect(readError).toBeNull();
-        expect(readData).not.toBeNull();
-        expect(Array.isArray(readData)).toBe(true);
-        expect(readData?.length).toBeGreaterThan(0);
-        expect(readData?.find(p => p.id === createdPageId)).toBeTruthy();
-    });
+        test('can delete own records', async () => {
+            await MarkdownPagesTest.cleanupTestData('markdown_pages', createdPageId);
 
-    test('authenticated user can update own records', async () => {
-        await delay(1000);
-        const updates = {
-            title: `Updated Test Page ${uniqueId}`,
-            content: '# Updated Content'
-        };
+            // Verify deletion
+            const { data, error: readError } = await MarkdownPagesTest.getAuthenticatedClient()
+                .from('markdown_pages')
+                .select('*')
+                .eq('id', createdPageId)
+                .single();
 
-        const { data, error } = await supabase
-            .from('markdown_pages')
-            .update(updates)
-            .eq('id', createdPageId)
-            .select()
-            .single();
+            expect(data).toBeNull();
+            expect(readError?.message).toContain('JSON object requested, multiple (or no) rows returned');
 
-        expect(error).toBeNull();
-        expect(data).not.toBeNull();
-        expect(data?.title).toBe(updates.title);
-        expect(data?.content).toBe(updates.content);
-    });
+            createdPageId = 0;
 
-    test('authenticated user can delete own records', async () => {
-        await delay(1000);
-        const { error } = await supabase
-            .from('markdown_pages')
-            .delete()
-            .eq('id', createdPageId);
+            await delay(1000);
+        });
 
-        expect(error).toBeNull();
+        test('has access to all fields of own records', async () => {
+            const page = await MarkdownPagesTest.createPage(`Test Page Fields ${uniqueId}`);
+            createdPageId = page.id;
 
-        await delay(1000);
-        // Verify the record is deleted
-        const { data, error: readError } = await supabase
-            .from('markdown_pages')
-            .select('*')
-            .eq('id', createdPageId)
-            .single();
+            // Try to read all fields
+            const { data: readData, error: readError } = await MarkdownPagesTest.getAuthenticatedClient()
+                .from('markdown_pages')
+                .select('id, title, slug, content, published, created_at, updated_at')
+                .eq('id', createdPageId)
+                .single();
 
-        expect(data).toBeNull();
-        expect(readError?.message).toContain('JSON object requested, multiple (or no) rows returned');
+            expect(readError).toBeNull();
+            expect(readData).not.toBeNull();
+            // All fields should be visible
+            expect(readData?.title).toContain('Test Page Fields');
+            expect(readData?.slug).toContain('test-page-fields');
+            expect(readData?.content).toContain('Test content for');
+            expect(readData?.published).toBe(true);
+            expect(readData?.created_at).toBeTruthy();
+            expect(readData?.updated_at).toBeTruthy();
 
-        // Reset createdPageId since we've deleted it
-        createdPageId = 0;
-    });
-
-    test('authenticated user has access to all fields of own records', async () => {
-        await delay(1000);
-        // Create test markdown page with all fields
-        const { data: createData, error: createError } = await supabase
-            .from('markdown_pages')
-            .insert([testPage])
-            .select()
-            .single();
-
-        expect(createError).toBeNull();
-        if (createData?.id) {
-            createdPageId = createData.id;
-        }
-
-        await delay(1000);
-        // Try to read all fields
-        const { data: readData, error: readError } = await supabase
-            .from('markdown_pages')
-            .select('id, title, slug, content, published, created_at, updated_at')
-            .eq('id', createdPageId)
-            .single();
-
-        expect(readError).toBeNull();
-        expect(readData).not.toBeNull();
-        // All fields should be visible
-        expect(readData?.title).toBe(testPage.title);
-        expect(readData?.slug).toBe(testPage.slug);
-        expect(readData?.content).toBe(testPage.content);
-        expect(readData?.published).toBe(testPage.published);
-        expect(readData?.created_at).toBeTruthy();
-        expect(readData?.updated_at).toBeTruthy();
+            await delay(1000);
+        });
     });
 }); 
