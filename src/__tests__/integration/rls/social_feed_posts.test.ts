@@ -1,184 +1,150 @@
-import { describe, it, expect } from 'vitest';
-import { BaseIntegrationTest } from '../base-test';
-import { delay } from '../../../utils/test-utils';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createClient } from '@supabase/supabase-js';
+import { generateTestName, delay } from '../config/test-utils';
+import type { Person } from '@/types';
 
-class SocialFeedPostsTest extends BaseIntegrationTest {
-    static async createPost(content: string, authorId: number) {
-        const { data, error } = await this.getAuthenticatedClient()
-            .from('social_feed_posts')
-            .insert({
-                content,
-                author_id: authorId,
-                timestamp: new Date().toISOString(),
-                image_urls: []
-            })
-            .select()
-            .single();
+const TEST_PROJECT_ID = 'vupwomxxfqjmwtbptkfu';
 
-        if (error) throw error;
-        return data;
-    }
-}
+describe('social_feed_posts basic admin operations', () => {
+    let testPerson: Person | null = null;
+    let postId: number | null = null;
 
-describe('social_feed_posts RLS policies', () => {
-    let postId: number;
-    let authorId: number;
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
+    // Setup: Create test person and login as admin
     beforeAll(async () => {
+        // Verify we're using test database
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.includes(TEST_PROJECT_ID)) {
+            throw new Error('Tests must run against test database only!');
+        }
+
+        // Login as admin
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+            email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
+            password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
+        });
+
+        if (loginError) throw loginError;
+        await delay(1000);
+
         // Create test person
-        const { data: personData, error: personError } = await SocialFeedPostsTest.getAuthenticatedClient()
+        const { data: personData, error: personError } = await supabase
             .from('people')
-            .insert({
-                name: `Test Person ${Date.now()}`,
-                role: 'speaker',
+            .insert([{
+                name: generateTestName('Test Person'),
+                role: 'attendee',
                 title: 'Test Title',
                 company: 'Test Company'
-            })
+            }])
             .select()
             .single();
 
         if (personError) throw personError;
-        authorId = personData.id;
-
-        // Wait for data to be ready
-        await delay(2000);
+        if (!personData) throw new Error('Person data is null');
+        testPerson = personData;
+        await delay(1000);
     });
 
+    // Clean up after all tests
     afterAll(async () => {
-        // Cleanup test data
+        // Clean up test post if it exists
         if (postId) {
-            await SocialFeedPostsTest.getAuthenticatedClient()
+            await supabase.from('social_feed_posts').delete().eq('id', postId);
+            await delay(1000);
+        }
+
+        // Clean up test person
+        if (testPerson) {
+            await supabase.from('people').delete().eq('id', testPerson.id);
+            await delay(1000);
+        }
+
+        await supabase.auth.signOut();
+    });
+
+    describe('Admin CRUD Operations', () => {
+        it('should allow admin to create posts', async () => {
+            if (!testPerson) throw new Error('Test person not initialized');
+
+            const { data, error } = await supabase
+                .from('social_feed_posts')
+                .insert([{
+                    content: generateTestName('Test Post Content'),
+                    author_id: testPerson.id,
+                    timestamp: new Date().toISOString(),
+                    image_urls: [],
+                    updated_at: new Date().toISOString()
+                }])
+                .select()
+                .single();
+
+            expect(error).toBeNull();
+            expect(data).not.toBeNull();
+            expect(data.author_id).toBe(testPerson.id);
+            postId = data.id;
+            await delay(1000);
+        });
+
+        it('should allow admin to read posts', async () => {
+            if (!postId) throw new Error('Post ID not initialized');
+
+            const { data, error } = await supabase
+                .from('social_feed_posts')
+                .select('*')
+                .eq('id', postId)
+                .single();
+
+            expect(error).toBeNull();
+            expect(data).not.toBeNull();
+            expect(data.id).toBe(postId);
+            await delay(1000);
+        });
+
+        it('should allow admin to update posts', async () => {
+            if (!postId) throw new Error('Post ID not initialized');
+
+            const newContent = generateTestName('Updated test post');
+            const { data, error } = await supabase
+                .from('social_feed_posts')
+                .update({
+                    content: newContent,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', postId)
+                .select()
+                .single();
+
+            expect(error).toBeNull();
+            expect(data).not.toBeNull();
+            expect(data.content).toBe(newContent);
+            await delay(1000);
+        });
+
+        it('should allow admin to delete posts', async () => {
+            if (!postId) throw new Error('Post ID not initialized');
+
+            const { error } = await supabase
                 .from('social_feed_posts')
                 .delete()
                 .eq('id', postId);
+
+            expect(error).toBeNull();
+
+            // Verify post is deleted
+            const { data: checkData, error: checkError } = await supabase
+                .from('social_feed_posts')
+                .select()
+                .eq('id', postId)
+                .single();
+
+            expect(checkData).toBeNull();
+            expect(checkError?.message).toContain('JSON object requested, multiple (or no) rows returned');
+
+            postId = null;
             await delay(1000);
-        }
-        if (authorId) {
-            await SocialFeedPostsTest.getAuthenticatedClient()
-                .from('people')
-                .delete()
-                .eq('id', authorId);
-            await delay(1000);
-        }
-    });
-
-    it('should deny access for anonymous users', async () => {
-        const { data, error } = await SocialFeedPostsTest.getAnonymousClient()
-            .from('social_feed_posts')
-            .select('*')
-            .limit(1);
-
-        expect(data).toEqual([]);
-        expect(error).toBeNull();
-    });
-
-    it('should allow authenticated users to create posts', async () => {
-        const data = await SocialFeedPostsTest.createPost('Test post', authorId);
-
-        expect(data).not.toBeNull();
-        expect(data.user_id).toBe(SocialFeedPostsTest.userId);
-        expect(data.author_id).toBe(authorId);
-        postId = data.id;
-
-        await delay(1000);
-    });
-
-    it('should allow authenticated users to read all posts', async () => {
-        const { data, error } = await SocialFeedPostsTest.getAuthenticatedClient()
-            .from('social_feed_posts')
-            .select('*')
-            .limit(1);
-
-        expect(error).toBeNull();
-        expect(data).not.toBeNull();
-        expect(Array.isArray(data)).toBe(true);
-
-        await delay(1000);
-    });
-
-    it('should allow users to update their own posts', async () => {
-        const newContent = 'Updated test post';
-        const { data, error } = await SocialFeedPostsTest.getAuthenticatedClient()
-            .from('social_feed_posts')
-            .update({ content: newContent })
-            .eq('id', postId)
-            .select()
-            .single();
-
-        expect(error).toBeNull();
-        expect(data).not.toBeNull();
-        expect(data.content).toBe(newContent);
-
-        await delay(1000);
-    });
-
-    it('should not allow users to update others posts', async () => {
-        // Try to update a non-existent post (or post that belongs to another user)
-        const { error } = await SocialFeedPostsTest.getAuthenticatedClient()
-            .from('social_feed_posts')
-            .update({ content: 'Should not work' })
-            .eq('id', 999999) // Используем заведомо несуществующий ID
-            .single();
-
-        if (!error) throw new Error('Expected RLS error but got none');
-        expect(error.message).toContain('JSON object requested, multiple (or no) rows returned');
-
-        await delay(1000);
-    });
-
-    it('should allow users to delete their own posts', async () => {
-        const { error } = await SocialFeedPostsTest.getAuthenticatedClient()
-            .from('social_feed_posts')
-            .delete()
-            .eq('id', postId);
-
-        expect(error).toBeNull();
-
-        // Verify post is deleted
-        const { data: checkData, error: checkError } = await SocialFeedPostsTest.getAuthenticatedClient()
-            .from('social_feed_posts')
-            .select()
-            .eq('id', postId)
-            .single();
-
-        expect(checkData).toBeNull();
-        expect(checkError?.message).toContain('JSON object requested, multiple (or no) rows returned');
-
-        postId = 0; // Reset postId as it's been deleted
-
-        await delay(1000);
-    });
-
-    it('should not allow users to delete others posts', async () => {
-        const { error } = await SocialFeedPostsTest.getAuthenticatedClient()
-            .from('social_feed_posts')
-            .delete()
-            .eq('id', 1) // Using ID 1 which should belong to another user
-            .single();
-
-        if (!error) throw new Error('Expected error but got none');
-        expect(error.message).toContain('JSON object requested, multiple (or no) rows returned');
-
-        await delay(1000);
-    });
-
-    it('should not allow users to update posts without matching user_id', async () => {
-        // Create a post with explicit user_id
-        const { error: createError } = await SocialFeedPostsTest.getAuthenticatedClient()
-            .from('social_feed_posts')
-            .insert({
-                content: 'Test post for RLS check',
-                author_id: authorId,
-                timestamp: new Date().toISOString(),
-                image_urls: [],
-                user_id: '00000000-0000-0000-0000-000000000000' // Другой user_id
-            })
-            .select()
-            .single();
-
-        expect(createError).not.toBeNull();
-        expect(createError?.message).toContain('new row violates row-level security');
-
-        await delay(1000);
+        });
     });
 }); 

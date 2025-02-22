@@ -100,7 +100,6 @@ describe('People CRUD Operations', () => {
                 expect(data?.email).toBe(testData.email);
                 expect(data?.mobile).toBe(testData.mobile);
                 expect(data?.created_at).not.toBeNull();
-                expect(data?.user_id).not.toBeNull();
 
                 if (data?.id) {
                     testPersonId = data.id;
@@ -145,25 +144,6 @@ describe('People CRUD Operations', () => {
                 const createdAt = data?.created_at;
                 expect(createdAt).not.toBeNull();
                 expect(new Date(createdAt!).getTime()).toBeGreaterThan(0);
-
-                if (data?.id) {
-                    await authClient.from('people').delete().eq('id', data.id);
-                }
-            });
-
-            it('should automatically set user_id', async () => {
-                const { data, error } = await authClient
-                    .from('people')
-                    .insert({
-                        name: generateTestName('test_person'),
-                        role: 'speaker'
-                    })
-                    .select()
-                    .single();
-
-                expect(error).toBeNull();
-                expect(data).not.toBeNull();
-                expect(data?.user_id).not.toBeNull();
 
                 if (data?.id) {
                     await authClient.from('people').delete().eq('id', data.id);

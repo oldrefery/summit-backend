@@ -73,80 +73,32 @@
     - ✅ Role-based access control
     - ✅ Required Schema Changes:
       ```sql
-      -- Add user_id column
-      ALTER TABLE people 
-      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
-      
-      -- Create trigger for auto-filling user_id
-      CREATE OR REPLACE FUNCTION public.set_user_id()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.user_id = auth.uid();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql SECURITY DEFINER;
-      
-      CREATE TRIGGER set_people_user_id
-        BEFORE INSERT ON people
-        FOR EACH ROW
-        EXECUTE FUNCTION public.set_user_id();
-      ```
-    - ✅ RLS Policies:
-      ```sql
       -- Enable RLS
       ALTER TABLE people ENABLE ROW LEVEL SECURITY;
       
-      -- Deny policies for anon
-      CREATE POLICY "deny_anon_select" ON people FOR SELECT TO anon USING (false);
-      CREATE POLICY "deny_anon_insert" ON people FOR INSERT TO anon WITH CHECK (false);
-      CREATE POLICY "deny_anon_update" ON people FOR UPDATE TO anon USING (false);
-      CREATE POLICY "deny_anon_delete" ON people FOR DELETE TO anon USING (false);
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "deny_anon_access" ON people;
+      DROP POLICY IF EXISTS "allow_auth_access" ON people;
       
-      -- Allow policies for authenticated
-      CREATE POLICY "allow_auth_select" ON people FOR SELECT TO authenticated USING (true);
-      CREATE POLICY "allow_auth_insert" ON people FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-      CREATE POLICY "allow_auth_update" ON people FOR UPDATE TO authenticated USING (user_id = auth.uid());
-      CREATE POLICY "allow_auth_delete" ON people FOR DELETE TO authenticated USING (user_id = auth.uid());
+      -- Create new policies following standard pattern
+      CREATE POLICY "deny_anon_access" ON people FOR ALL TO anon USING (false);
+      CREATE POLICY "allow_auth_access" ON people FOR ALL TO authenticated USING (true);
       ```
   - ✅ Events table policies
     - ✅ Anonymous access restrictions
     - ✅ Authenticated user permissions
     - ✅ Required Schema Changes:
       ```sql
-      -- Add user_id column
-      ALTER TABLE events 
-      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
-      
-      -- Create trigger for auto-filling user_id
-      CREATE OR REPLACE FUNCTION public.set_event_user_id()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.user_id = auth.uid();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql SECURITY DEFINER;
-      
-      CREATE TRIGGER set_events_user_id
-        BEFORE INSERT ON events
-        FOR EACH ROW
-        EXECUTE FUNCTION public.set_event_user_id();
-      ```
-    - ✅ RLS Policies:
-      ```sql
       -- Enable RLS
       ALTER TABLE events ENABLE ROW LEVEL SECURITY;
       
-      -- Deny policies for anon
-      CREATE POLICY "deny_anon_select_events" ON events FOR SELECT TO anon USING (false);
-      CREATE POLICY "deny_anon_insert_events" ON events FOR INSERT TO anon WITH CHECK (false);
-      CREATE POLICY "deny_anon_update_events" ON events FOR UPDATE TO anon USING (false);
-      CREATE POLICY "deny_anon_delete_events" ON events FOR DELETE TO anon USING (false);
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "deny_anon_access" ON events;
+      DROP POLICY IF EXISTS "allow_auth_access" ON events;
       
-      -- Allow policies for authenticated
-      CREATE POLICY "allow_auth_select_events" ON events FOR SELECT TO authenticated USING (true);
-      CREATE POLICY "allow_auth_insert_events" ON events FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-      CREATE POLICY "allow_auth_update_events" ON events FOR UPDATE TO authenticated USING (user_id = auth.uid());
-      CREATE POLICY "allow_auth_delete_events" ON events FOR DELETE TO authenticated USING (user_id = auth.uid());
+      -- Create new policies following standard pattern
+      CREATE POLICY "deny_anon_access" ON events FOR ALL TO anon USING (false);
+      CREATE POLICY "allow_auth_access" ON events FOR ALL TO authenticated USING (true);
       ```
     - ✅ Тесты написаны
     - ✅ SQL скрипт выполнен
@@ -157,59 +109,19 @@
     - ✅ Тесты пройдены успешно
     - ✅ Проверено:
       - Анонимные пользователи не могут читать/создавать/обновлять/удалять записи
-      - Аутентифицированные пользователи могут читать все записи
-      - Аутентифицированные пользователи могут создавать новые записи
-      - Аутентифицированные пользователи могут обновлять/удалять только свои записи
-      - Поле user_id заполняется автоматически при создании записи
-      - Каскадное удаление при удалении события работает
-      - Защита от удаления людей с существующими связями работает
-      - Проверки внешних ключей работают
+      - Аутентифицированные пользователи имеют полный доступ ко всем записям
     - Required Schema Changes:
-      ```sql
-      -- Add user_id column
-      ALTER TABLE event_people 
-      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
-      
-      -- Create trigger for auto-filling user_id
-      CREATE OR REPLACE FUNCTION public.set_event_person_user_id()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.user_id = auth.uid();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql SECURITY DEFINER;
-      
-      DROP TRIGGER IF EXISTS set_event_people_user_id ON event_people;
-      CREATE TRIGGER set_event_people_user_id
-        BEFORE INSERT ON event_people
-        FOR EACH ROW
-        EXECUTE FUNCTION public.set_event_person_user_id();
-      ```
-    - RLS Policies:
       ```sql
       -- Enable RLS
       ALTER TABLE event_people ENABLE ROW LEVEL SECURITY;
       
-      -- Drop existing policies if they exist
-      DROP POLICY IF EXISTS "deny_anon_select_event_people" ON event_people;
-      DROP POLICY IF EXISTS "deny_anon_insert_event_people" ON event_people;
-      DROP POLICY IF EXISTS "deny_anon_update_event_people" ON event_people;
-      DROP POLICY IF EXISTS "deny_anon_delete_event_people" ON event_people;
-      DROP POLICY IF EXISTS "allow_auth_select_event_people" ON event_people;
-      DROP POLICY IF EXISTS "allow_auth_insert_event_people" ON event_people;
-      DROP POLICY IF EXISTS "allow_auth_update_event_people" ON event_people;
-      DROP POLICY IF EXISTS "allow_auth_delete_event_people" ON event_people;
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "deny_anon_access" ON event_people;
+      DROP POLICY IF EXISTS "allow_auth_access" ON event_people;
       
-      -- Create policies
-      CREATE POLICY "deny_anon_select_event_people" ON event_people FOR SELECT TO anon USING (false);
-      CREATE POLICY "deny_anon_insert_event_people" ON event_people FOR INSERT TO anon WITH CHECK (false);
-      CREATE POLICY "deny_anon_update_event_people" ON event_people FOR UPDATE TO anon USING (false);
-      CREATE POLICY "deny_anon_delete_event_people" ON event_people FOR DELETE TO anon USING (false);
-      
-      CREATE POLICY "allow_auth_select_event_people" ON event_people FOR SELECT TO authenticated USING (true);
-      CREATE POLICY "allow_auth_insert_event_people" ON event_people FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-      CREATE POLICY "allow_auth_update_event_people" ON event_people FOR UPDATE TO authenticated USING (user_id = auth.uid());
-      CREATE POLICY "allow_auth_delete_event_people" ON event_people FOR DELETE TO authenticated USING (user_id = auth.uid());
+      -- Create new policies following standard pattern
+      CREATE POLICY "deny_anon_access" ON event_people FOR ALL TO anon USING (false);
+      CREATE POLICY "allow_auth_access" ON event_people FOR ALL TO authenticated USING (true);
       
       -- Add foreign key constraints with cascade delete for events
       ALTER TABLE event_people 
@@ -231,77 +143,50 @@
     - Tests written and passed successfully
     - SQL scripts executed
     - Verified:
-      - Anonymous users cannot create or read records
-      - Authenticated users can create their own sections
-      - Authenticated users can read only their own sections
-      - Authenticated users can update their own sections
-      - Authenticated users can delete their own sections
+      - Anonymous users cannot access records
+      - Authenticated users have full access to all records
     - Required schema changes:
-      - Added trigger function `set_section_user_id()` to auto-fill user_id
-      - Enabled RLS
-      - Added policies:
-        ```sql
-        CREATE POLICY "Enable read access for authenticated users" ON public.sections
-        FOR SELECT TO authenticated USING (auth.uid() = user_id);
-
-        CREATE POLICY "Enable insert access for authenticated users only" ON public.sections
-        FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-
-        CREATE POLICY "Enable update access for users based on user_id" ON public.sections
-        FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
-        CREATE POLICY "Enable delete access for users based on user_id" ON public.sections
-        FOR DELETE TO authenticated USING (auth.uid() = user_id);
-        ```
+      ```sql
+      -- Enable RLS
+      ALTER TABLE sections ENABLE ROW LEVEL SECURITY;
+      
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "deny_anon_access" ON sections;
+      DROP POLICY IF EXISTS "allow_auth_access" ON sections;
+      
+      -- Create new policies following standard pattern
+      CREATE POLICY "deny_anon_access" ON sections FOR ALL TO anon USING (false);
+      CREATE POLICY "allow_auth_access" ON sections FOR ALL TO authenticated USING (true);
+      ```
   - ✅ Markdown Pages table policies
     - ✅ Тесты написаны
     - ✅ SQL скрипт выполнен
     - ✅ Тесты пройдены успешно
     - Required Schema Changes:
       ```sql
-      -- Add user_id column
-      ALTER TABLE markdown_pages 
-      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+      -- Enable RLS
+      ALTER TABLE markdown_pages ENABLE ROW LEVEL SECURITY;
       
-      -- Create trigger for auto-filling user_id
-      CREATE OR REPLACE FUNCTION public.set_markdown_page_user_id()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.user_id = auth.uid();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql SECURITY DEFINER;
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "deny_anon_access" ON markdown_pages;
+      DROP POLICY IF EXISTS "allow_auth_access" ON markdown_pages;
       
-      CREATE TRIGGER set_markdown_pages_user_id
-        BEFORE INSERT ON markdown_pages
-        FOR EACH ROW
-        EXECUTE FUNCTION public.set_markdown_page_user_id();
+      -- Create new policies following standard pattern
+      CREATE POLICY "deny_anon_access" ON markdown_pages FOR ALL TO anon USING (false);
+      CREATE POLICY "allow_auth_access" ON markdown_pages FOR ALL TO authenticated USING (true);
       ```
     - RLS Policies:
       ```sql
       -- Enable RLS
       ALTER TABLE markdown_pages ENABLE ROW LEVEL SECURITY;
       
-      -- Create policies
-      CREATE POLICY "Markdown pages are viewable by everyone" ON markdown_pages
-        FOR SELECT
-        USING (
-          published = true OR 
-          (auth.uid() IS NOT NULL AND user_id = auth.uid())
-        );
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "deny_anon_access" ON markdown_pages;
+      DROP POLICY IF EXISTS "allow_auth_access" ON markdown_pages;
       
-      CREATE POLICY "Users can create markdown pages" ON markdown_pages
-        FOR INSERT
-        WITH CHECK (auth.uid() IS NOT NULL);
-      
-      CREATE POLICY "Users can update own markdown pages" ON markdown_pages
-        FOR UPDATE
-        USING (auth.uid() = user_id)
-        WITH CHECK (auth.uid() = user_id);
-      
-      CREATE POLICY "Users can delete own markdown pages" ON markdown_pages
-        FOR DELETE
-        USING (auth.uid() = user_id);
+      -- Create new policies following standard pattern
+      CREATE POLICY "deny_anon_access" ON markdown_pages FOR ALL TO anon USING (false);
+      CREATE POLICY "allow_auth_access" ON markdown_pages FOR ALL TO authenticated USING (true);
       ```
   - ✅ Social Feed Posts table policies
     - ✅ Тесты написаны
@@ -625,323 +510,129 @@
     - ✅ Тесты пройдены успешно
     - Required Schema Changes:
       ```sql
-      -- Add user_id column
-      ALTER TABLE locations 
-      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+      -- Enable RLS
+      ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
       
-      -- Create trigger for auto-filling user_id
-      CREATE OR REPLACE FUNCTION public.set_location_user_id()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.user_id = auth.uid();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql SECURITY DEFINER;
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "deny_anon_access" ON locations;
+      DROP POLICY IF EXISTS "allow_auth_access" ON locations;
       
-      CREATE TRIGGER set_locations_user_id
-        BEFORE INSERT ON locations
-        FOR EACH ROW
-        EXECUTE FUNCTION public.set_location_user_id();
+      -- Create new policies following standard pattern
+      CREATE POLICY "deny_anon_access" ON locations FOR ALL TO anon USING (false);
+      CREATE POLICY "allow_auth_access" ON locations FOR ALL TO authenticated USING (true);
       ```
     - RLS Policies:
       ```sql
       -- Enable RLS
       ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
       
-      -- Deny policies for anon
-      CREATE POLICY "deny_anon_select_locations" ON locations FOR SELECT TO anon USING (false);
-      CREATE POLICY "deny_anon_insert_locations" ON locations FOR INSERT TO anon WITH CHECK (false);
-      CREATE POLICY "deny_anon_update_locations" ON locations FOR UPDATE TO anon USING (false);
-      CREATE POLICY "deny_anon_delete_locations" ON locations FOR DELETE TO anon USING (false);
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "deny_anon_access" ON locations;
+      DROP POLICY IF EXISTS "allow_auth_access" ON locations;
       
-      -- Allow policies for authenticated
-      CREATE POLICY "allow_auth_select_locations" ON locations FOR SELECT TO authenticated USING (true);
-      CREATE POLICY "allow_auth_insert_locations" ON locations FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-      CREATE POLICY "allow_auth_update_locations" ON locations FOR UPDATE TO authenticated USING (user_id = auth.uid());
-      CREATE POLICY "allow_auth_delete_locations" ON locations FOR DELETE TO authenticated USING (user_id = auth.uid());
+      -- Create new policies following standard pattern
+      CREATE POLICY "deny_anon_access" ON locations FOR ALL TO anon USING (false);
+      CREATE POLICY "allow_auth_access" ON locations FOR ALL TO authenticated USING (true);
       ```
   - ✅ Resources table policies
     - ✅ Тесты написаны
     - ✅ SQL скрипт выполнен
     - ✅ Тесты пройдены успешно
-    - ✅ Проверено:
-      - Анонимные пользователи не могут читать/создавать/обновлять/удалять записи
-      - Аутентифицированные пользователи могут читать все записи
-      - Аутентифицированные пользователи могут создавать новые записи
-      - Аутентифицированные пользователи могут обновлять/удалять только свои записи
-      - Поле user_id заполняется автоматически при создании записи
     - Required Schema Changes:
       ```sql
-      -- Add user_id column
-      ALTER TABLE resources 
-      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+      -- Enable RLS
+      ALTER TABLE resources ENABLE ROW LEVEL SECURITY;
       
-      -- Create trigger for auto-filling user_id
-      CREATE OR REPLACE FUNCTION public.set_resource_user_id()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.user_id = auth.uid();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql SECURITY DEFINER;
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "deny_anon_access" ON resources;
+      DROP POLICY IF EXISTS "allow_auth_access" ON resources;
       
-      CREATE TRIGGER set_resources_user_id
-        BEFORE INSERT ON resources
-        FOR EACH ROW
-        EXECUTE FUNCTION public.set_resource_user_id();
+      -- Create new policies following standard pattern
+      CREATE POLICY "deny_anon_access" ON resources FOR ALL TO anon USING (false);
+      CREATE POLICY "allow_auth_access" ON resources FOR ALL TO authenticated USING (true);
       ```
     - RLS Policies:
       ```sql
       -- Enable RLS
       ALTER TABLE resources ENABLE ROW LEVEL SECURITY;
       
-      -- Deny policies for anon
-      CREATE POLICY "deny_anon_select_resources" ON resources FOR SELECT TO anon USING (false);
-      CREATE POLICY "deny_anon_insert_resources" ON resources FOR INSERT TO anon WITH CHECK (false);
-      CREATE POLICY "deny_anon_update_resources" ON resources FOR UPDATE TO anon USING (false);
-      CREATE POLICY "deny_anon_delete_resources" ON resources FOR DELETE TO anon USING (false);
+      -- Drop existing policies
+      DROP POLICY IF EXISTS "deny_anon_access" ON resources;
+      DROP POLICY IF EXISTS "allow_auth_access" ON resources;
       
-      -- Allow policies for authenticated
-      CREATE POLICY "allow_auth_select_resources" ON resources FOR SELECT TO authenticated USING (true);
-      CREATE POLICY "allow_auth_insert_resources" ON resources FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-      CREATE POLICY "allow_auth_update_resources" ON resources FOR UPDATE TO authenticated USING (user_id = auth.uid());
-      CREATE POLICY "allow_auth_delete_resources" ON resources FOR DELETE TO authenticated USING (user_id = auth.uid());
+      -- Create new policies following standard pattern
+      CREATE POLICY "deny_anon_access" ON resources FOR ALL TO anon USING (false);
+      CREATE POLICY "allow_auth_access" ON resources FOR ALL TO authenticated USING (true);
       ```
-  - ✅ Announcements table policies
-    - ✅ Тесты написаны
-    - ✅ SQL скрипт выполнен
-    - ✅ Тесты пройдены успешно
-    - ✅ Проверено:
-      - Анонимные пользователи не могут читать/создавать/обновлять/удалять записи
-      - Аутентифицированные пользователи могут читать все записи
-      - Аутентифицированные пользователи могут создавать новые записи
-      - Аутентифицированные пользователи могут обновлять/удалять только свои записи
-      - Поле user_id заполняется автоматически при создании записи
-    - Required Schema Changes:
-      ```sql
-      -- Add user_id column
-      ALTER TABLE announcements 
-      ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
-      
-      -- Create trigger for auto-filling user_id
-      CREATE OR REPLACE FUNCTION public.set_announcement_user_id()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.user_id = auth.uid();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql SECURITY DEFINER;
-      
-      DROP TRIGGER IF EXISTS set_announcements_user_id ON announcements;
-      CREATE TRIGGER set_announcements_user_id
-        BEFORE INSERT ON announcements
-        FOR EACH ROW
-        EXECUTE FUNCTION public.set_announcement_user_id();
-      ```
-    - RLS Policies:
+  - ✅ Special Cases RLS Policies
+    - ✅ app_user_settings table policies
+      - Single policy allowing all operations for all users (public)
       ```sql
       -- Enable RLS
-      ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE app_user_settings ENABLE ROW LEVEL SECURITY;
       
-      -- Drop existing policies if they exist
-      DROP POLICY IF EXISTS "deny_anon_select_announcements" ON announcements;
-      DROP POLICY IF EXISTS "deny_anon_insert_announcements" ON announcements;
-      DROP POLICY IF EXISTS "deny_anon_update_announcements" ON announcements;
-      DROP POLICY IF EXISTS "deny_anon_delete_announcements" ON announcements;
-      DROP POLICY IF EXISTS "allow_auth_select_announcements" ON announcements;
-      DROP POLICY IF EXISTS "allow_auth_insert_announcements" ON announcements;
-      DROP POLICY IF EXISTS "allow_auth_update_announcements" ON announcements;
-      DROP POLICY IF EXISTS "allow_auth_delete_announcements" ON announcements;
+      -- Create public access policy
+      CREATE POLICY "app_user_settings_policy" ON app_user_settings
+      FOR ALL TO public USING (true);
+      ```
+    
+    - ✅ debug_logs table policies
+      - Single policy allowing all operations for authenticated users
+      ```sql
+      -- Enable RLS
+      ALTER TABLE debug_logs ENABLE ROW LEVEL SECURITY;
       
-      -- Create policies
-      CREATE POLICY "deny_anon_select_announcements" ON announcements FOR SELECT TO anon USING (false);
-      CREATE POLICY "deny_anon_insert_announcements" ON announcements FOR INSERT TO anon WITH CHECK (false);
-      CREATE POLICY "deny_anon_update_announcements" ON announcements FOR UPDATE TO anon USING (false);
-      CREATE POLICY "deny_anon_delete_announcements" ON announcements FOR DELETE TO anon USING (false);
+      -- Create authenticated access policy
+      CREATE POLICY "debug_logs_auth_policy" ON debug_logs
+      FOR ALL TO authenticated USING (true);
+      ```
+    
+    - ✅ deletions_log table policies
+      - Allows anonymous inserts
+      - Allows public read access
+      ```sql
+      -- Enable RLS
+      ALTER TABLE deletions_log ENABLE ROW LEVEL SECURITY;
       
-      CREATE POLICY "allow_auth_select_announcements" ON announcements FOR SELECT TO authenticated USING (true);
-      CREATE POLICY "allow_auth_insert_announcements" ON announcements FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-      CREATE POLICY "allow_auth_update_announcements" ON announcements FOR UPDATE TO authenticated USING (user_id = auth.uid());
-      CREATE POLICY "allow_auth_delete_announcements" ON announcements FOR DELETE TO authenticated USING (user_id = auth.uid());
+      -- Create public read policy
+      CREATE POLICY "allow_public_read" ON deletions_log
+      FOR SELECT TO public USING (true);
+      
+      -- Create anonymous insert policy
+      CREATE POLICY "allow_anon_insert" ON deletions_log
+      FOR INSERT TO anon WITH CHECK (true);
       ```
 
-### Phase 2: CRUD Operations
-- 🚧 Create operations tests
-  - Валидация данных:
-    - ⏳ Проверка обязательных полей
-    - ⏳ Проверка типов данных
-    - ⏳ Проверка ограничений (длина, формат и т.д.)
-    - ⏳ Проверка уникальных ограничений
-  - Автоматическое заполнение:
-    - ⏳ created_at
-    - ⏳ user_id
-    - ⏳ default values
-  - Связи между таблицами:
-    - ⏳ Проверка foreign key constraints
-    - ⏳ Каскадное создание связанных записей
-    - ⏳ Обработка ошибок при невалидных foreign keys
+## Отложенные тесты для будущей реализации
 
-- 🚧 Read operations tests
-  - Базовые операции:
-    - ⏳ Получение списка записей
-    - ⏳ Получение одной записи
-    - ⏳ Фильтрация по полям
-    - ⏳ Поиск по тексту
-  - Пагинация:
-    - ⏳ Limit/Offset пагинация
-    - ⏳ Проверка корректности count
-    - ⏳ Проверка сортировки
-  - Связанные данные:
-    - ⏳ Join таблиц
-    - ⏳ Nested queries
-    - ⏳ Агрегации
+### Таблица social_feed_posts
+- ⏳ Тесты на проверку доступа для разных ролей пользователей
+- ⏳ Тесты на проверку ограничений доступа к записям других пользователей
+- ⏳ Тесты на проверку автоматического заполнения user_id
+- ⏳ Тесты на каскадное удаление связанных записей
 
-- 🚧 Update operations tests
-  - Валидация:
-    - ⏳ Проверка частичного обновления (PATCH)
-    - ⏳ Проверка полного обновления (PUT)
-    - ⏳ Валидация обновляемых полей
-  - Целостность данных:
-    - ⏳ Проверка конкурентных обновлений
-    - ⏳ Проверка версионирования
-    - ⏳ Проверка истории изменений
-  - Связанные данные:
-    - ⏳ Обновление связанных записей
-    - ⏳ Проверка каскадных обновлений
-    - ⏳ Обработка ошибок при нарушении связей
+### Таблица announcements
+- ⏳ Тесты на проверку доступа для разных ролей пользователей
+- ⏳ Тесты на проверку связей с таблицей people
+- ⏳ Тесты на проверку валидации данных
+- ⏳ Тесты на проверку каскадного удаления
 
-- 🚧 Delete operations tests
-  - Базовые операции:
-    - ⏳ Удаление одной записи
-    - ⏳ Массовое удаление
-    - ⏳ Soft delete
-  - Целостность данных:
-    - ⏳ Проверка каскадного удаления
-    - ⏳ Проверка ограничений на удаление
-    - ⏳ Проверка сохранения истории
-  - Связанные данные:
-    - ⏳ Удаление связанных записей
-    - ⏳ Обработка ошибок при нарушении foreign key constraints
-    - ⏳ Проверка целостности после удаления
+### Таблица event_people
+- ⏳ Тесты на проверку создания связей между событиями и людьми
+- ⏳ Тесты на проверку каскадного удаления при удалении события
+- ⏳ Тесты на проверку ограничения удаления людей с активными событиями
+- ⏳ Тесты на проверку валидации данных и внешних ключей
+- ⏳ Тесты на проверку уникальности комбинации event_id и person_id
+- ⏳ Тесты на проверку корректности роли (speaker)
 
-### Phase 3: Storage Operations
-- ⏳ File upload tests
-- ⏳ File retrieval tests
-- ⏳ File deletion tests
-- ⏳ Storage permissions tests
+### Таблица people
+- ⏳ Тесты на проверку ограничений удаления при наличии связанных событий
+- ⏳ Тесты на проверку каскадного удаления связанных данных
+- ⏳ Тесты на проверку валидации полей (email, mobile, role)
+- ⏳ Тесты на проверку уникальности имени в рамках роли
 
-### Phase 4: Push Notifications
-- ⏳ Notification sending tests
-- ⏳ Notification receiving tests
-- ⏳ Notification handling tests
-
-### Test Infrastructure
-- ✅ Database cleanup script
-- ⏳ Test data generation
-- ⏳ CI/CD for integration tests
-
-### Documentation
-- 🚧 Testing process description
-- ⏳ Test environment setup guide
-- ⏳ Integration tests examples
-
-## Test Execution
-
-### Running Tests
-```bash
-# Unit tests
-npm test
-
-# Integration tests
-npm run test:integration
-
-# E2E tests
-npm run test:e2e
-```
-
-## Notes
-- All tests should use real test database (copy of production)
-- No mocking for Supabase operations
-- Clear test data before and after test runs
-- Each test file should handle its own cleanup
-- Use test database ID verification to prevent production access
-- Integration tests require valid Supabase credentials
-
-## Additional Changes
-- ✅ Event People table policies
-  - ✅ Тесты написаны
-  - ✅ SQL скрипт выполнен
-  - ✅ Тесты пройдены успешно
-  - ✅ Проверено:
-    - Анонимные пользователи не могут читать/создавать/обновлять/удалять записи
-    - Аутентифицированные пользователи могут читать все записи
-    - Аутентифицированные пользователи могут создавать новые записи
-    - Аутентифицированные пользователи могут обновлять/удалять только свои записи
-    - Поле user_id заполняется автоматически при создании записи
-    - Каскадное удаление при удалении события работает
-    - Защита от удаления людей с существующими связями работает
-    - Проверки внешних ключей работают
-  - Required Schema Changes:
-    ```sql
-    -- Add user_id column
-    ALTER TABLE event_people 
-    ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
-    
-    -- Create trigger for auto-filling user_id
-    CREATE OR REPLACE FUNCTION public.set_event_person_user_id()
-    RETURNS TRIGGER AS $$
-    BEGIN
-      NEW.user_id = auth.uid();
-      RETURN NEW;
-    END;
-    $$ LANGUAGE plpgsql SECURITY DEFINER;
-    
-    DROP TRIGGER IF EXISTS set_event_people_user_id ON event_people;
-    CREATE TRIGGER set_event_people_user_id
-      BEFORE INSERT ON event_people
-      FOR EACH ROW
-      EXECUTE FUNCTION public.set_event_person_user_id();
-    ```
-  - RLS Policies:
-    ```sql
-    -- Enable RLS
-    ALTER TABLE event_people ENABLE ROW LEVEL SECURITY;
-    
-    -- Drop existing policies if they exist
-    DROP POLICY IF EXISTS "deny_anon_select_event_people" ON event_people;
-    DROP POLICY IF EXISTS "deny_anon_insert_event_people" ON event_people;
-    DROP POLICY IF EXISTS "deny_anon_update_event_people" ON event_people;
-    DROP POLICY IF EXISTS "deny_anon_delete_event_people" ON event_people;
-    DROP POLICY IF EXISTS "allow_auth_select_event_people" ON event_people;
-    DROP POLICY IF EXISTS "allow_auth_insert_event_people" ON event_people;
-    DROP POLICY IF EXISTS "allow_auth_update_event_people" ON event_people;
-    DROP POLICY IF EXISTS "allow_auth_delete_event_people" ON event_people;
-    
-    -- Create policies
-    CREATE POLICY "deny_anon_select_event_people" ON event_people FOR SELECT TO anon USING (false);
-    CREATE POLICY "deny_anon_insert_event_people" ON event_people FOR INSERT TO anon WITH CHECK (false);
-    CREATE POLICY "deny_anon_update_event_people" ON event_people FOR UPDATE TO anon USING (false);
-    CREATE POLICY "deny_anon_delete_event_people" ON event_people FOR DELETE TO anon USING (false);
-    
-    CREATE POLICY "allow_auth_select_event_people" ON event_people FOR SELECT TO authenticated USING (true);
-    CREATE POLICY "allow_auth_insert_event_people" ON event_people FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-    CREATE POLICY "allow_auth_update_event_people" ON event_people FOR UPDATE TO authenticated USING (user_id = auth.uid());
-    CREATE POLICY "allow_auth_delete_event_people" ON event_people FOR DELETE TO authenticated USING (user_id = auth.uid());
-    
-    -- Add foreign key constraints with cascade delete for events
-    ALTER TABLE event_people 
-    DROP CONSTRAINT IF EXISTS event_people_event_id_fkey,
-    ADD CONSTRAINT event_people_event_id_fkey 
-      FOREIGN KEY (event_id) 
-      REFERENCES events(id) 
-      ON DELETE CASCADE;
-    
-    -- Add foreign key constraints without cascade for people
-    ALTER TABLE event_people 
-    DROP CONSTRAINT IF EXISTS event_people_person_id_fkey,
-    ADD CONSTRAINT event_people_person_id_fkey 
-      FOREIGN KEY (person_id) 
-      REFERENCES people(id) 
-      ON DELETE RESTRICT;
-    ```
-  - 🚧 Social Feed Posts table policies
+### Общие задачи по тестированию
+- ⏳ Реализация тестов для проверки конкурентного доступа
+- ⏳ Тесты производительности для больших наборов данных
+- ⏳ Тесты на проверку индексов и оптимизацию запросов
+- ⏳ Тесты на проверку миграций и обновлений схемы

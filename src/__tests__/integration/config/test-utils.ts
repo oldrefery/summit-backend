@@ -72,6 +72,13 @@ export function wait(ms: number): Promise<void> {
 }
 
 /**
+ * Wait for a specified time
+ */
+export function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
  * Verify that we are using test database
  */
 export function verifyTestDatabase() {

@@ -1,7 +1,10 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import { BaseIntegrationTest } from '../base-test';
 import type { Event, Section } from '@/types';
-import { delay } from '../../../utils/test-utils';
+import { generateTestName, delay } from '../config/test-utils';
+import { supabase } from '@/lib/supabase';
+
+const TEST_PROJECT_ID = 'vupwomxxfqjmwtbptkfu';
 
 class EventsTest extends BaseIntegrationTest {
     static async createEvent(title: string, sectionId: number) {
@@ -27,15 +30,48 @@ class EventsTest extends BaseIntegrationTest {
 }
 
 describe('Events Table RLS Policies', () => {
-    let createdEventId: number;
-    let testSectionId: number;
+    let testSection: Section | null = null;
+    let createdEventId: number | null = null;
     const uniqueId = Date.now();
+
+    beforeAll(async () => {
+        // Verify we're using test database
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.includes(TEST_PROJECT_ID)) {
+            throw new Error('Tests must run against test database only!');
+        }
+
+        // Login to create test section
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+            email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
+            password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
+        });
+
+        if (loginError) throw loginError;
+
+        // Create test section
+        const { data: sectionData, error: sectionError } = await supabase
+            .from('sections')
+            .insert([{
+                name: generateTestName('Test Section'),
+                date: new Date().toISOString().split('T')[0]
+            }])
+            .select()
+            .single();
+
+        if (sectionError) throw sectionError;
+        if (!sectionData) throw new Error('Section data is null');
+        testSection = sectionData;
+
+        // Sign out for anonymous tests
+        await supabase.auth.signOut();
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for signout to complete
+    });
 
     describe('Anonymous Access', () => {
         test('cannot create records', async () => {
             // First create a section as authenticated user
             const section = await EventsTest.createSection(`Test Section ${uniqueId}`);
-            testSectionId = section.id;
+            const testSectionId = section.id;
 
             await delay(1000);
 
@@ -76,15 +112,88 @@ describe('Events Table RLS Policies', () => {
     });
 
     describe('Authenticated Access', () => {
-        test('can create and read records', async () => {
-            const event = await EventsTest.createEvent(`Test Event Create ${uniqueId}`, testSectionId);
-            createdEventId = event.id;
+        beforeEach(async () => {
+            // Login first
+            const { error: loginError } = await supabase.auth.signInWithPassword({
+                email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
+                password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
+            });
 
-            expect(event).not.toBeNull();
-            expect(event.title).toContain('Test Event Create');
+            if (loginError) throw loginError;
+
+            // Create test section if not exists
+            if (!testSection) {
+                const { data: sectionData, error: sectionError } = await supabase
+                    .from('sections')
+                    .insert([{
+                        name: generateTestName('Test Section'),
+                        date: new Date().toISOString().split('T')[0]
+                    }])
+                    .select()
+                    .single();
+
+                if (sectionError) throw sectionError;
+                if (!sectionData) throw new Error('Section data is null');
+                testSection = sectionData;
+            }
+
+            if (!testSection) throw new Error('Test section is still null after creation attempt');
+
+            // Verify section exists
+            const { data: verifyData, error: verifyError } = await supabase
+                .from('sections')
+                .select('*')
+                .eq('id', testSection.id)
+                .single();
+
+            if (verifyError || !verifyData) {
+                // Section doesn't exist, create a new one
+                const { data: newSectionData, error: newSectionError } = await supabase
+                    .from('sections')
+                    .insert([{
+                        name: generateTestName('Test Section'),
+                        date: new Date().toISOString().split('T')[0]
+                    }])
+                    .select()
+                    .single();
+
+                if (newSectionError) throw newSectionError;
+                if (!newSectionData) throw new Error('Section data is null');
+                testSection = newSectionData;
+            }
+        });
+
+        test('can create and read records', async () => {
+            if (!testSection) throw new Error('Test section is not initialized');
+
+            const testEvent = {
+                section_id: testSection.id,
+                title: generateTestName('Test Event'),
+                date: new Date().toISOString().split('T')[0],
+                start_time: new Date().toISOString(),
+                end_time: new Date(Date.now() + 3600000).toISOString(),
+                description: 'Test Description',
+                duration: '1h'
+            };
+
+            // Create an event
+            const { data: createData, error: createError } = await supabase
+                .from('events')
+                .insert([testEvent])
+                .select()
+                .single();
+
+            expect(createError).toBeNull();
+            expect(createData).not.toBeNull();
+            expect(createData?.title).toBe(testEvent.title);
+            expect(createData?.section_id).toBe(testEvent.section_id);
+
+            if (createData?.id) {
+                createdEventId = createData.id;
+            }
 
             // Read all events
-            const { data: readData, error: readError } = await EventsTest.getAuthenticatedClient()
+            const { data: readData, error: readError } = await supabase
                 .from('events')
                 .select('*');
 
@@ -93,17 +202,16 @@ describe('Events Table RLS Policies', () => {
             expect(Array.isArray(readData)).toBe(true);
             expect(readData?.length).toBeGreaterThan(0);
             expect(readData?.find(e => e.id === createdEventId)).toBeTruthy();
-
-            await delay(1000);
         });
 
         test('can update records', async () => {
+            if (!createdEventId) throw new Error('No event to update');
+
             const updates = {
-                title: `Updated Event ${uniqueId}`,
-                description: 'Updated Description'
+                title: generateTestName('Updated Event Title')
             };
 
-            const { data, error } = await EventsTest.getAuthenticatedClient()
+            const { data, error } = await supabase
                 .from('events')
                 .update(updates)
                 .eq('id', createdEventId)
@@ -113,16 +221,20 @@ describe('Events Table RLS Policies', () => {
             expect(error).toBeNull();
             expect(data).not.toBeNull();
             expect(data?.title).toBe(updates.title);
-            expect(data?.description).toBe(updates.description);
-
-            await delay(1000);
         });
 
         test('can delete records', async () => {
-            await EventsTest.cleanupTestData('events', createdEventId);
+            if (!createdEventId) throw new Error('No event to delete');
 
-            // Verify deletion
-            const { data, error: readError } = await EventsTest.getAuthenticatedClient()
+            const { error } = await supabase
+                .from('events')
+                .delete()
+                .eq('id', createdEventId);
+
+            expect(error).toBeNull();
+
+            // Verify the record is deleted
+            const { data, error: readError } = await supabase
                 .from('events')
                 .select('*')
                 .eq('id', createdEventId)
@@ -131,17 +243,38 @@ describe('Events Table RLS Policies', () => {
             expect(data).toBeNull();
             expect(readError?.message).toContain('JSON object requested, multiple (or no) rows returned');
 
-            createdEventId = 0;
-
-            await delay(1000);
+            // Reset createdEventId since we've deleted it
+            createdEventId = null;
         });
 
         test('has access to all fields', async () => {
-            const event = await EventsTest.createEvent(`Test Event Fields ${uniqueId}`, testSectionId);
-            createdEventId = event.id;
+            if (!testSection) throw new Error('Test section is not initialized');
+
+            const testEvent = {
+                section_id: testSection.id,
+                title: generateTestName('Test Event Fields'),
+                date: new Date().toISOString().split('T')[0],
+                start_time: new Date().toISOString(),
+                end_time: new Date(Date.now() + 3600000).toISOString(),
+                description: 'Test Description',
+                duration: '1h'
+            };
+
+            // Create an event
+            const { data: createData, error: createError } = await supabase
+                .from('events')
+                .insert([testEvent])
+                .select()
+                .single();
+
+            expect(createError).toBeNull();
+            expect(createData).not.toBeNull();
+            if (createData?.id) {
+                createdEventId = createData.id;
+            }
 
             // Try to read all fields
-            const { data: readData, error: readError } = await EventsTest.getAuthenticatedClient()
+            const { data: readData, error: readError } = await supabase
                 .from('events')
                 .select('id, section_id, title, date, start_time, end_time, description, duration, location_id')
                 .eq('id', createdEventId)
@@ -150,20 +283,18 @@ describe('Events Table RLS Policies', () => {
             expect(readError).toBeNull();
             expect(readData).not.toBeNull();
             // All fields should be visible
-            expect(readData?.title).toContain('Test Event Fields');
-            expect(readData?.section_id).toBe(testSectionId);
-            expect(readData?.date).toBe('2024-03-20');
-            expect(new Date(readData?.start_time).toISOString()).toBe('2024-03-20T10:00:00.000Z');
-            expect(new Date(readData?.end_time).toISOString()).toBe('2024-03-20T11:00:00.000Z');
-
-            await delay(1000);
+            expect(readData?.title).toBe(testEvent.title);
+            expect(readData?.section_id).toBe(testEvent.section_id);
+            expect(readData?.date).toBe(testEvent.date);
+            expect(readData?.description).toBe(testEvent.description);
+            expect(readData?.duration).toBe(testEvent.duration);
         });
     });
 
     afterAll(async () => {
         // Cleanup test section
-        if (testSectionId) {
-            await EventsTest.cleanupTestData('sections', testSectionId);
+        if (testSection) {
+            await EventsTest.cleanupTestData('sections', testSection.id);
         }
     });
 }); 

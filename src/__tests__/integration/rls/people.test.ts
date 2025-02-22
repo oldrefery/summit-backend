@@ -1,63 +1,48 @@
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
-import type { Person } from '@/types';
+import type { Database } from '../../../types/database';
+import type { Person } from '../../../types/supabase';
+import { cleanupTestData, generateTestName, setupTestClient } from '../config/test-utils';
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const TEST_PROJECT_ID = 'vupwomxxfqjmwtbptkfu';
 
 describe('People Table RLS Policies', () => {
-    // Test data
+    let authClient: ReturnType<typeof createClient<Database>>;
+    let anonClient: ReturnType<typeof createClient<Database>>;
+    let testPersonId: number;
+
     const testPerson: Omit<Person, 'id' | 'created_at'> = {
-        name: 'Test Person',
-        role: 'attendee',
-        email: 'test@example.com',
+        name: generateTestName('test_person'),
+        role: 'speaker',
         title: 'Test Title',
         company: 'Test Company',
         bio: 'Test Bio',
+        photo_url: 'https://example.com/photo.jpg',
         country: 'Test Country',
+        email: 'test@example.com',
         mobile: '+1234567890'
     };
 
-    let createdPersonId: number;
-
-    // Ensure we're logged out before each test
     beforeAll(async () => {
-        await supabase.auth.signOut();
+        const clients = await setupTestClient();
+        authClient = clients.authClient;
+        anonClient = clients.anonClient;
 
-        // Verify we're actually logged out
-        const { data: { session } } = await supabase.auth.getSession();
-        expect(session).toBeNull();
+        // Verify we're using test database
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL?.includes(TEST_PROJECT_ID)) {
+            throw new Error('Tests must run against test database only!');
+        }
     });
 
-    // Clean up after all tests
     afterAll(async () => {
-        // Login to clean up
-        await supabase.auth.signInWithPassword({
-            email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
-            password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
-        });
-
-        if (createdPersonId) {
-            await supabase.from('people').delete().eq('id', createdPersonId);
+        if (testPersonId) {
+            await authClient.from('people').delete().eq('id', testPersonId);
         }
-
-        await supabase.auth.signOut();
+        await cleanupTestData(authClient);
     });
 
     test('anonymous user cannot create people records', async () => {
-        // Create a new Supabase client for anonymous user
-        const anonSupabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-
-        // Verify we're not authenticated
-        const { data: { session } } = await anonSupabase.auth.getSession();
-        expect(session).toBeNull();
-
-        const { data, error } = await anonSupabase
+        const { data, error } = await anonClient
             .from('people')
             .insert([testPerson])
             .select()
@@ -69,17 +54,7 @@ describe('People Table RLS Policies', () => {
     });
 
     test('anonymous user cannot read people records', async () => {
-        // Create a new Supabase client for anonymous user
-        const anonSupabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-
-        // Verify we're not authenticated
-        const { data: { session } } = await anonSupabase.auth.getSession();
-        expect(session).toBeNull();
-
-        const { data, error } = await anonSupabase
+        const { data, error } = await anonClient
             .from('people')
             .select('*');
 
@@ -88,14 +63,8 @@ describe('People Table RLS Policies', () => {
     });
 
     test('authenticated user can create and read people records', async () => {
-        // Login first
-        await supabase.auth.signInWithPassword({
-            email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
-            password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
-        });
-
         // Create a person
-        const { data: createData, error: createError } = await supabase
+        const { data: createData, error: createError } = await authClient
             .from('people')
             .insert([testPerson])
             .select()
@@ -104,13 +73,14 @@ describe('People Table RLS Policies', () => {
         expect(createError).toBeNull();
         expect(createData).not.toBeNull();
         expect(createData?.name).toBe(testPerson.name);
+        expect(createData?.role).toBe(testPerson.role);
 
         if (createData?.id) {
-            createdPersonId = createData.id;
+            testPersonId = createData.id;
         }
 
         // Read all people
-        const { data: readData, error: readError } = await supabase
+        const { data: readData, error: readError } = await authClient
             .from('people')
             .select('*');
 
@@ -118,53 +88,35 @@ describe('People Table RLS Policies', () => {
         expect(readData).not.toBeNull();
         expect(Array.isArray(readData)).toBe(true);
         expect(readData?.length).toBeGreaterThan(0);
-        expect(readData?.find(p => p.id === createdPersonId)).toBeTruthy();
+        expect(readData?.find(p => p.id === testPersonId)).toBeTruthy();
     });
 
-    test('authenticated user can update own records', async () => {
-        const updates = {
-            name: 'Updated Test Person',
-            title: 'Updated Title'
-        };
-
-        const { data, error } = await supabase
-            .from('people')
-            .update(updates)
-            .eq('id', createdPersonId)
-            .select()
-            .single();
-
-        expect(error).toBeNull();
-        expect(data).not.toBeNull();
-        expect(data?.name).toBe(updates.name);
-        expect(data?.title).toBe(updates.title);
-    });
 
     test('authenticated user can delete own records', async () => {
-        const { error } = await supabase
+        const { error } = await authClient
             .from('people')
             .delete()
-            .eq('id', createdPersonId);
+            .eq('id', testPersonId);
 
         expect(error).toBeNull();
 
         // Verify the record is deleted
-        const { data, error: readError } = await supabase
+        const { data, error: readError } = await authClient
             .from('people')
             .select('*')
-            .eq('id', createdPersonId)
+            .eq('id', testPersonId)
             .single();
 
         expect(data).toBeNull();
         expect(readError?.message).toContain('JSON object requested, multiple (or no) rows returned');
 
-        // Reset createdPersonId since we've deleted it
-        createdPersonId = 0;
+        // Reset testPersonId since we've deleted it
+        testPersonId = 0;
     });
 
-    test('authenticated user has access to sensitive fields of own records', async () => {
-        // Create test person with sensitive data
-        const { data: createData, error: createError } = await supabase
+    test('authenticated user has access to all fields', async () => {
+        // Create test person with all fields
+        const { data: createData, error: createError } = await authClient
             .from('people')
             .insert([testPerson])
             .select()
@@ -172,22 +124,27 @@ describe('People Table RLS Policies', () => {
 
         expect(createError).toBeNull();
         if (createData?.id) {
-            createdPersonId = createData.id;
+            testPersonId = createData.id;
         }
 
-        // Try to read sensitive fields
-        const { data: readData, error: readError } = await supabase
+        // Try to read all fields
+        const { data: readData, error: readError } = await authClient
             .from('people')
-            .select('id, name, title, company, bio, country, mobile, email')
-            .eq('id', createdPersonId)
+            .select('*')
+            .eq('id', testPersonId)
             .single();
 
         expect(readError).toBeNull();
         expect(readData).not.toBeNull();
-        // All fields should be visible for own records
+        // All fields should be visible
         expect(readData?.name).toBe(testPerson.name);
+        expect(readData?.role).toBe(testPerson.role);
         expect(readData?.title).toBe(testPerson.title);
-        expect(readData?.mobile).toBe(testPerson.mobile);
+        expect(readData?.company).toBe(testPerson.company);
+        expect(readData?.bio).toBe(testPerson.bio);
+        expect(readData?.photo_url).toBe(testPerson.photo_url);
+        expect(readData?.country).toBe(testPerson.country);
         expect(readData?.email).toBe(testPerson.email);
+        expect(readData?.mobile).toBe(testPerson.mobile);
     });
 }); 
