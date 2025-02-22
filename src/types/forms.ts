@@ -7,7 +7,7 @@ export interface EventFormData
     Event,
     'id' | 'created_at' | 'section' | 'location' | 'event_people'
   > {
-  speaker_ids: number[];
+  speaker_ids?: number[];
 }
 
 export type LocationFormData = Omit<Location, 'id' | 'created_at'>;

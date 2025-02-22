@@ -1,6 +1,6 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Игнорируемые файлы и директории
+# ignored files and directories
 node_modules/
 .next/
 build/
@@ -10,19 +10,19 @@ coverage/
 .env.local
 .env.*.local
 
-# Логи
+# logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# IDE и редакторы
+# IDE and editors
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# Системные файлы
+# system files
 .DS_Store
 Thumbs.db
 
@@ -69,3 +69,16 @@ next-env.d.ts
 
 # IDE
 /.idea/
+
+# sync files and folders
+prod_data.sql
+prod_schema.sql
+local_app_data/
+local_avatars/
+
+# Supabase
+**/supabase/.temp
+**/supabase/.branches
+**/supabase/config.toml
+**/supabase/docker
+**/supabase/volumes

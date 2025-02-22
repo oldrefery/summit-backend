@@ -114,7 +114,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
       const end_timestamp = `${formData.date}T${formData.end_time}:00Z`;
 
       const eventApiData: EventFormData = {
-        section_id: formData.section_id,
+        section_id: Number(formData.section_id),
         date: formData.date,
         title: formData.title,
         description: formData.description || null,
@@ -123,6 +123,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
         location_id: formData.location_id ? Number(formData.location_id) : null,
         duration: formData.duration || null,
         speaker_ids: selectedSpeakerIds.map(id => Number(id)),
+        user_id: 'test-user-id'
       };
 
       if (initialData) {

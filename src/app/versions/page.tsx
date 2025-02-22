@@ -53,7 +53,7 @@ export default function VersionsPage() {
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(version.published_at), 'PPP pp')}
+                        {version.published_at && format(new Date(version.published_at), 'PPP pp')}
                       </p>
                       {totalChanges > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">

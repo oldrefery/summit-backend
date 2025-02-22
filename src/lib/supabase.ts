@@ -142,6 +142,8 @@ export const storage = {
 export const api = {
   people: {
     async getAll() {
+      await ensureAuthenticated();
+
       const { data, error } = await supabase
         .from('people')
         .select('*')
@@ -156,6 +158,8 @@ export const api = {
     },
 
     async create(person: Omit<Person, 'id' | 'created_at'>) {
+      await ensureAuthenticated();
+
       const { data, error } = await supabase
         .from('people')
         .insert([person])
@@ -174,6 +178,8 @@ export const api = {
       id: number,
       updates: Partial<Omit<Person, 'id' | 'created_at'>>
     ) {
+      await ensureAuthenticated();
+
       const { data, error } = await supabase
         .from('people')
         .update(updates)
@@ -190,6 +196,8 @@ export const api = {
     },
 
     async delete(id: number) {
+      await ensureAuthenticated();
+
       // Check related records in event_people
       const { data: eventPeople, error: checkError } = await supabase
         .from('event_people')

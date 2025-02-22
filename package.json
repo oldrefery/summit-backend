@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
     "watch": "vitest --watch",
     "coverage": "vitest run --coverage",
     "sync:prod:test": "bash ./sync_prod_to_test.sh",

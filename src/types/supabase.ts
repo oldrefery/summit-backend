@@ -25,6 +25,7 @@ export interface Event extends BaseEntity {
   description?: string | null;
   duration?: string | null;
   location_id?: number | null;
+  user_id?: string;
   section?: {
     name: string;
   };
@@ -70,6 +71,8 @@ export interface SocialFeedPost extends BaseEntity {
   content: string;
   timestamp: string;
   image_urls: string[];
+  updated_at: string;
+  user_id: string;
 }
 
 export interface MarkdownPage extends BaseEntity {
