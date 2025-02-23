@@ -59,11 +59,12 @@ export class BaseApiTest extends BaseIntegrationTest {
 
     protected static generateLocationData(): Partial<Location> {
         const timestamp = Date.now();
+        const uniqueSuffix = Math.random().toString(36).substring(2, 15);
         return {
-            name: `Test Location ${timestamp}`,
-            link_map: `https://maps.test/${timestamp}`,
-            link: `https://test.com/${timestamp}`,
-            link_address: `Test Address ${timestamp}`,
+            name: `Test Location ${timestamp}-${uniqueSuffix}`,
+            link_map: `https://maps.test/${timestamp}-${uniqueSuffix}`,
+            link: `https://test.com/${timestamp}-${uniqueSuffix}`,
+            link_address: `Test Address ${timestamp}-${uniqueSuffix}`,
         };
     }
 
