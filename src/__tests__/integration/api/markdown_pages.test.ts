@@ -182,6 +182,52 @@ class MarkdownPagesApiTest extends BaseApiTest {
                     }
                 });
 
+                it('should not allow updating page to use existing slug', async () => {
+                    // Создаем две страницы с разными slug
+                    const timestamp1 = Date.now();
+                    const timestamp2 = timestamp1 + 1;
+
+                    const page1Data = {
+                        ...this.generateMarkdownPageData(),
+                        slug: `test-page-${timestamp1}`
+                    };
+                    const page2Data = {
+                        ...this.generateMarkdownPageData(),
+                        slug: `test-page-${timestamp2}`
+                    };
+
+                    // Создаем первую страницу
+                    const { data: page1 } = await this.getAuthenticatedClient()
+                        .from('markdown_pages')
+                        .insert([page1Data])
+                        .select()
+                        .single();
+
+                    expect(page1).toBeDefined();
+                    if (page1) this.trackTestRecord('markdown_pages', page1.id);
+
+                    // Создаем вторую страницу
+                    const { data: page2 } = await this.getAuthenticatedClient()
+                        .from('markdown_pages')
+                        .insert([page2Data])
+                        .select()
+                        .single();
+
+                    expect(page2).toBeDefined();
+                    if (page2) this.trackTestRecord('markdown_pages', page2.id);
+
+                    // Пытаемся обновить вторую страницу, установив slug первой страницы
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('markdown_pages')
+                            .update({ slug: page1Data.slug })
+                            .eq('id', page2.id)
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
                 it('should validate slug format', async () => {
                     const pageData = this.generateMarkdownPageData();
                     const invalidData = {
