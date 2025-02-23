@@ -9,7 +9,8 @@ import type {
     EventPerson,
     PersonRole,
     BaseEntity,
-    AppUserSettings
+    AppUserSettings,
+    Announcement
 } from '@/types';
 import { format } from 'date-fns';
 import { PostgrestBuilder } from '@supabase/postgrest-js';
@@ -144,6 +145,15 @@ export class BaseApiTest extends BaseIntegrationTest {
                 social_feed: true,
                 announcements: true
             }
+        };
+    }
+
+    protected static generateAnnouncementData(personId?: number): Partial<Announcement> {
+        const timestamp = Date.now();
+        return {
+            person_id: personId,
+            content: `Test Announcement Content ${timestamp}`,
+            published_at: new Date().toISOString()
         };
     }
 
