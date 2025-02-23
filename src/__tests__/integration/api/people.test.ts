@@ -1,7 +1,6 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { BaseApiTest } from './base-api-test';
 import type { Person, PersonRole } from '@/types';
-import { PostgrestBuilder } from '@supabase/postgrest-js';
 
 interface TestData {
     name: string;
@@ -15,29 +14,6 @@ interface TestData {
 }
 
 class PeopleApiTest extends BaseApiTest {
-    private static async expectSupabaseError<T>(
-        promise: PostgrestBuilder<T>,
-        expectedStatus?: number
-    ): Promise<void> {
-        try {
-            await promise;
-            throw new Error('Expected error but got success');
-        } catch (error) {
-            if (expectedStatus && PeopleApiTest.isPostgrestError(error)) {
-                expect(error.status).toBe(expectedStatus);
-            }
-        }
-    }
-
-    private static isPostgrestError(error: unknown): error is { status: number } {
-        return (
-            typeof error === 'object' &&
-            error !== null &&
-            'status' in error &&
-            typeof (error as { status: number }).status === 'number'
-        );
-    }
-
     public static async runTests() {
         describe('People API Tests', () => {
             describe('CRUD Operations', () => {

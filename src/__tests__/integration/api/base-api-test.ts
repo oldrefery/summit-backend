@@ -11,6 +11,7 @@ import type {
     BaseEntity
 } from '@/types';
 import { format } from 'date-fns';
+import { PostgrestBuilder } from '@supabase/postgrest-js';
 
 type EntityWithTimestamps = BaseEntity & {
     created_at?: string;
@@ -66,11 +67,12 @@ export class BaseApiTest extends BaseIntegrationTest {
         };
     }
 
-    protected static generateSectionData(): Partial<Section> {
+    protected static generateSectionData(date?: Date): Partial<Section> {
         const timestamp = Date.now();
+        const uniqueSuffix = Math.random().toString(36).substring(2, 15);
         return {
-            name: `Test Section ${timestamp}`,
-            date: format(new Date(), 'yyyy-MM-dd'),
+            name: `Test Section ${timestamp}-${uniqueSuffix}`,
+            date: format(date || new Date(), 'yyyy-MM-dd'),
         };
     }
 
@@ -99,8 +101,8 @@ export class BaseApiTest extends BaseIntegrationTest {
         return await this.initializeTestData<Person>('people', this.generatePersonData(role));
     }
 
-    protected static async createTestSection(): Promise<Section> {
-        return await this.initializeTestData<Section>('sections', this.generateSectionData());
+    protected static async createTestSection(date?: Date): Promise<Section> {
+        return await this.initializeTestData<Section>('sections', this.generateSectionData(date));
     }
 
     protected static async createTestLocation(): Promise<Location> {
@@ -152,6 +154,20 @@ export class BaseApiTest extends BaseIntegrationTest {
     // Error Handling Helpers
     protected static async expectError<T>(
         promise: Promise<T>,
+        expectedStatus?: number
+    ): Promise<void> {
+        try {
+            await promise;
+            throw new Error('Expected error but got success');
+        } catch (error) {
+            if (expectedStatus && this.isSupabaseError(error)) {
+                expect(error.status).toBe(expectedStatus);
+            }
+        }
+    }
+
+    protected static async expectSupabaseError<T>(
+        promise: PostgrestBuilder<T>,
         expectedStatus?: number
     ): Promise<void> {
         try {
