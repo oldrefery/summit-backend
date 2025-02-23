@@ -10,7 +10,8 @@ import type {
     PersonRole,
     BaseEntity,
     AppUserSettings,
-    Announcement
+    Announcement,
+    Version
 } from '@/types';
 import { format } from 'date-fns';
 import { PostgrestBuilder } from '@supabase/postgrest-js';
@@ -154,6 +155,25 @@ export class BaseApiTest extends BaseIntegrationTest {
             person_id: personId,
             content: `Test Announcement Content ${timestamp}`,
             published_at: new Date().toISOString()
+        };
+    }
+
+    protected static generateJsonVersionData(): Partial<Version> {
+        const timestamp = Date.now();
+        return {
+            version: `1.0.${timestamp}`,
+            file_path: `/test/path/${timestamp}`,
+            changes: {
+                events: 1,
+                people: 1,
+                sections: 1,
+                locations: 1,
+                resources: 1,
+                social_posts: 1,
+                announcements: 1,
+                markdown_pages: 1
+            },
+            file_url: `https://example.com/test-${timestamp}.json`
         };
     }
 
