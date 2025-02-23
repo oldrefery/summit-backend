@@ -177,6 +177,34 @@ class SectionsApiTest extends BaseApiTest {
                         );
                     }
                 });
+
+                it('should not create sections with duplicate name and date', async () => {
+                    const sectionData = this.generateSectionData();
+
+                    // Создаем первую секцию
+                    const { data: section1, error: error1 } = await this.getAuthenticatedClient()
+                        .from('sections')
+                        .insert([sectionData])
+                        .select()
+                        .single();
+
+                    expect(error1).toBeNull();
+                    expect(section1).toBeDefined();
+
+                    try {
+                        // Пытаемся создать вторую секцию с теми же данными
+                        await this.expectSupabaseError(
+                            this.getAuthenticatedClient()
+                                .from('sections')
+                                .insert([sectionData])
+                                .select()
+                                .single(),
+                            400
+                        );
+                    } finally {
+                        await this.cleanupTestData('sections', section1.id);
+                    }
+                });
             });
 
             describe('Event Relationships', () => {

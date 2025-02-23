@@ -199,6 +199,34 @@ class LocationsApiTest extends BaseApiTest {
                     );
                 });
 
+                it('should not create locations with duplicate name', async () => {
+                    const locationData = this.generateLocationData();
+
+                    // Создаем первую локацию
+                    const { data: location1, error: error1 } = await this.getAuthenticatedClient()
+                        .from('locations')
+                        .insert([locationData])
+                        .select()
+                        .single();
+
+                    expect(error1).toBeNull();
+                    expect(location1).toBeDefined();
+
+                    try {
+                        // Пытаемся создать вторую локацию с тем же именем
+                        await this.expectSupabaseError(
+                            this.getAuthenticatedClient()
+                                .from('locations')
+                                .insert([locationData])
+                                .select()
+                                .single(),
+                            400
+                        );
+                    } finally {
+                        await this.cleanupTestData('locations', location1.id);
+                    }
+                });
+
                 it('should validate URL formats', async () => {
                     const locationData = this.generateLocationData();
                     const invalidData = {

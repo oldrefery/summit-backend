@@ -151,6 +151,34 @@ class ResourcesApiTest extends BaseApiTest {
                     );
                 });
 
+                it('should not create resources with duplicate name', async () => {
+                    const resourceData = this.generateResourceData();
+
+                    // Создаем первый ресурс
+                    const { data: resource1, error: error1 } = await this.getAuthenticatedClient()
+                        .from('resources')
+                        .insert([resourceData])
+                        .select()
+                        .single();
+
+                    expect(error1).toBeNull();
+                    expect(resource1).toBeDefined();
+
+                    try {
+                        // Пытаемся создать второй ресурс с тем же именем
+                        await this.expectSupabaseError(
+                            this.getAuthenticatedClient()
+                                .from('resources')
+                                .insert([resourceData])
+                                .select()
+                                .single(),
+                            400
+                        );
+                    } finally {
+                        await this.cleanupTestData('resources', resource1.id);
+                    }
+                });
+
                 it('should validate URL format', async () => {
                     const resourceData = this.generateResourceData();
                     const invalidData = {

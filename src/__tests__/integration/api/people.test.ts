@@ -242,6 +242,39 @@ class PeopleApiTest extends BaseApiTest {
                     );
                 });
 
+                it('should not create people with duplicate email', async () => {
+                    const personData = this.generatePersonData('speaker');
+                    const email = `test.${Date.now()}@example.com`;
+                    personData.email = email;
+
+                    // Создаем первого человека
+                    const { data: person1, error: error1 } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([personData])
+                        .select()
+                        .single();
+
+                    expect(error1).toBeNull();
+                    expect(person1).toBeDefined();
+
+                    try {
+                        // Пытаемся создать второго человека с тем же email
+                        const person2Data = this.generatePersonData('attendee');
+                        person2Data.email = email;
+
+                        await this.expectSupabaseError<TestData>(
+                            this.getAuthenticatedClient()
+                                .from('people')
+                                .insert([person2Data])
+                                .select()
+                                .single(),
+                            400
+                        );
+                    } finally {
+                        await this.cleanupTestData('people', person1.id);
+                    }
+                });
+
                 it('should require valid role', async () => {
                     const personData = this.generatePersonData();
                     const invalidData = {

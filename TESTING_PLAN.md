@@ -146,6 +146,18 @@
   - Maximum limits
   - Date/time edge cases
 
+### Phase 8: Uniqueness Constraints
+- Проверки уникальности по таблицам:
+  - ✅ `sections` - уникальность комбинации (name, date)
+  - ✅ `locations` - уникальность name
+  - ✅ `resources` - уникальность name
+  - ✅ `people` - уникальность email
+  - ❌ `markdown_pages` - уникальность slug
+  - ❌ `json_versions` - уникальность комбинации (file_path, version)
+  - ❌ `event_people` - уникальность комбинации (event_id, person_id)
+  - ❌ `app_user_settings` - уникальность device_id
+  - ❌ `social_feed_posts` - уникальность комбинации (user_id, created_at) если требуется
+
 ## Test Coverage Goals
 - 100% coverage of API endpoints
 - 100% coverage of error scenarios
