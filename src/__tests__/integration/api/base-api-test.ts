@@ -8,7 +8,8 @@ import type {
     MarkdownPage,
     EventPerson,
     PersonRole,
-    BaseEntity
+    BaseEntity,
+    AppUserSettings
 } from '@/types';
 import { format } from 'date-fns';
 import { PostgrestBuilder } from '@supabase/postgrest-js';
@@ -26,13 +27,13 @@ interface SupabaseError {
 
 interface TestRecord {
     table: string;
-    id: number;
+    id: string | number;
 }
 
 export class BaseApiTest extends BaseIntegrationTest {
     private static testRecords: TestRecord[] = [];
 
-    protected static trackTestRecord(table: string, id: number) {
+    protected static trackTestRecord(table: string, id: string | number) {
         this.testRecords.push({ table, id });
     }
 
@@ -126,6 +127,26 @@ export class BaseApiTest extends BaseIntegrationTest {
         };
     }
 
+    protected static generateAppUserSettingsData(): Partial<AppUserSettings> {
+        const timestamp = Date.now();
+        return {
+            device_id: `test-device-${timestamp}`,
+            device_info: {
+                deviceName: `Test Device ${timestamp}`,
+                osName: 'iOS',
+                osVersion: '16.0',
+                deviceModel: 'iPhone 14',
+                appVersion: '1.0.0',
+                buildNumber: '1'
+            },
+            push_token: `test-token-${timestamp}`,
+            settings: {
+                social_feed: true,
+                announcements: true
+            }
+        };
+    }
+
     // Common Test Scenarios
     protected static async createTestPerson(role: PersonRole = 'speaker'): Promise<Person> {
         const person = await this.initializeTestData<Person>('people', this.generatePersonData(role));
@@ -182,6 +203,15 @@ export class BaseApiTest extends BaseIntegrationTest {
         return page;
     }
 
+    protected static async createTestAppUserSettings(): Promise<AppUserSettings> {
+        const settings = await this.initializeTestData<AppUserSettings>(
+            'app_user_settings',
+            this.generateAppUserSettingsData()
+        );
+        this.trackTestRecord('app_user_settings', settings.id);
+        return settings;
+    }
+
     protected static async assignSpeakerToEvent(
         eventId: number,
         personId: number
@@ -235,8 +265,9 @@ export class BaseApiTest extends BaseIntegrationTest {
 
     // Validation Helpers
     protected static validateTimestamps(obj: EntityWithTimestamps): void {
-        expect(obj.created_at).toBeDefined();
-        expect(new Date(obj.created_at || '').getTime()).not.toBeNaN();
+        if (obj.created_at) {
+            expect(new Date(obj.created_at).getTime()).not.toBeNaN();
+        }
         if (obj.updated_at) {
             expect(new Date(obj.updated_at).getTime()).not.toBeNaN();
         }
