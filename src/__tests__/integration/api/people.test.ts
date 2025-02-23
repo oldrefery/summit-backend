@@ -49,6 +49,101 @@ class PeopleApiTest extends BaseApiTest {
                     }
                 });
 
+                it('should get all people', async () => {
+                    // Create two test persons
+                    const person1Data = this.generatePersonData('speaker');
+                    const person2Data = this.generatePersonData('attendee');
+
+                    const { data: p1 } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([person1Data])
+                        .select()
+                        .single();
+
+                    const { data: p2 } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([person2Data])
+                        .select()
+                        .single();
+
+                    try {
+                        const { data, error } = await this.getAuthenticatedClient()
+                            .from('people')
+                            .select('*')
+                            .order('name');
+
+                        expect(error).toBeNull();
+                        expect(data).toBeDefined();
+                        expect(Array.isArray(data)).toBe(true);
+                        expect(data!.length).toBeGreaterThanOrEqual(2);
+                        expect(data!.some(p => p.id === p1.id)).toBe(true);
+                        expect(data!.some(p => p.id === p2.id)).toBe(true);
+                    } finally {
+                        // Cleanup
+                        await this.cleanupTestData('people', p1.id);
+                        await this.cleanupTestData('people', p2.id);
+                    }
+                });
+
+                it('should not delete person with related event_people records', async () => {
+                    // Create test person and event
+                    const person = await this.createTestPerson('speaker');
+                    const event = await this.createTestEvent();
+
+                    // Assign person to event
+                    await this.assignSpeakerToEvent(event.id, person.id);
+
+                    try {
+                        // Try to delete person
+                        const { error } = await this.getAuthenticatedClient()
+                            .from('people')
+                            .delete()
+                            .eq('id', person.id);
+
+                        expect(error).toBeDefined();
+                        expect(error!.message).toContain('violates foreign key constraint "event_people_person_id_fkey"');
+                    } finally {
+                        // Cleanup
+                        await this.getAuthenticatedClient()
+                            .from('event_people')
+                            .delete()
+                            .match({ event_id: event.id, person_id: person.id });
+                        await this.cleanupTestData('events', event.id);
+                        await this.cleanupTestData('people', person.id);
+                    }
+                });
+
+                it('should not delete person with related announcements', async () => {
+                    // Create test person and announcement
+                    const person = await this.createTestPerson('speaker');
+                    const announcementData = {
+                        person_id: person.id,
+                        content: `Test Announcement ${Date.now()}`,
+                        published_at: new Date().toISOString()
+                    };
+
+                    const { data: announcement } = await this.getAuthenticatedClient()
+                        .from('announcements')
+                        .insert([announcementData])
+                        .select()
+                        .single();
+
+                    try {
+                        // Try to delete person
+                        const { error } = await this.getAuthenticatedClient()
+                            .from('people')
+                            .delete()
+                            .eq('id', person.id);
+
+                        expect(error).toBeDefined();
+                        expect(error!.message).toContain('violates foreign key constraint "announcements_person_id_fkey"');
+                    } finally {
+                        // Cleanup
+                        await this.cleanupTestData('announcements', announcement.id);
+                        await this.cleanupTestData('people', person.id);
+                    }
+                });
+
                 it('should create a person with all fields', async () => {
                     const personData = this.generatePersonData('speaker');
                     const { data, error } = await this.getAuthenticatedClient()
