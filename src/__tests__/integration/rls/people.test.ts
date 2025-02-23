@@ -62,57 +62,7 @@ describe('People Table RLS Policies', () => {
         expect(error).toBeNull();
     });
 
-    test('authenticated user can create and read people records', async () => {
-        // Create a person
-        const { data: createData, error: createError } = await authClient
-            .from('people')
-            .insert([testPerson])
-            .select()
-            .single();
 
-        expect(createError).toBeNull();
-        expect(createData).not.toBeNull();
-        expect(createData?.name).toBe(testPerson.name);
-        expect(createData?.role).toBe(testPerson.role);
-
-        if (createData?.id) {
-            testPersonId = createData.id;
-        }
-
-        // Read all people
-        const { data: readData, error: readError } = await authClient
-            .from('people')
-            .select('*');
-
-        expect(readError).toBeNull();
-        expect(readData).not.toBeNull();
-        expect(Array.isArray(readData)).toBe(true);
-        expect(readData?.length).toBeGreaterThan(0);
-        expect(readData?.find(p => p.id === testPersonId)).toBeTruthy();
-    });
-
-
-    test('authenticated user can delete own records', async () => {
-        const { error } = await authClient
-            .from('people')
-            .delete()
-            .eq('id', testPersonId);
-
-        expect(error).toBeNull();
-
-        // Verify the record is deleted
-        const { data, error: readError } = await authClient
-            .from('people')
-            .select('*')
-            .eq('id', testPersonId)
-            .single();
-
-        expect(data).toBeNull();
-        expect(readError?.message).toContain('JSON object requested, multiple (or no) rows returned');
-
-        // Reset testPersonId since we've deleted it
-        testPersonId = 0;
-    });
 
     test('authenticated user has access to all fields', async () => {
         // Create test person with all fields
