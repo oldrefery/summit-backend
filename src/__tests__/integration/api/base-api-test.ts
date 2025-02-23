@@ -11,7 +11,6 @@ import type {
     BaseEntity
 } from '@/types';
 import { format } from 'date-fns';
-import { PostgrestError } from '@supabase/supabase-js';
 
 type EntityWithTimestamps = BaseEntity & {
     created_at?: string;

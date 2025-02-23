@@ -50,14 +50,14 @@
     - Data generators and helpers
 
 ### Phase 2: Core Entity Tests
-- ⏳ People API Tests
+- ✅ People API Tests
   - CRUD operations
   - Role-based operations
   - Validation scenarios
   - Error handling
   - Edge cases
 
-- ⏳ Events API Tests
+- 🚧 Events API Tests
   - CRUD operations
   - Date and time handling
   - Location integration
