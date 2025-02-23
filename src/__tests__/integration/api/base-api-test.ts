@@ -12,6 +12,7 @@ import type {
 } from '@/types';
 import { format } from 'date-fns';
 import { PostgrestBuilder } from '@supabase/postgrest-js';
+import { afterAll, afterEach } from 'vitest';
 
 type EntityWithTimestamps = BaseEntity & {
     created_at?: string;
@@ -23,7 +24,35 @@ interface SupabaseError {
     message: string;
 }
 
+interface TestRecord {
+    table: string;
+    id: number;
+}
+
 export class BaseApiTest extends BaseIntegrationTest {
+    private static testRecords: TestRecord[] = [];
+
+    protected static trackTestRecord(table: string, id: number) {
+        this.testRecords.push({ table, id });
+    }
+
+    protected static async cleanup() {
+        for (const record of this.testRecords) {
+            await this.cleanupTestData(record.table, record.id);
+        }
+        this.testRecords = [];
+    }
+
+    public static async runTests() {
+        afterAll(async () => {
+            await this.cleanup();
+        });
+
+        afterEach(async () => {
+            await this.cleanup();
+        });
+    }
+
     // Data Generators
     protected static generatePersonData(role: PersonRole = 'speaker'): Partial<Person> {
         const timestamp = Date.now();
@@ -99,15 +128,21 @@ export class BaseApiTest extends BaseIntegrationTest {
 
     // Common Test Scenarios
     protected static async createTestPerson(role: PersonRole = 'speaker'): Promise<Person> {
-        return await this.initializeTestData<Person>('people', this.generatePersonData(role));
+        const person = await this.initializeTestData<Person>('people', this.generatePersonData(role));
+        this.trackTestRecord('people', person.id);
+        return person;
     }
 
     protected static async createTestSection(date?: Date): Promise<Section> {
-        return await this.initializeTestData<Section>('sections', this.generateSectionData(date));
+        const section = await this.initializeTestData<Section>('sections', this.generateSectionData(date));
+        this.trackTestRecord('sections', section.id);
+        return section;
     }
 
     protected static async createTestLocation(): Promise<Location> {
-        return await this.initializeTestData<Location>('locations', this.generateLocationData());
+        const location = await this.initializeTestData<Location>('locations', this.generateLocationData());
+        this.trackTestRecord('locations', location.id);
+        return location;
     }
 
     protected static async createTestEvent(
@@ -124,32 +159,40 @@ export class BaseApiTest extends BaseIntegrationTest {
             locationId = location.id;
         }
 
-        return await this.initializeTestData<Event>(
+        const event = await this.initializeTestData<Event>(
             'events',
             this.generateEventData(sectionId, locationId)
         );
+        this.trackTestRecord('events', event.id);
+        return event;
     }
 
     protected static async createTestResource(): Promise<Resource> {
-        return await this.initializeTestData<Resource>('resources', this.generateResourceData());
+        const resource = await this.initializeTestData<Resource>('resources', this.generateResourceData());
+        this.trackTestRecord('resources', resource.id);
+        return resource;
     }
 
     protected static async createTestMarkdownPage(): Promise<MarkdownPage> {
-        return await this.initializeTestData<MarkdownPage>(
+        const page = await this.initializeTestData<MarkdownPage>(
             'markdown_pages',
             this.generateMarkdownPageData()
         );
+        this.trackTestRecord('markdown_pages', page.id);
+        return page;
     }
 
     protected static async assignSpeakerToEvent(
         eventId: number,
         personId: number
     ): Promise<EventPerson> {
-        return await this.initializeTestData<EventPerson>('event_people', {
+        const eventPerson = await this.initializeTestData<EventPerson>('event_people', {
             event_id: eventId,
             person_id: personId,
             role: 'speaker',
         });
+        this.trackTestRecord('event_people', eventPerson.id);
+        return eventPerson;
     }
 
     // Error Handling Helpers

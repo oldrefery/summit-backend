@@ -15,12 +15,6 @@ class SectionsApiTest extends BaseApiTest {
             describe('CRUD Operations', () => {
                 let testSection: Section;
 
-                afterAll(async () => {
-                    if (testSection?.id) {
-                        await this.cleanupTestData('sections', testSection.id);
-                    }
-                });
-
                 it('should get all sections', async () => {
                     // Create two test sections
                     const section1Data = this.generateSectionData();
@@ -37,6 +31,7 @@ class SectionsApiTest extends BaseApiTest {
 
                     expect(error1).toBeNull();
                     expect(s1).toBeDefined();
+                    if (s1) this.trackTestRecord('sections', s1.id);
 
                     const { data: s2, error: error2 } = await this.getAuthenticatedClient()
                         .from('sections')
@@ -46,24 +41,19 @@ class SectionsApiTest extends BaseApiTest {
 
                     expect(error2).toBeNull();
                     expect(s2).toBeDefined();
+                    if (s2) this.trackTestRecord('sections', s2.id);
 
-                    try {
-                        const { data, error } = await this.getAuthenticatedClient()
-                            .from('sections')
-                            .select('*')
-                            .order('date');
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('sections')
+                        .select('*')
+                        .order('date');
 
-                        expect(error).toBeNull();
-                        expect(data).toBeDefined();
-                        expect(Array.isArray(data)).toBe(true);
-                        expect(data!.length).toBeGreaterThanOrEqual(2);
-                        expect(data!.some(s => s.id === s1.id)).toBe(true);
-                        expect(data!.some(s => s.id === s2.id)).toBe(true);
-                    } finally {
-                        // Cleanup
-                        await this.cleanupTestData('sections', s1.id);
-                        await this.cleanupTestData('sections', s2.id);
-                    }
+                    expect(error).toBeNull();
+                    expect(data).toBeDefined();
+                    expect(Array.isArray(data)).toBe(true);
+                    expect(data!.length).toBeGreaterThanOrEqual(2);
+                    expect(data!.some(s => s.id === s1.id)).toBe(true);
+                    expect(data!.some(s => s.id === s2.id)).toBe(true);
                 });
 
                 it('should create a section with all fields', async () => {
@@ -77,6 +67,7 @@ class SectionsApiTest extends BaseApiTest {
                     expect(error).toBeNull();
                     expect(data).toBeDefined();
                     testSection = data;
+                    if (data) this.trackTestRecord('sections', data.id);
 
                     // Validate all fields
                     expect(data.name).toBe(sectionData.name);
@@ -160,22 +151,15 @@ class SectionsApiTest extends BaseApiTest {
                         this.createTestSection(addDays(today, 2))
                     ]);
 
-                    try {
-                        // Verify all sections are created with different dates
-                        const dates = sections.map(s => s.date);
-                        const uniqueDates = new Set(dates);
-                        expect(uniqueDates.size).toBe(sections.length);
+                    // Verify all sections are created with different dates
+                    const dates = sections.map(s => s.date);
+                    const uniqueDates = new Set(dates);
+                    expect(uniqueDates.size).toBe(sections.length);
 
-                        // Verify dates are valid
-                        dates.forEach(date => {
-                            expect(() => new Date(date)).not.toThrow();
-                        });
-                    } finally {
-                        // Cleanup
-                        await Promise.all(
-                            sections.map((s: Section) => this.cleanupTestData('sections', s.id))
-                        );
-                    }
+                    // Verify dates are valid
+                    dates.forEach(date => {
+                        expect(() => new Date(date)).not.toThrow();
+                    });
                 });
 
                 it('should not create sections with duplicate name and date', async () => {
@@ -190,20 +174,17 @@ class SectionsApiTest extends BaseApiTest {
 
                     expect(error1).toBeNull();
                     expect(section1).toBeDefined();
+                    if (section1) this.trackTestRecord('sections', section1.id);
 
-                    try {
-                        // Пытаемся создать вторую секцию с теми же данными
-                        await this.expectSupabaseError(
-                            this.getAuthenticatedClient()
-                                .from('sections')
-                                .insert([sectionData])
-                                .select()
-                                .single(),
-                            400
-                        );
-                    } finally {
-                        await this.cleanupTestData('sections', section1.id);
-                    }
+                    // Пытаемся создать вторую секцию с теми же данными
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('sections')
+                            .insert([sectionData])
+                            .select()
+                            .single(),
+                        400
+                    );
                 });
             });
 
@@ -211,22 +192,13 @@ class SectionsApiTest extends BaseApiTest {
                 let section: Section;
                 let events: Event[];
 
-                beforeAll(async () => {
+                it('should get section with related events', async () => {
                     section = await this.createTestSection();
                     events = await Promise.all([
                         this.createTestEvent(section.id),
                         this.createTestEvent(section.id),
                     ]);
-                });
 
-                afterAll(async () => {
-                    await Promise.all([
-                        ...events.map((e: Event) => this.cleanupTestData('events', e.id)),
-                        this.cleanupTestData('sections', section.id),
-                    ]);
-                });
-
-                it('should get section with related events', async () => {
                     const { data, error } = await this.getAuthenticatedClient()
                         .from('sections')
                         .select('*, events(*)')
@@ -285,28 +257,24 @@ class SectionsApiTest extends BaseApiTest {
                 it('should handle concurrent updates gracefully', async () => {
                     const section = await this.createTestSection();
 
-                    try {
-                        // Attempt two concurrent updates
-                        const updates = await Promise.allSettled([
-                            this.getAuthenticatedClient()
-                                .from('sections')
-                                .update({ name: 'Update 1' })
-                                .eq('id', section.id)
-                                .select()
-                                .single(),
-                            this.getAuthenticatedClient()
-                                .from('sections')
-                                .update({ name: 'Update 2' })
-                                .eq('id', section.id)
-                                .select()
-                                .single(),
-                        ]);
+                    // Attempt two concurrent updates
+                    const updates = await Promise.allSettled([
+                        this.getAuthenticatedClient()
+                            .from('sections')
+                            .update({ name: 'Update 1' })
+                            .eq('id', section.id)
+                            .select()
+                            .single(),
+                        this.getAuthenticatedClient()
+                            .from('sections')
+                            .update({ name: 'Update 2' })
+                            .eq('id', section.id)
+                            .select()
+                            .single(),
+                    ]);
 
-                        // At least one update should succeed
-                        expect(updates.some(r => r.status === 'fulfilled')).toBe(true);
-                    } finally {
-                        await this.cleanupTestData('sections', section.id);
-                    }
+                    // At least one update should succeed
+                    expect(updates.some(r => r.status === 'fulfilled')).toBe(true);
                 });
             });
 
@@ -341,7 +309,6 @@ class SectionsApiTest extends BaseApiTest {
                             .eq('id', section.id),
                         401
                     );
-                    await this.cleanupTestData('sections', section.id);
                 });
 
                 it('should not allow anonymous delete', async () => {
@@ -353,7 +320,6 @@ class SectionsApiTest extends BaseApiTest {
                             .eq('id', section.id),
                         401
                     );
-                    await this.cleanupTestData('sections', section.id);
                 });
             });
         });

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { BaseApiTest } from './base-api-test';
 import type { Location, Event } from '@/types';
 
@@ -7,12 +7,6 @@ class LocationsApiTest extends BaseApiTest {
         describe('Locations API Tests', () => {
             describe('CRUD Operations', () => {
                 let testLocation: Location;
-
-                afterAll(async () => {
-                    if (testLocation?.id) {
-                        await this.cleanupTestData('locations', testLocation.id);
-                    }
-                });
 
                 it('should get all locations', async () => {
                     // Create two test locations
@@ -27,6 +21,7 @@ class LocationsApiTest extends BaseApiTest {
 
                     expect(error1).toBeNull();
                     expect(l1).toBeDefined();
+                    if (l1) this.trackTestRecord('locations', l1.id);
 
                     const { data: l2, error: error2 } = await this.getAuthenticatedClient()
                         .from('locations')
@@ -36,24 +31,19 @@ class LocationsApiTest extends BaseApiTest {
 
                     expect(error2).toBeNull();
                     expect(l2).toBeDefined();
+                    if (l2) this.trackTestRecord('locations', l2.id);
 
-                    try {
-                        const { data, error } = await this.getAuthenticatedClient()
-                            .from('locations')
-                            .select('*')
-                            .order('name');
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('locations')
+                        .select('*')
+                        .order('name');
 
-                        expect(error).toBeNull();
-                        expect(data).toBeDefined();
-                        expect(Array.isArray(data)).toBe(true);
-                        expect(data!.length).toBeGreaterThanOrEqual(2);
-                        expect(data!.some(l => l.id === l1!.id)).toBe(true);
-                        expect(data!.some(l => l.id === l2!.id)).toBe(true);
-                    } finally {
-                        // Cleanup
-                        if (l1?.id) await this.cleanupTestData('locations', l1.id);
-                        if (l2?.id) await this.cleanupTestData('locations', l2.id);
-                    }
+                    expect(error).toBeNull();
+                    expect(data).toBeDefined();
+                    expect(Array.isArray(data)).toBe(true);
+                    expect(data!.length).toBeGreaterThanOrEqual(2);
+                    expect(data!.some(l => l.id === l1!.id)).toBe(true);
+                    expect(data!.some(l => l.id === l2!.id)).toBe(true);
                 });
 
                 it('should create a location with all fields', async () => {
@@ -67,6 +57,7 @@ class LocationsApiTest extends BaseApiTest {
                     expect(error).toBeNull();
                     expect(data).toBeDefined();
                     testLocation = data;
+                    if (data) this.trackTestRecord('locations', data.id);
 
                     // Validate all fields
                     expect(data.name).toBe(locationData.name);
@@ -139,23 +130,14 @@ class LocationsApiTest extends BaseApiTest {
                 let location: Location;
                 let events: Event[];
 
-                beforeAll(async () => {
+                it('should get location with related events', async () => {
                     location = await this.createTestLocation();
                     const section = await this.createTestSection();
                     events = await Promise.all([
                         this.createTestEvent(section.id, location.id),
                         this.createTestEvent(section.id, location.id),
                     ]);
-                });
 
-                afterAll(async () => {
-                    await Promise.all([
-                        ...events.map((e: Event) => this.cleanupTestData('events', e.id)),
-                        this.cleanupTestData('locations', location.id),
-                    ]);
-                });
-
-                it('should get location with related events', async () => {
                     const { data, error } = await this.getAuthenticatedClient()
                         .from('locations')
                         .select('*, events(*)')
@@ -211,20 +193,17 @@ class LocationsApiTest extends BaseApiTest {
 
                     expect(error1).toBeNull();
                     expect(location1).toBeDefined();
+                    if (location1) this.trackTestRecord('locations', location1.id);
 
-                    try {
-                        // Пытаемся создать вторую локацию с тем же именем
-                        await this.expectSupabaseError(
-                            this.getAuthenticatedClient()
-                                .from('locations')
-                                .insert([locationData])
-                                .select()
-                                .single(),
-                            400
-                        );
-                    } finally {
-                        await this.cleanupTestData('locations', location1.id);
-                    }
+                    // Пытаемся создать вторую локацию с тем же именем
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('locations')
+                            .insert([locationData])
+                            .select()
+                            .single(),
+                        400
+                    );
                 });
 
                 it('should validate URL formats', async () => {
@@ -277,7 +256,6 @@ class LocationsApiTest extends BaseApiTest {
                             .eq('id', location.id),
                         401
                     );
-                    await this.cleanupTestData('locations', location.id);
                 });
 
                 it('should not allow anonymous delete', async () => {
@@ -289,7 +267,6 @@ class LocationsApiTest extends BaseApiTest {
                             .eq('id', location.id),
                         401
                     );
-                    await this.cleanupTestData('locations', location.id);
                 });
             });
 
@@ -298,24 +275,17 @@ class LocationsApiTest extends BaseApiTest {
                     const longText = 'a'.repeat(255);
                     const locationData = this.generateLocationData();
                     locationData.link_address = longText;
-                    let createdId: number | undefined;
 
-                    try {
-                        const { data, error } = await this.getAuthenticatedClient()
-                            .from('locations')
-                            .insert([locationData])
-                            .select()
-                            .single();
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('locations')
+                        .insert([locationData])
+                        .select()
+                        .single();
 
-                        expect(error).toBeNull();
-                        expect(data).toBeDefined();
-                        expect(data.link_address).toBe(longText);
-                        createdId = data?.id;
-                    } finally {
-                        if (createdId) {
-                            await this.cleanupTestData('locations', createdId);
-                        }
-                    }
+                    expect(error).toBeNull();
+                    expect(data).toBeDefined();
+                    expect(data.link_address).toBe(longText);
+                    if (data) this.trackTestRecord('locations', data.id);
                 });
 
                 it('should handle special characters in text fields', async () => {
@@ -334,7 +304,7 @@ class LocationsApiTest extends BaseApiTest {
                     expect(data.name).toBe(locationData.name);
                     expect(data.link_address).toBe(locationData.link_address);
 
-                    await this.cleanupTestData('locations', data.id);
+                    if (data) this.trackTestRecord('locations', data.id);
                 });
 
                 it('should handle empty optional fields', async () => {
@@ -353,7 +323,7 @@ class LocationsApiTest extends BaseApiTest {
                     expect(data.link).toBeNull();
                     expect(data.link_address).toBeNull();
 
-                    await this.cleanupTestData('locations', data.id);
+                    if (data) this.trackTestRecord('locations', data.id);
                 });
             });
         });

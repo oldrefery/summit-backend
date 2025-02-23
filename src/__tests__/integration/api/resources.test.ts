@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { BaseApiTest } from './base-api-test';
 import type { Resource } from '@/types';
 
@@ -7,12 +7,6 @@ class ResourcesApiTest extends BaseApiTest {
         describe('Resources API Tests', () => {
             describe('CRUD Operations', () => {
                 let testResource: Resource;
-
-                afterAll(async () => {
-                    if (testResource?.id) {
-                        await this.cleanupTestData('resources', testResource.id);
-                    }
-                });
 
                 it('should get all resources', async () => {
                     // Create two test resources
@@ -27,6 +21,7 @@ class ResourcesApiTest extends BaseApiTest {
 
                     expect(error1).toBeNull();
                     expect(r1).toBeDefined();
+                    if (r1) this.trackTestRecord('resources', r1.id);
 
                     const { data: r2, error: error2 } = await this.getAuthenticatedClient()
                         .from('resources')
@@ -36,24 +31,19 @@ class ResourcesApiTest extends BaseApiTest {
 
                     expect(error2).toBeNull();
                     expect(r2).toBeDefined();
+                    if (r2) this.trackTestRecord('resources', r2.id);
 
-                    try {
-                        const { data, error } = await this.getAuthenticatedClient()
-                            .from('resources')
-                            .select('*')
-                            .order('name');
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('resources')
+                        .select('*')
+                        .order('name');
 
-                        expect(error).toBeNull();
-                        expect(data).toBeDefined();
-                        expect(Array.isArray(data)).toBe(true);
-                        expect(data!.length).toBeGreaterThanOrEqual(2);
-                        expect(data!.some(r => r.id === r1!.id)).toBe(true);
-                        expect(data!.some(r => r.id === r2!.id)).toBe(true);
-                    } finally {
-                        // Cleanup
-                        if (r1?.id) await this.cleanupTestData('resources', r1.id);
-                        if (r2?.id) await this.cleanupTestData('resources', r2.id);
-                    }
+                    expect(error).toBeNull();
+                    expect(data).toBeDefined();
+                    expect(Array.isArray(data)).toBe(true);
+                    expect(data!.length).toBeGreaterThanOrEqual(2);
+                    expect(data!.some(r => r.id === r1!.id)).toBe(true);
+                    expect(data!.some(r => r.id === r2!.id)).toBe(true);
                 });
 
                 it('should create a resource with all fields', async () => {
@@ -67,6 +57,7 @@ class ResourcesApiTest extends BaseApiTest {
                     expect(error).toBeNull();
                     expect(data).toBeDefined();
                     testResource = data;
+                    if (data) this.trackTestRecord('resources', data.id);
 
                     // Validate all fields
                     expect(data.name).toBe(resourceData.name);
@@ -163,20 +154,17 @@ class ResourcesApiTest extends BaseApiTest {
 
                     expect(error1).toBeNull();
                     expect(resource1).toBeDefined();
+                    if (resource1) this.trackTestRecord('resources', resource1.id);
 
-                    try {
-                        // Пытаемся создать второй ресурс с тем же именем
-                        await this.expectSupabaseError(
-                            this.getAuthenticatedClient()
-                                .from('resources')
-                                .insert([resourceData])
-                                .select()
-                                .single(),
-                            400
-                        );
-                    } finally {
-                        await this.cleanupTestData('resources', resource1.id);
-                    }
+                    // Пытаемся создать второй ресурс с тем же именем
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('resources')
+                            .insert([resourceData])
+                            .select()
+                            .single(),
+                        400
+                    );
                 });
 
                 it('should validate URL format', async () => {
@@ -245,7 +233,6 @@ class ResourcesApiTest extends BaseApiTest {
                             .eq('id', resource.id),
                         401
                     );
-                    await this.cleanupTestData('resources', resource.id);
                 });
 
                 it('should not allow anonymous delete', async () => {
@@ -257,7 +244,6 @@ class ResourcesApiTest extends BaseApiTest {
                             .eq('id', resource.id),
                         401
                     );
-                    await this.cleanupTestData('resources', resource.id);
                 });
             });
 
@@ -266,22 +252,18 @@ class ResourcesApiTest extends BaseApiTest {
                     const longText = 'a'.repeat(1000);
                     const resource = await this.createTestResource();
 
-                    try {
-                        const { data, error } = await this.getAuthenticatedClient()
-                            .from('resources')
-                            .update({
-                                description: longText,
-                            })
-                            .eq('id', resource.id)
-                            .select()
-                            .single();
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('resources')
+                        .update({
+                            description: longText,
+                        })
+                        .eq('id', resource.id)
+                        .select()
+                        .single();
 
-                        expect(error).toBeNull();
-                        expect(data).toBeDefined();
-                        expect(data.description).toBe(longText);
-                    } finally {
-                        await this.cleanupTestData('resources', resource.id);
-                    }
+                    expect(error).toBeNull();
+                    expect(data).toBeDefined();
+                    expect(data.description).toBe(longText);
                 });
 
                 it('should handle special characters in text fields', async () => {
@@ -300,7 +282,7 @@ class ResourcesApiTest extends BaseApiTest {
                     expect(data.name).toBe(resourceData.name);
                     expect(data.description).toBe(resourceData.description);
 
-                    await this.cleanupTestData('resources', data.id);
+                    if (data) this.trackTestRecord('resources', data.id);
                 });
 
                 it('should handle empty optional fields', async () => {
@@ -319,7 +301,7 @@ class ResourcesApiTest extends BaseApiTest {
                     expect(error).toBeNull();
                     expect(data.description).toBe(''); // empty string instead of null
 
-                    await this.cleanupTestData('resources', data.id);
+                    if (data) this.trackTestRecord('resources', data.id);
                 });
 
                 it('should handle route resources correctly', async () => {
@@ -337,7 +319,7 @@ class ResourcesApiTest extends BaseApiTest {
                     expect(error).toBeNull();
                     expect(data.is_route).toBe(true);
 
-                    await this.cleanupTestData('resources', data.id);
+                    if (data) this.trackTestRecord('resources', data.id);
                 });
             });
         });

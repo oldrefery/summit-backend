@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { BaseApiTest } from './base-api-test';
 import type { Person, PersonRole } from '@/types';
 
@@ -19,12 +19,6 @@ class PeopleApiTest extends BaseApiTest {
             describe('CRUD Operations', () => {
                 let testPerson: Person;
 
-                afterAll(async () => {
-                    if (testPerson?.id) {
-                        await this.cleanupTestData('people', testPerson.id);
-                    }
-                });
-
                 it('should get all people', async () => {
                     // Create two test persons
                     const person1Data = this.generatePersonData('speaker');
@@ -36,29 +30,27 @@ class PeopleApiTest extends BaseApiTest {
                         .select()
                         .single();
 
+                    if (p1) this.trackTestRecord('people', p1.id);
+
                     const { data: p2 } = await this.getAuthenticatedClient()
                         .from('people')
                         .insert([person2Data])
                         .select()
                         .single();
 
-                    try {
-                        const { data, error } = await this.getAuthenticatedClient()
-                            .from('people')
-                            .select('*')
-                            .order('name');
+                    if (p2) this.trackTestRecord('people', p2.id);
 
-                        expect(error).toBeNull();
-                        expect(data).toBeDefined();
-                        expect(Array.isArray(data)).toBe(true);
-                        expect(data!.length).toBeGreaterThanOrEqual(2);
-                        expect(data!.some(p => p.id === p1.id)).toBe(true);
-                        expect(data!.some(p => p.id === p2.id)).toBe(true);
-                    } finally {
-                        // Cleanup
-                        await this.cleanupTestData('people', p1.id);
-                        await this.cleanupTestData('people', p2.id);
-                    }
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .select('*')
+                        .order('name');
+
+                    expect(error).toBeNull();
+                    expect(data).toBeDefined();
+                    expect(Array.isArray(data)).toBe(true);
+                    expect(data!.length).toBeGreaterThanOrEqual(2);
+                    expect(data!.some(p => p.id === p1.id)).toBe(true);
+                    expect(data!.some(p => p.id === p2.id)).toBe(true);
                 });
 
                 it('should not delete person with related event_people records', async () => {
@@ -69,24 +61,14 @@ class PeopleApiTest extends BaseApiTest {
                     // Assign person to event
                     await this.assignSpeakerToEvent(event.id, person.id);
 
-                    try {
-                        // Try to delete person
-                        const { error } = await this.getAuthenticatedClient()
-                            .from('people')
-                            .delete()
-                            .eq('id', person.id);
+                    // Try to delete person
+                    const { error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .delete()
+                        .eq('id', person.id);
 
-                        expect(error).toBeDefined();
-                        expect(error!.message).toContain('violates foreign key constraint "event_people_person_id_fkey"');
-                    } finally {
-                        // Cleanup
-                        await this.getAuthenticatedClient()
-                            .from('event_people')
-                            .delete()
-                            .match({ event_id: event.id, person_id: person.id });
-                        await this.cleanupTestData('events', event.id);
-                        await this.cleanupTestData('people', person.id);
-                    }
+                    expect(error).toBeDefined();
+                    expect(error!.message).toContain('violates foreign key constraint "event_people_person_id_fkey"');
                 });
 
                 it('should not delete person with related announcements', async () => {
@@ -104,20 +86,16 @@ class PeopleApiTest extends BaseApiTest {
                         .select()
                         .single();
 
-                    try {
-                        // Try to delete person
-                        const { error } = await this.getAuthenticatedClient()
-                            .from('people')
-                            .delete()
-                            .eq('id', person.id);
+                    if (announcement) this.trackTestRecord('announcements', announcement.id);
 
-                        expect(error).toBeDefined();
-                        expect(error!.message).toContain('violates foreign key constraint "announcements_person_id_fkey"');
-                    } finally {
-                        // Cleanup
-                        await this.cleanupTestData('announcements', announcement.id);
-                        await this.cleanupTestData('people', person.id);
-                    }
+                    // Try to delete person
+                    const { error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .delete()
+                        .eq('id', person.id);
+
+                    expect(error).toBeDefined();
+                    expect(error!.message).toContain('violates foreign key constraint "announcements_person_id_fkey"');
                 });
 
                 it('should create a person with all fields', async () => {
@@ -131,6 +109,7 @@ class PeopleApiTest extends BaseApiTest {
                     expect(error).toBeNull();
                     expect(data).toBeDefined();
                     testPerson = data;
+                    if (data) this.trackTestRecord('people', data.id);
 
                     // Validate all fields
                     expect(data.name).toBe(personData.name);
@@ -169,6 +148,7 @@ class PeopleApiTest extends BaseApiTest {
                         .single();
 
                     expect(createdPerson).toBeDefined();
+                    if (createdPerson) this.trackTestRecord('people', createdPerson.id);
 
                     const updateData = {
                         title: 'Updated Title',
@@ -187,9 +167,6 @@ class PeopleApiTest extends BaseApiTest {
                     expect(data.title).toBe(updateData.title);
                     expect(data.company).toBe(updateData.company);
                     expect(data.id).toBe(createdPerson.id);
-
-                    // Cleanup
-                    await this.cleanupTestData('people', createdPerson.id);
                 });
 
                 it('should delete a person', async () => {
@@ -216,13 +193,11 @@ class PeopleApiTest extends BaseApiTest {
                 it('should create a speaker', async () => {
                     const person = await this.createTestPerson('speaker');
                     expect(person.role).toBe('speaker');
-                    await this.cleanupTestData('people', person.id);
                 });
 
                 it('should create an attendee', async () => {
                     const person = await this.createTestPerson('attendee');
                     expect(person.role).toBe('attendee');
-                    await this.cleanupTestData('people', person.id);
                 });
             });
 
@@ -256,23 +231,20 @@ class PeopleApiTest extends BaseApiTest {
 
                     expect(error1).toBeNull();
                     expect(person1).toBeDefined();
+                    if (person1) this.trackTestRecord('people', person1.id);
 
-                    try {
-                        // Пытаемся создать второго человека с тем же email
-                        const person2Data = this.generatePersonData('attendee');
-                        person2Data.email = email;
+                    // Пытаемся создать второго человека с тем же email
+                    const person2Data = this.generatePersonData('attendee');
+                    person2Data.email = email;
 
-                        await this.expectSupabaseError<TestData>(
-                            this.getAuthenticatedClient()
-                                .from('people')
-                                .insert([person2Data])
-                                .select()
-                                .single(),
-                            400
-                        );
-                    } finally {
-                        await this.cleanupTestData('people', person1.id);
-                    }
+                    await this.expectSupabaseError<TestData>(
+                        this.getAuthenticatedClient()
+                            .from('people')
+                            .insert([person2Data])
+                            .select()
+                            .single(),
+                        400
+                    );
                 });
 
                 it('should require valid role', async () => {
@@ -338,7 +310,6 @@ class PeopleApiTest extends BaseApiTest {
                             .eq('id', person.id),
                         401
                     );
-                    await this.cleanupTestData('people', person.id);
                 });
 
                 it('should not allow anonymous delete', async () => {
@@ -350,7 +321,6 @@ class PeopleApiTest extends BaseApiTest {
                             .eq('id', person.id),
                         401
                     );
-                    await this.cleanupTestData('people', person.id);
                 });
             });
 
@@ -372,8 +342,6 @@ class PeopleApiTest extends BaseApiTest {
                     expect(error).toBeNull();
                     expect(data.bio).toBe(longText);
                     expect(data.title).toBe(longText);
-
-                    await this.cleanupTestData('people', person.id);
                 });
 
                 it('should handle special characters in text fields', async () => {
@@ -392,7 +360,7 @@ class PeopleApiTest extends BaseApiTest {
                     expect(data.name).toBe(personData.name);
                     expect(data.title).toBe(personData.title);
 
-                    await this.cleanupTestData('people', data.id);
+                    if (data) this.trackTestRecord('people', data.id);
                 });
 
                 it('should handle empty optional fields', async () => {
@@ -415,7 +383,7 @@ class PeopleApiTest extends BaseApiTest {
                     expect(data.email).toBeNull();
                     expect(data.mobile).toBeNull();
 
-                    await this.cleanupTestData('people', data.id);
+                    if (data) this.trackTestRecord('people', data.id);
                 });
             });
         });
