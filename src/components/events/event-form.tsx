@@ -30,6 +30,7 @@ import { useEvents } from '@/hooks/use-events';
 import type { EventFormData } from '@/types';
 import type { EventWithRelations } from '@/hooks/use-events';
 import { useToastContext } from '@/components/providers/toast-provider';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface EventFormProps {
   initialData?: EventWithRelations;
@@ -59,10 +60,10 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   const { data: sections } = useSections();
   const { data: allPeople, isLoading: isPeopleLoading } = usePeople();
   const { createEvent, updateEvent } = useEvents();
-  const [isDirty, setIsDirty] = useState(false); // for tracking form changes
+  const [isDirty, setIsDirty] = useState(false);
 
-  const [formData, setFormData] = useState<FormData>({
-    section_id: initialData?.section_id || sections?.[0]?.id || 0,
+  const [formData, setFormData] = useState<FormData>(() => ({
+    section_id: initialData?.section_id || 0,
     date: initialData?.date || format(new Date(), 'yyyy-MM-dd'),
     title: initialData?.title || '',
     description: initialData?.description || '',
@@ -74,7 +75,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
       : '10:00',
     location_id: initialData?.location_id || undefined,
     duration: initialData?.duration || '',
-  });
+  }));
 
   const [selectedSpeakerIds, setSelectedSpeakerIds] = useState<string[]>(
     initialData?.event_people
@@ -86,21 +87,45 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    if (sections?.length && formData.section_id === 0) {
+      setFormData(prev => ({
+        ...prev,
+        section_id: sections[0].id
+      }));
+    }
+  }, [sections, formData.section_id]);
+
+  useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
         e.preventDefault();
-
         return 'Changes you made may not be saved.';
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
   const availableSpeakers =
     allPeople?.filter(person => person.role === 'speaker') || [];
+
+  if (!sections?.length) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Loading...</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -122,8 +147,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
         end_time: end_timestamp,
         location_id: formData.location_id ? Number(formData.location_id) : null,
         duration: formData.duration || null,
-        speaker_ids: selectedSpeakerIds.map(id => Number(id)),
-        user_id: 'test-user-id'
+        speaker_ids: selectedSpeakerIds.map(id => Number(id))
       };
 
       if (initialData) {
