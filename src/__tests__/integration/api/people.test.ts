@@ -337,7 +337,7 @@ class PeopleApiTest extends BaseApiTest {
                         })
                         .eq('id', person.id)
                         .select()
-                        .single();
+                        .maybeSingle();
 
                     expect(error).toBeNull();
                     expect(data.bio).toBe(longText);
