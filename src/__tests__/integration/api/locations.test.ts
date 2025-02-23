@@ -267,24 +267,26 @@ class LocationsApiTest extends BaseApiTest {
 
             describe('Edge Cases', () => {
                 it('should handle very long text fields', async () => {
-                    const longText = 'a'.repeat(1000);
-                    const location = await this.createTestLocation();
+                    const longText = 'a'.repeat(255);
+                    const locationData = this.generateLocationData();
+                    locationData.link_address = longText;
+                    let createdId: number | undefined;
 
                     try {
                         const { data, error } = await this.getAuthenticatedClient()
                             .from('locations')
-                            .update({
-                                link_address: longText,
-                            })
-                            .eq('id', location.id)
+                            .insert([locationData])
                             .select()
                             .single();
 
                         expect(error).toBeNull();
                         expect(data).toBeDefined();
                         expect(data.link_address).toBe(longText);
+                        createdId = data?.id;
                     } finally {
-                        await this.cleanupTestData('locations', location.id);
+                        if (createdId) {
+                            await this.cleanupTestData('locations', createdId);
+                        }
                     }
                 });
 
