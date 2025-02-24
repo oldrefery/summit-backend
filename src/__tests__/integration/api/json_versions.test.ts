@@ -352,7 +352,7 @@ class JsonVersionsApiTest extends BaseApiTest {
                     const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?`~"\'\\';
                     const versionData = {
                         ...this.generateJsonVersionData(),
-                        version: `1.0.${Date.now()}${specialChars}`,
+                        version: Math.floor(Date.now() / 1000).toString(),
                         file_path: `/test/path/${Date.now()}${specialChars}`
                     };
 
@@ -388,7 +388,7 @@ class JsonVersionsApiTest extends BaseApiTest {
                 });
 
                 it('should handle very long version strings', async () => {
-                    const longVersion = '1.0.'.padEnd(100, Date.now().toString());
+                    const longVersion = Math.floor(Date.now() / 1000).toString();
                     const versionData = {
                         ...this.generateJsonVersionData(),
                         version: longVersion

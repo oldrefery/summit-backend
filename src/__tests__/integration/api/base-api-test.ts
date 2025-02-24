@@ -161,7 +161,7 @@ export class BaseApiTest extends BaseIntegrationTest {
     protected static generateJsonVersionData(): Partial<Version> {
         const timestamp = Date.now();
         return {
-            version: `1.0.${timestamp}`,
+            version: Math.floor(timestamp / 1000).toString(),
             file_path: `/test/path/${timestamp}`,
             changes: {
                 events: 1,

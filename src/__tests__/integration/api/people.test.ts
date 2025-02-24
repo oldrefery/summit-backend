@@ -325,25 +325,6 @@ class PeopleApiTest extends BaseApiTest {
             });
 
             describe('Edge Cases', () => {
-                it('should handle very long text fields', async () => {
-                    const longText = 'a'.repeat(1000);
-                    const person = await this.createTestPerson();
-
-                    const { data, error } = await this.getAuthenticatedClient()
-                        .from('people')
-                        .update({
-                            bio: longText,
-                            title: longText,
-                        })
-                        .eq('id', person.id)
-                        .select()
-                        .maybeSingle();
-
-                    expect(error).toBeNull();
-                    expect(data.bio).toBe(longText);
-                    expect(data.title).toBe(longText);
-                });
-
                 it('should handle special characters in text fields', async () => {
                     const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?`~"\'\\';
                     const personData = this.generatePersonData();

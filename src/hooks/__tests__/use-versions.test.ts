@@ -4,7 +4,7 @@ import { useVersions } from '../use-versions';
 import { api } from '@/lib/supabase';
 import { useToastContext } from '@/components/providers/toast-provider';
 import { Providers } from '@/__mocks__/test-wrapper';
-import type { Version } from '../use-versions';
+import type { Version } from '@/types/versions';
 
 // Mock the API and toast context
 vi.mock('@/lib/supabase', () => ({
@@ -24,26 +24,38 @@ vi.mock('@/components/providers/toast-provider', () => ({
 describe('useVersions', () => {
     const mockVersions: Version[] = [
         {
-            id: 1,
-            version: '1.0.0',
-            created_at: new Date().toISOString(),
+            id: '1',
+            version: '1',
             published_at: new Date().toISOString(),
             changes: {
-                pages: 5,
                 events: 3,
+                people: 5,
+                sections: 0,
+                locations: 2,
+                resources: 1,
+                social_posts: 0,
+                announcements: 1,
+                markdown_pages: 2
             },
-            file_url: 'https://example.com/v1.0.0.zip',
+            file_url: 'https://example.com/v1.json',
+            created_at: new Date().toISOString()
         },
         {
-            id: 2,
-            version: '1.1.0',
-            created_at: new Date().toISOString(),
+            id: '2',
+            version: '2',
             published_at: new Date().toISOString(),
             changes: {
-                pages: 2,
                 events: 1,
+                people: 2,
+                sections: 1,
+                locations: 0,
+                resources: 1,
+                social_posts: 1,
+                announcements: 0,
+                markdown_pages: 1
             },
-            file_url: 'https://example.com/v1.1.0.zip',
+            file_url: 'https://example.com/v2.json',
+            created_at: new Date().toISOString()
         },
     ];
 
@@ -110,9 +122,9 @@ describe('useVersions', () => {
             wrapper: Providers,
         });
 
-        await result.current.rollbackVersion.mutateAsync('1.0.0');
+        await result.current.rollbackVersion.mutateAsync('1');
 
-        expect(api.versions.rollback).toHaveBeenCalledWith('1.0.0');
+        expect(api.versions.rollback).toHaveBeenCalledWith('1');
         expect(mockToast.showSuccess).toHaveBeenCalledWith('Version rollback successful');
     });
 
@@ -124,7 +136,7 @@ describe('useVersions', () => {
             wrapper: Providers,
         });
 
-        await result.current.rollbackVersion.mutateAsync('1.0.0').catch(() => { });
+        await result.current.rollbackVersion.mutateAsync('1').catch(() => { });
 
         expect(mockToast.showError).toHaveBeenCalledWith(error);
     });
@@ -134,9 +146,9 @@ describe('useVersions', () => {
             wrapper: Providers,
         });
 
-        await result.current.deleteVersion.mutateAsync('1.0.0');
+        await result.current.deleteVersion.mutateAsync('1');
 
-        expect(api.versions.delete).toHaveBeenCalledWith('1.0.0');
+        expect(api.versions.delete).toHaveBeenCalledWith('1');
         expect(mockToast.showSuccess).toHaveBeenCalledWith('Version deleted successfully');
     });
 
@@ -148,7 +160,7 @@ describe('useVersions', () => {
             wrapper: Providers,
         });
 
-        await result.current.deleteVersion.mutateAsync('1.0.0').catch(() => { });
+        await result.current.deleteVersion.mutateAsync('1').catch(() => { });
 
         expect(mockToast.showError).toHaveBeenCalledWith(error);
     });

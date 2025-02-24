@@ -126,7 +126,7 @@ describe('Smoke tests for pages', () => {
 
     it('displays test version data', () => {
       const { getByText } = renderWithProviders(<VersionsPage />);
-      expect(getByText(/Version 1.0.0/)).toBeInTheDocument();
+      expect(getByText(/Version 1/)).toBeInTheDocument();
       expect(getByText(/Latest/)).toBeInTheDocument();
     });
   });

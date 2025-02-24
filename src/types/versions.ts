@@ -24,7 +24,7 @@ export interface EntityChanges {
 
 // Type for JSON file version
 export interface JsonVersion extends BaseEntity {
-  version: number;
+  version: string;
   published_at: string;
   changes: EntityChanges;
   file_path: string;
@@ -67,4 +67,5 @@ export interface Version {
   };
   file_url: string;
   id: string;
+  created_at: string;
 }
