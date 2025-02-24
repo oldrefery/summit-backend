@@ -16,6 +16,7 @@ import type {
   NotificationHistory,
   NotificationFormData,
   PushStatistics,
+  SocialFeedPost,
 } from '@/types';
 import { showToastError } from '@/lib/toast-handler';
 
@@ -934,5 +935,84 @@ export const api = {
       if (error) throw error;
       return data as PushStatistics;
     },
+  },
+
+  socialFeed: {
+    async getAll() {
+      await ensureAuthenticated();
+
+      const { data, error } = await supabase
+        .from('social_feed_posts')
+        .select(`
+          *,
+          author:people(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Get all error:', error);
+        throw error;
+      }
+
+      return data as (SocialFeedPost & { author: Person })[];
+    },
+
+    async create(post: Omit<SocialFeedPost, 'id' | 'created_at' | 'updated_at'>) {
+      await ensureAuthenticated();
+
+      const { data, error } = await supabase
+        .from('social_feed_posts')
+        .insert([post])
+        .select(`
+          *,
+          author:people(*)
+        `)
+        .single();
+
+      if (error) {
+        console.error('Create error:', error);
+        throw error;
+      }
+
+      return data as SocialFeedPost & { author: Person };
+    },
+
+    async update(
+      id: number,
+      updates: Partial<Omit<SocialFeedPost, 'id' | 'created_at' | 'updated_at'>>
+    ) {
+      await ensureAuthenticated();
+
+      const { data, error } = await supabase
+        .from('social_feed_posts')
+        .update(updates)
+        .eq('id', id)
+        .select(`
+          *,
+          author:people(*)
+        `)
+        .single();
+
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
+
+      return data as SocialFeedPost & { author: Person };
+    },
+
+    async delete(id: number) {
+      await ensureAuthenticated();
+
+      const { error } = await supabase
+        .from('social_feed_posts')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+    }
   },
 };
