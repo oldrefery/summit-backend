@@ -13,11 +13,27 @@ export class BaseIntegrationTest {
             return;
         }
 
-        // Create a new Supabase client
-        this.supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
+        // Проверяем, что мы используем тестовую базу данных
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseAnonKey) {
+            throw new Error('Supabase environment variables are not set');
+        }
+
+        // Проверяем, что это тестовая база данных
+        if (!supabaseUrl.includes('vupwomxxfqjmwtbptkfu')) {
+            throw new Error('Tests must run against test database only');
+        }
+
+        // Создаем клиент с автоматическим обновлением сессии
+        this.supabase = createClient(supabaseUrl, supabaseAnonKey, {
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: false
+            }
+        });
 
         // Sign in with test user
         const { data: signInData, error: signInError } = await this.supabase.auth.signInWithPassword({
@@ -31,35 +47,13 @@ export class BaseIntegrationTest {
         this.userId = signInData.user.id;
         this.sessionToken = signInData.session.access_token;
         this.isSetup = true;
-
-        // Wait for auth to be ready
-        await delay(2000);
-    }
-
-    static async cleanupTestClient() {
-        if (this.supabase && this.isSetup) {
-            await this.supabase.auth.signOut();
-            this.isSetup = false;
-            await delay(2000);
-        }
     }
 
     static getAuthenticatedClient() {
-        if (!this.sessionToken) {
-            throw new Error('No session token available. Make sure setupTestClient was called');
+        if (!this.supabase) {
+            throw new Error('Supabase client is not initialized');
         }
-
-        return createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-                global: {
-                    headers: {
-                        Authorization: `Bearer ${this.sessionToken}`,
-                    },
-                },
-            }
-        );
+        return this.supabase;
     }
 
     static getAnonymousClient() {
@@ -107,5 +101,5 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-    await BaseIntegrationTest.cleanupTestClient();
+    await BaseIntegrationTest.cleanupTestData('', '');
 }); 

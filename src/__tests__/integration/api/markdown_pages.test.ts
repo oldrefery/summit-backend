@@ -12,18 +12,12 @@ class MarkdownPagesApiTest extends BaseApiTest {
                     // Create two test pages with unique slugs
                     const timestamp1 = Date.now();
                     const timestamp2 = Date.now() + 1;
-                    const page1Data = {
-                        ...this.generateMarkdownPageData(),
-                        slug: `test-page-${timestamp1}`
-                    };
-                    const page2Data = {
-                        ...this.generateMarkdownPageData(),
-                        slug: `test-page-${timestamp2}`
-                    };
 
                     const { data: p1, error: error1 } = await this.getAuthenticatedClient()
                         .from('markdown_pages')
-                        .insert([page1Data])
+                        .insert([this.generateMarkdownPageData({
+                            slug: `test-page-${timestamp1}`
+                        })])
                         .select()
                         .single();
 
@@ -33,7 +27,9 @@ class MarkdownPagesApiTest extends BaseApiTest {
 
                     const { data: p2, error: error2 } = await this.getAuthenticatedClient()
                         .from('markdown_pages')
-                        .insert([page2Data])
+                        .insert([this.generateMarkdownPageData({
+                            slug: `test-page-${timestamp2}`
+                        })])
                         .select()
                         .single();
 
@@ -242,6 +238,30 @@ class MarkdownPagesApiTest extends BaseApiTest {
                             .select()
                             .single(),
                         400
+                    );
+                });
+
+                it('should enforce unique slug constraint', async () => {
+                    // Создаем первую страницу
+                    const pageData = this.generateMarkdownPageData();
+                    const { data: firstPage, error: firstError } = await this.getAuthenticatedClient()
+                        .from('markdown_pages')
+                        .insert([pageData])
+                        .select()
+                        .single();
+
+                    expect(firstError).toBeNull();
+                    expect(firstPage).toBeDefined();
+                    if (firstPage) this.trackTestRecord('markdown_pages', firstPage.id);
+
+                    // Пытаемся создать вторую страницу с тем же slug
+                    const duplicateData = this.generateMarkdownPageData();
+                    duplicateData.slug = pageData.slug;
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('markdown_pages')
+                            .insert([duplicateData])
                     );
                 });
             });

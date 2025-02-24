@@ -11,7 +11,8 @@ import type {
     BaseEntity,
     AppUserSettings,
     Announcement,
-    Version
+    Version,
+    SocialFeedPost
 } from '@/types';
 import { format } from 'date-fns';
 import { PostgrestBuilder } from '@supabase/postgrest-js';
@@ -109,7 +110,7 @@ export class BaseApiTest extends BaseIntegrationTest {
         };
     }
 
-    protected static generateResourceData(): Partial<Resource> {
+    public static generateResourceData(): Partial<Resource> {
         const timestamp = Date.now();
         return {
             name: `Test Resource ${timestamp}`,
@@ -119,20 +120,30 @@ export class BaseApiTest extends BaseIntegrationTest {
         };
     }
 
-    protected static generateMarkdownPageData(): Partial<MarkdownPage> {
+    protected static generateMarkdownPageData(customData?: Partial<MarkdownPage>): Partial<MarkdownPage> {
         const timestamp = Date.now();
-        return {
+        const defaultData = {
             slug: `test-page-${timestamp}`,
             title: `Test Page ${timestamp}`,
             content: `# Test Content ${timestamp}\n\nThis is a test page.`,
-            published: false,
+            published: false
         };
+
+        return { ...defaultData, ...customData };
+    }
+
+    protected static generateUUID(): string {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
     }
 
     protected static generateAppUserSettingsData(): Partial<AppUserSettings> {
         const timestamp = Date.now();
         return {
-            device_id: `test-device-${timestamp}`,
+            device_id: this.generateUUID(),
             device_info: {
                 deviceName: `Test Device ${timestamp}`,
                 osName: 'iOS',
@@ -141,7 +152,7 @@ export class BaseApiTest extends BaseIntegrationTest {
                 appVersion: '1.0.0',
                 buildNumber: '1'
             },
-            push_token: `test-token-${timestamp}`,
+            push_token: `test-token-${this.generateUUID()}`,
             settings: {
                 social_feed: true,
                 announcements: true
@@ -158,22 +169,34 @@ export class BaseApiTest extends BaseIntegrationTest {
         };
     }
 
-    protected static generateJsonVersionData(): Partial<Version> {
+    protected static generateJsonVersionData(customChanges?: Partial<Version['changes']>): Partial<Version> {
         const timestamp = Date.now();
+        const defaultChanges = {
+            events: 1,
+            people: 1,
+            sections: 1,
+            locations: 1,
+            resources: 1,
+            social_posts: 1,
+            announcements: 1,
+            markdown_pages: 1
+        };
+
         return {
             version: Math.floor(timestamp / 1000).toString(),
             file_path: `/test/path/${timestamp}`,
-            changes: {
-                events: 1,
-                people: 1,
-                sections: 1,
-                locations: 1,
-                resources: 1,
-                social_posts: 1,
-                announcements: 1,
-                markdown_pages: 1
-            },
+            changes: { ...defaultChanges, ...customChanges },
             file_url: `https://example.com/test-${timestamp}.json`
+        };
+    }
+
+    protected static generateSocialFeedPostData(): Partial<SocialFeedPost> {
+        const timestamp = new Date().toISOString();
+        return {
+            content: `Test post content ${Date.now()}`,
+            timestamp,
+            image_urls: [`https://example.com/test-${Date.now()}.jpg`],
+            user_id: this.userId
         };
     }
 
@@ -255,6 +278,21 @@ export class BaseApiTest extends BaseIntegrationTest {
         return eventPerson;
     }
 
+    protected static async createTestSocialFeedPost(author?: Person): Promise<SocialFeedPost> {
+        if (!author) {
+            author = await this.createTestPerson();
+        }
+
+        const postData = {
+            ...this.generateSocialFeedPostData(),
+            author_id: author.id
+        };
+
+        const post = await this.initializeTestData<SocialFeedPost>('social_feed_posts', postData);
+        this.trackTestRecord('social_feed_posts', post.id);
+        return post;
+    }
+
     // Error Handling Helpers
     protected static async expectError<T>(
         promise: Promise<T>,
@@ -306,5 +344,51 @@ export class BaseApiTest extends BaseIntegrationTest {
     protected static validateIds(obj: BaseEntity): void {
         expect(obj.id).toBeDefined();
         expect(typeof obj.id === 'number' || typeof obj.id === 'string').toBe(true);
+    }
+
+    protected static async getAuthenticatedUserId(): Promise<string> {
+        const { data: { session }, error } = await this.getAuthenticatedClient().auth.getSession();
+        if (error || !session?.user?.id) {
+            throw new Error('Failed to get authenticated user ID');
+        }
+        return session.user.id;
+    }
+
+    protected static getTestUserId(): string {
+        return '00000000-0000-0000-0000-000000000000'; // Фиксированный тестовый ID пользователя
+    }
+
+    protected static async signInTestUser(): Promise<void> {
+        const client = this.getAuthenticatedClient();
+
+        // Создаем промис для ожидания события SIGNED_IN
+        const signInPromise = new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Auth timeout'));
+            }, 5000);
+
+            client.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_IN' && session) {
+                    clearTimeout(timeout);
+                    resolve(session);
+                }
+            });
+        });
+
+        // Выполняем вход
+        const { error } = await client.auth.signInWithPassword({
+            email: 'anonymoususer@firstlinesoftware.com',
+            password: 'Au123456!'
+        });
+
+        if (error) throw error;
+
+        // Ждем завершения аутентификации
+        await signInPromise;
+
+        // Используем userId из базового класса
+        if (!BaseIntegrationTest.userId) {
+            throw new Error('Failed to get user ID from base class');
+        }
     }
 } 

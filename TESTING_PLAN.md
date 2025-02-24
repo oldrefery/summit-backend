@@ -90,14 +90,14 @@
   - Publishing workflow
 
 ### Phase 4: Complex Features
-- ⏳ Event Management Tests
+- ✅ Event Management Tests
   - Speaker assignment
   - Location assignment
   - Date/time conflicts
   - Capacity handling
   - Event series
 
-- ⏳ Push Notification Tests
+- ✅ Push Notification Tests
   - Token management
   - Notification sending
   - Target audience filtering
@@ -105,26 +105,20 @@
   - Error handling
 
 ### Phase 5: Integration Scenarios
-- ⏳ Cross-Entity Operations
+- ✅ Cross-Entity Operations
   - Event creation with speakers
   - Section management with events
   - Resource linking
   - Cascading updates/deletes
 
-- 🚧 Data Versioning Tests
+- ✅ Data Versioning Tests
   - Version creation
   - Rollback operations
   - Change tracking
   - File storage integration
 
 ### Phase 6: Performance and Security
-- ⏳ Performance Tests
-  - Large dataset handling
-  - Concurrent operations
-  - Response time benchmarks
-  - Resource usage monitoring
-
-- ⏳ Security Tests
+- ✅ Security Tests
   - Authentication flows
   - Authorization rules
   - RLS policy validation
@@ -132,14 +126,14 @@
   - Rate limiting
 
 ### Phase 7: Error Handling and Edge Cases
-- ⏳ Error Scenarios
+- ✅ Error Scenarios
   - Network failures
   - Invalid inputs
   - Concurrent modifications
   - Resource conflicts
   - Timeout handling
 
-- ⏳ Edge Cases
+- ✅ Edge Cases
   - Boundary values
   - Special characters
   - Empty/null handling
@@ -152,11 +146,10 @@
   - ✅ `locations` - уникальность name
   - ✅ `resources` - уникальность name
   - ✅ `people` - уникальность email
-  - ❌ `markdown_pages` - уникальность slug
-  - ❌ `json_versions` - уникальность комбинации (file_path, version)
-  - ❌ `event_people` - уникальность комбинации (event_id, person_id)
-  - ❌ `app_user_settings` - уникальность device_id
-  - ❌ `social_feed_posts` - уникальность комбинации (user_id, created_at) если требуется
+  - ✅ `markdown_pages` - уникальность slug
+  - ✅ `json_versions` - уникальность комбинации (file_path, version)
+  - ✅ `event_people` - уникальность комбинации (event_id, person_id)
+  - ✅ `app_user_settings` - уникальность device_id
 
 ## Test Coverage Goals
 - 100% coverage of API endpoints

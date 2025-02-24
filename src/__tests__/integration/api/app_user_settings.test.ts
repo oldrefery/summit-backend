@@ -212,6 +212,30 @@ class AppUserSettingsApiTest extends BaseApiTest {
                         400
                     );
                 });
+
+                it('should enforce unique device_id constraint', async () => {
+                    // Создаем первые настройки
+                    const settingsData = this.generateAppUserSettingsData();
+                    const { data: firstSettings, error: firstError } = await this.getAuthenticatedClient()
+                        .from('app_user_settings')
+                        .insert([settingsData])
+                        .select()
+                        .single();
+
+                    expect(firstError).toBeNull();
+                    expect(firstSettings).toBeDefined();
+                    if (firstSettings) this.trackTestRecord('app_user_settings', firstSettings.id);
+
+                    // Пытаемся создать настройки с тем же device_id
+                    const duplicateData = this.generateAppUserSettingsData();
+                    duplicateData.device_id = settingsData.device_id;
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('app_user_settings')
+                            .insert([duplicateData])
+                    );
+                });
             });
 
             describe('Anonymous Access', () => {
@@ -321,6 +345,81 @@ class AppUserSettingsApiTest extends BaseApiTest {
                     expect(data).toBeDefined();
                     expect(data.push_token).toBeNull();
                     if (data) this.trackTestRecord('app_user_settings', data.id);
+                });
+            });
+
+            describe('Push Token Management', () => {
+                it('should allow updating push token for existing device', async () => {
+                    // Создаем настройки
+                    const settings = await this.createTestAppUserSettings();
+                    const newPushToken = `new-push-token-${Date.now()}`;
+
+                    // Обновляем push token
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('app_user_settings')
+                        .update({ push_token: newPushToken })
+                        .eq('id', settings.id)
+                        .select()
+                        .single();
+
+                    expect(error).toBeNull();
+                    expect(data).toBeDefined();
+                    expect(data.push_token).toBe(newPushToken);
+                });
+
+                it('should allow removing push token', async () => {
+                    const settings = await this.createTestAppUserSettings();
+
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('app_user_settings')
+                        .update({ push_token: null })
+                        .eq('id', settings.id)
+                        .select()
+                        .single();
+
+                    expect(error).toBeNull();
+                    expect(data).toBeDefined();
+                    expect(data.push_token).toBeNull();
+                });
+
+                it('should validate push token format', async () => {
+                    const settingsData = this.generateAppUserSettingsData();
+                    settingsData.push_token = 'invalid-token-format'; // Обычно push token имеет определенный формат
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('app_user_settings')
+                            .insert([settingsData])
+                    );
+                });
+
+                it('should handle multiple devices for same user', async () => {
+                    // Создаем настройки для первого устройства
+                    const device1Data = this.generateAppUserSettingsData();
+                    const { data: device1, error: error1 } = await this.getAuthenticatedClient()
+                        .from('app_user_settings')
+                        .insert([device1Data])
+                        .select()
+                        .single();
+
+                    expect(error1).toBeNull();
+                    expect(device1).toBeDefined();
+                    if (device1) this.trackTestRecord('app_user_settings', device1.id);
+
+                    // Создаем настройки для второго устройства
+                    const device2Data = this.generateAppUserSettingsData();
+                    const { data: device2, error: error2 } = await this.getAuthenticatedClient()
+                        .from('app_user_settings')
+                        .insert([device2Data])
+                        .select()
+                        .single();
+
+                    expect(error2).toBeNull();
+                    expect(device2).toBeDefined();
+                    if (device2) this.trackTestRecord('app_user_settings', device2.id);
+
+                    // Проверяем что оба устройства имеют разные device_id
+                    expect(device1.device_id).not.toBe(device2.device_id);
                 });
             });
         });
