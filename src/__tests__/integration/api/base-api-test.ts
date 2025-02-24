@@ -78,12 +78,17 @@ export class BaseApiTest extends BaseIntegrationTest {
     ): Partial<Event> {
         const timestamp = Date.now();
         const date = format(new Date(), 'yyyy-MM-dd');
+        const startTime = new Date();
+        startTime.setHours(9, 0, 0, 0);
+        const endTime = new Date();
+        endTime.setHours(10, 0, 0, 0);
+
         return {
             section_id: sectionId,
             title: `Test Event ${timestamp}`,
             date,
-            start_time: `${date}T09:00:00Z`,
-            end_time: `${date}T10:00:00Z`,
+            start_time: `${date}T09:00:00+00:00`,
+            end_time: `${date}T10:00:00+00:00`,
             description: `Test Description ${timestamp}`,
             location_id: locationId,
             duration: '1h',

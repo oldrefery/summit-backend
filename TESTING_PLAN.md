@@ -58,12 +58,50 @@
   - Edge cases
 
 - 🚧 Events API Tests
+  - CRUD Operations
+    - getAll() tests
+      - Empty list
+      - Single event
+      - Multiple events
+      - Related data (location, section, event_people)
+    - getById() tests
+      - Existing event
+      - Non-existent event
+      - Related data validation
+    - create() tests
+      - Minimal fields
+      - All fields with location
+      - With speakers
+      - Invalid section/location/speakers
+      - Invalid time range
+    - update() tests
+      - Basic fields
+      - Location update
+      - Speakers update
+      - Invalid updates handling
+    - delete() tests
+      - Basic deletion
+      - With speakers cleanup
+      - Non-existent event
+  - Anonymous Access (RLS)
+    - Create restriction
+    - Read restriction
+    - Update restriction
+    - Delete restriction
+  - Integration Scenarios
+    - Section integration
+    - Location integration
+    - Speakers integration
+    - Cascade deletions
+
+- ✅ Social Feed API Tests
   - CRUD operations
-  - Date and time handling
-  - Location integration
-  - Speaker assignments
-  - Validation and constraints
-  - Error scenarios
+  - Author relationships
+  - User-specific access control
+  - Image handling
+  - Validation scenarios
+  - Error handling
+  - Edge cases
 
 - ✅ Sections API Tests
   - CRUD operations
