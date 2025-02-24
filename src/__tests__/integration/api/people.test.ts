@@ -1,335 +1,375 @@
-import { describe, test, expect, beforeAll, afterAll } from 'vitest';
-import type { Person, PersonRole } from '@/types/supabase';
-import { generateTestName, setupTestClient } from '../config/test-utils';
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '../../../types/database';
+import { describe, it, expect } from 'vitest';
+import { BaseApiTest } from './base-api-test';
+import type { Person, PersonRole } from '@/types';
 
-describe('People API Integration Tests', () => {
-    let testPersonId: number;
-    let authClient: ReturnType<typeof createClient<Database>>;
-    const uniqueId = Date.now();
+interface TestData {
+    name: string;
+    role: PersonRole;
+    title?: string;
+    company?: string;
+    bio?: string;
+    country?: string;
+    email?: string;
+    mobile?: string;
+}
 
-    const validPerson: Omit<Person, 'id' | 'created_at'> = {
-        name: generateTestName('Test Person'),
-        role: 'speaker' as PersonRole,
-        title: 'Test Title',
-        company: 'Test Company',
-        bio: 'Test Bio',
-        photo_url: 'https://example.com/photo.jpg',
-        country: 'Test Country',
-        email: `test${uniqueId}@example.com`,
-        mobile: '+1234567890'
-    };
+class PeopleApiTest extends BaseApiTest {
+    public static async runTests() {
+        describe('People API Tests', () => {
+            describe('CRUD Operations', () => {
+                let testPerson: Person;
 
-    // Setup: Authenticate before tests
-    beforeAll(async () => {
-        const clients = await setupTestClient();
-        authClient = clients.authClient;
-    });
+                it('should get all people', async () => {
+                    // Create two test persons
+                    const person1Data = this.generatePersonData('speaker');
+                    const person2Data = this.generatePersonData('attendee');
 
-    describe('Create Operations', () => {
-        test('should create person with all valid fields', async () => {
-            const { data: person, error } = await authClient
-                .from('people')
-                .insert([validPerson])
-                .select()
-                .single();
+                    const { data: p1 } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([person1Data])
+                        .select()
+                        .single();
 
-            expect(error).toBeNull();
-            expect(person).toBeDefined();
-            expect(person.id).toBeDefined();
-            expect(person.name).toBe(validPerson.name);
-            expect(person.role).toBe(validPerson.role);
-            expect(person.title).toBe(validPerson.title);
-            expect(person.company).toBe(validPerson.company);
-            expect(person.bio).toBe(validPerson.bio);
-            expect(person.photo_url).toBe(validPerson.photo_url);
-            expect(person.country).toBe(validPerson.country);
-            expect(person.email).toBe(validPerson.email);
-            expect(person.mobile).toBe(validPerson.mobile);
-            expect(person.created_at).toBeDefined();
+                    if (p1) this.trackTestRecord('people', p1.id);
 
-            testPersonId = person.id;
+                    const { data: p2 } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([person2Data])
+                        .select()
+                        .single();
+
+                    if (p2) this.trackTestRecord('people', p2.id);
+
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .select('*')
+                        .order('name');
+
+                    expect(error).toBeNull();
+                    expect(data).toBeDefined();
+                    expect(Array.isArray(data)).toBe(true);
+                    expect(data!.length).toBeGreaterThanOrEqual(2);
+                    expect(data!.some(p => p.id === p1.id)).toBe(true);
+                    expect(data!.some(p => p.id === p2.id)).toBe(true);
+                });
+
+                it('should not delete person with related event_people records', async () => {
+                    // Create test person and event
+                    const person = await this.createTestPerson('speaker');
+                    const event = await this.createTestEvent();
+
+                    // Assign person to event
+                    await this.assignSpeakerToEvent(event.id, person.id);
+
+                    // Try to delete person
+                    const { error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .delete()
+                        .eq('id', person.id);
+
+                    expect(error).toBeDefined();
+                    expect(error!.message).toContain('violates foreign key constraint "event_people_person_id_fkey"');
+                });
+
+                it('should not delete person with related announcements', async () => {
+                    // Create test person and announcement
+                    const person = await this.createTestPerson('speaker');
+                    const announcementData = {
+                        person_id: person.id,
+                        content: `Test Announcement ${Date.now()}`,
+                        published_at: new Date().toISOString()
+                    };
+
+                    const { data: announcement } = await this.getAuthenticatedClient()
+                        .from('announcements')
+                        .insert([announcementData])
+                        .select()
+                        .single();
+
+                    if (announcement) this.trackTestRecord('announcements', announcement.id);
+
+                    // Try to delete person
+                    const { error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .delete()
+                        .eq('id', person.id);
+
+                    expect(error).toBeDefined();
+                    expect(error!.message).toContain('violates foreign key constraint "announcements_person_id_fkey"');
+                });
+
+                it('should create a person with all fields', async () => {
+                    const personData = this.generatePersonData('speaker');
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([personData])
+                        .select()
+                        .single();
+
+                    expect(error).toBeNull();
+                    expect(data).toBeDefined();
+                    testPerson = data;
+                    if (data) this.trackTestRecord('people', data.id);
+
+                    // Validate all fields
+                    expect(data.name).toBe(personData.name);
+                    expect(data.role).toBe(personData.role);
+                    expect(data.title).toBe(personData.title);
+                    expect(data.company).toBe(personData.company);
+                    expect(data.bio).toBe(personData.bio);
+                    expect(data.country).toBe(personData.country);
+                    expect(data.email).toBe(personData.email);
+                    expect(data.mobile).toBe(personData.mobile);
+
+                    // Validate timestamps and id
+                    this.validateTimestamps(data);
+                    this.validateIds(data);
+                });
+
+                it('should read a person by id', async () => {
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .select()
+                        .eq('id', testPerson.id)
+                        .single();
+
+                    expect(error).toBeNull();
+                    expect(data).toBeDefined();
+                    expect(data.id).toBe(testPerson.id);
+                });
+
+                it('should update a person', async () => {
+                    // Create a test person first
+                    const personData = this.generatePersonData('speaker');
+                    const { data: createdPerson } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([personData])
+                        .select()
+                        .single();
+
+                    expect(createdPerson).toBeDefined();
+                    if (createdPerson) this.trackTestRecord('people', createdPerson.id);
+
+                    const updateData = {
+                        title: 'Updated Title',
+                        company: 'Updated Company',
+                    };
+
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .update(updateData)
+                        .eq('id', createdPerson.id)
+                        .select()
+                        .single();
+
+                    expect(error).toBeNull();
+                    expect(data).toBeDefined();
+                    expect(data.title).toBe(updateData.title);
+                    expect(data.company).toBe(updateData.company);
+                    expect(data.id).toBe(createdPerson.id);
+                });
+
+                it('should delete a person', async () => {
+                    const { error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .delete()
+                        .eq('id', testPerson.id);
+
+                    expect(error).toBeNull();
+
+                    // Verify deletion
+                    const { data, error: readError } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .select()
+                        .eq('id', testPerson.id)
+                        .single();
+
+                    expect(data).toBeNull();
+                    expect(readError).toBeDefined();
+                });
+            });
+
+            describe('Role-based Operations', () => {
+                it('should create a speaker', async () => {
+                    const person = await this.createTestPerson('speaker');
+                    expect(person.role).toBe('speaker');
+                });
+
+                it('should create an attendee', async () => {
+                    const person = await this.createTestPerson('attendee');
+                    expect(person.role).toBe('attendee');
+                });
+            });
+
+            describe('Validation', () => {
+                it('should require name field', async () => {
+                    const personData = this.generatePersonData();
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    const { name: _name, ...dataWithoutName } = personData;
+
+                    await this.expectSupabaseError<TestData>(
+                        this.getAuthenticatedClient()
+                            .from('people')
+                            .insert([dataWithoutName])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
+                it('should not create people with duplicate email', async () => {
+                    const personData = this.generatePersonData('speaker');
+                    const email = `test.${Date.now()}@example.com`;
+                    personData.email = email;
+
+                    // Создаем первого человека
+                    const { data: person1, error: error1 } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([personData])
+                        .select()
+                        .single();
+
+                    expect(error1).toBeNull();
+                    expect(person1).toBeDefined();
+                    if (person1) this.trackTestRecord('people', person1.id);
+
+                    // Пытаемся создать второго человека с тем же email
+                    const person2Data = this.generatePersonData('attendee');
+                    person2Data.email = email;
+
+                    await this.expectSupabaseError<TestData>(
+                        this.getAuthenticatedClient()
+                            .from('people')
+                            .insert([person2Data])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
+                it('should require valid role', async () => {
+                    const personData = this.generatePersonData();
+                    const invalidData = {
+                        ...personData,
+                        role: 'invalid_role' as PersonRole
+                    };
+
+                    await this.expectSupabaseError<TestData>(
+                        this.getAuthenticatedClient()
+                            .from('people')
+                            .insert([invalidData])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
+                it('should validate email format', async () => {
+                    const personData = this.generatePersonData();
+                    personData.email = 'invalid_email';
+
+                    await this.expectSupabaseError<TestData>(
+                        this.getAuthenticatedClient()
+                            .from('people')
+                            .insert([personData])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+            });
+
+            describe('Anonymous Access', () => {
+                it('should not allow anonymous read', async () => {
+                    await this.expectSupabaseError(
+                        this.getAnonymousClient()
+                            .from('people')
+                            .select(),
+                        401
+                    );
+                });
+
+                it('should not allow anonymous create', async () => {
+                    const personData = this.generatePersonData();
+                    await this.expectSupabaseError<TestData>(
+                        this.getAnonymousClient()
+                            .from('people')
+                            .insert([personData])
+                            .select()
+                            .single(),
+                        401
+                    );
+                });
+
+                it('should not allow anonymous update', async () => {
+                    const person = await this.createTestPerson();
+                    await this.expectSupabaseError(
+                        this.getAnonymousClient()
+                            .from('people')
+                            .update({ title: 'Updated Title' })
+                            .eq('id', person.id),
+                        401
+                    );
+                });
+
+                it('should not allow anonymous delete', async () => {
+                    const person = await this.createTestPerson();
+                    await this.expectSupabaseError(
+                        this.getAnonymousClient()
+                            .from('people')
+                            .delete()
+                            .eq('id', person.id),
+                        401
+                    );
+                });
+            });
+
+            describe('Edge Cases', () => {
+                it('should handle special characters in text fields', async () => {
+                    const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?`~"\'\\';
+                    const personData = this.generatePersonData();
+                    personData.name += specialChars;
+                    personData.title += specialChars;
+
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([personData])
+                        .select()
+                        .single();
+
+                    expect(error).toBeNull();
+                    expect(data.name).toBe(personData.name);
+                    expect(data.title).toBe(personData.title);
+
+                    if (data) this.trackTestRecord('people', data.id);
+                });
+
+                it('should handle empty optional fields', async () => {
+                    const personData = {
+                        name: `Test Person ${Date.now()}`,
+                        role: 'speaker' as const,
+                    };
+
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([personData])
+                        .select()
+                        .single();
+
+                    expect(error).toBeNull();
+                    expect(data.title).toBeNull();
+                    expect(data.company).toBeNull();
+                    expect(data.bio).toBeNull();
+                    expect(data.country).toBeNull();
+                    expect(data.email).toBeNull();
+                    expect(data.mobile).toBeNull();
+
+                    if (data) this.trackTestRecord('people', data.id);
+                });
+            });
         });
+    }
+}
 
-        test('should fail to create person without required fields', async () => {
-            const invalidPerson = {
-                title: 'Test Title'
-            };
-
-            const { error } = await authClient
-                .from('people')
-                .insert([invalidPerson])
-                .select()
-                .single();
-
-            expect(error).not.toBeNull();
-            expect(error?.message).toContain('null value in column "name"');
-        });
-
-        test('should create person with minimum required fields', async () => {
-            const minimalPerson = {
-                name: generateTestName('Minimal Person'),
-                role: 'attendee' as PersonRole
-            };
-
-            const { data: person, error } = await authClient
-                .from('people')
-                .insert([minimalPerson])
-                .select()
-                .single();
-
-            expect(error).toBeNull();
-            expect(person).toBeDefined();
-            expect(person.id).toBeDefined();
-            expect(person.name).toBe(minimalPerson.name);
-            expect(person.role).toBe(minimalPerson.role);
-
-            // Cleanup
-            await authClient.from('people').delete().eq('id', person.id);
-        });
-
-        test('should create person with valid photo_url', async () => {
-            const personWithPhoto = {
-                ...validPerson,
-                name: generateTestName('Photo Person'),
-                photo_url: 'https://example.com/valid-photo.jpg'
-            };
-
-            const { data: person, error } = await authClient
-                .from('people')
-                .insert([personWithPhoto])
-                .select()
-                .single();
-
-            expect(error).toBeNull();
-            expect(person).toBeDefined();
-            expect(person.photo_url).toBe(personWithPhoto.photo_url);
-
-            // Cleanup
-            await authClient.from('people').delete().eq('id', person.id);
-        });
-
-        test('should create person with valid email format', async () => {
-            const personWithEmail = {
-                ...validPerson,
-                name: generateTestName('Email Person'),
-                email: `test.valid${uniqueId}@example.com`
-            };
-
-            const { data: person, error } = await authClient
-                .from('people')
-                .insert([personWithEmail])
-                .select()
-                .single();
-
-            expect(error).toBeNull();
-            expect(person).toBeDefined();
-            expect(person.email).toBe(personWithEmail.email);
-
-            // Cleanup
-            await authClient.from('people').delete().eq('id', person.id);
-        });
-    });
-
-    describe('Read Operations', () => {
-        test('should get all people', async () => {
-            const { data: people, error } = await authClient
-                .from('people')
-                .select('*');
-
-            expect(error).toBeNull();
-            expect(people).not.toBeNull();
-            if (people) {
-                expect(Array.isArray(people)).toBe(true);
-                expect(people.length).toBeGreaterThan(0);
-                const testPerson = people.find(p => p.id === testPersonId);
-                expect(testPerson).toBeDefined();
-            }
-        });
-
-        test('should get person with all fields', async () => {
-            const { data: person, error } = await authClient
-                .from('people')
-                .select('*')
-                .eq('id', testPersonId)
-                .single();
-
-            expect(error).toBeNull();
-            expect(person).toBeDefined();
-            expect(person?.name).toBe(validPerson.name);
-            expect(person?.role).toBe(validPerson.role);
-            expect(person?.title).toBe(validPerson.title);
-            expect(person?.company).toBe(validPerson.company);
-            expect(person?.bio).toBe(validPerson.bio);
-            expect(person?.photo_url).toBe(validPerson.photo_url);
-            expect(person?.country).toBe(validPerson.country);
-            expect(person?.email).toBe(validPerson.email);
-            expect(person?.mobile).toBe(validPerson.mobile);
-        });
-    });
-
-    describe('Update Operations', () => {
-        test('should update all fields', async () => {
-            const updates: Partial<Omit<Person, 'id' | 'created_at'>> = {
-                name: generateTestName('Updated Person'),
-                title: 'Updated Title',
-                company: 'Updated Company',
-                bio: 'Updated Bio',
-                country: 'Updated Country',
-                email: `updated${uniqueId}@example.com`,
-                mobile: '+9876543210'
-            };
-
-            const { data: updatedPerson, error } = await authClient
-                .from('people')
-                .update(updates)
-                .eq('id', testPersonId)
-                .select()
-                .single();
-
-            expect(error).toBeNull();
-            expect(updatedPerson).toBeDefined();
-            expect(updatedPerson.name).toBe(updates.name);
-            expect(updatedPerson.title).toBe(updates.title);
-            expect(updatedPerson.company).toBe(updates.company);
-            expect(updatedPerson.bio).toBe(updates.bio);
-            expect(updatedPerson.country).toBe(updates.country);
-            expect(updatedPerson.email).toBe(updates.email);
-            expect(updatedPerson.mobile).toBe(updates.mobile);
-        });
-
-        test('should partially update person', async () => {
-            const partialUpdate = {
-                title: 'Partial Update Title'
-            };
-
-            const { data: updatedPerson, error } = await authClient
-                .from('people')
-                .update(partialUpdate)
-                .eq('id', testPersonId)
-                .select()
-                .single();
-
-            expect(error).toBeNull();
-            expect(updatedPerson).toBeDefined();
-            expect(updatedPerson.title).toBe(partialUpdate.title);
-        });
-
-        test('should fail to update non-existent person', async () => {
-            const nonExistentId = 999999;
-            const { data, error } = await authClient
-                .from('people')
-                .update({ title: 'Test' })
-                .eq('id', nonExistentId)
-                .select()
-                .single();
-
-            expect(data).toBeNull();
-            expect(error).not.toBeNull();
-            expect(error?.message).toContain('JSON object requested, multiple (or no) rows returned');
-        });
-    });
-
-    describe('Delete Operations', () => {
-        /* Temporarily disabled - needs to be fixed
-        test('should fail to delete person with event assignments', async () => {
-            // Create event and event_person records
-            const { data: sectionData } = await authClient
-                .from('sections')
-                .insert([{
-                    name: generateTestName('Test Section'),
-                    date: new Date().toISOString().split('T')[0]
-                }])
-                .select()
-                .single();
-
-            const { data: eventData } = await authClient
-                .from('events')
-                .insert([{
-                    section_id: sectionData!.id,
-                    title: generateTestName('Test Event'),
-                    date: new Date().toISOString().split('T')[0],
-                    start_time: new Date().toISOString(),
-                    end_time: new Date(Date.now() + 3600000).toISOString()
-                }])
-                .select()
-                .single();
-
-            await authClient
-                .from('event_people')
-                .insert([{
-                    event_id: eventData!.id,
-                    person_id: testPersonId,
-                    role: 'speaker'
-                }]);
-
-            // Try to delete person with assignments
-            const { error } = await authClient
-                .from('people')
-                .delete()
-                .eq('id', testPersonId);
-
-            expect(error).not.toBeNull();
-            expect(error?.message).toContain('violates foreign key constraint');
-
-            // Cleanup
-            await authClient.from('event_people').delete().eq('event_id', eventData!.id);
-            await authClient.from('events').delete().eq('id', eventData!.id);
-            await authClient.from('sections').delete().eq('id', sectionData!.id);
-        });
-        */
-
-        test('should successfully delete person without assignments', async () => {
-            // Create a new person without any assignments
-            const { data: personToDelete } = await authClient
-                .from('people')
-                .insert([{
-                    name: generateTestName('Person To Delete'),
-                    role: 'attendee' as PersonRole
-                }])
-                .select()
-                .single();
-
-            // Should successfully delete
-            const { error: deleteError } = await authClient
-                .from('people')
-                .delete()
-                .eq('id', personToDelete!.id);
-
-            expect(deleteError).toBeNull();
-
-            // Verify person is deleted
-            const { data: verifyData } = await authClient
-                .from('people')
-                .select('*')
-                .eq('id', personToDelete!.id)
-                .single();
-
-            expect(verifyData).toBeNull();
-        });
-
-        test('should fail to delete non-existent person', async () => {
-            const nonExistentId = 999999;
-            const { data, error } = await authClient
-                .from('people')
-                .delete()
-                .eq('id', nonExistentId)
-                .select();
-
-            expect(data).toEqual([]);
-            expect(error).toBeNull();
-        });
-    });
-
-    // Cleanup after all tests
-    afterAll(async () => {
-        if (testPersonId) {
-            try {
-                await authClient.from('people').delete().eq('id', testPersonId);
-            } catch (error) {
-                console.log('Cleanup error (expected if delete tests failed):', error);
-            }
-        }
-    });
-}); 
+// Run the tests
+PeopleApiTest.runTests(); 

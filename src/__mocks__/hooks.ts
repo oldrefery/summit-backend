@@ -163,7 +163,23 @@ export const mockHooks = () => {
 
   vi.mock('@/hooks/use-versions', () => ({
     useVersions: () => ({
-      data: [createTestData.version()] as VersionWithRelations[],
+      data: [{
+        id: '1',
+        version: '1',
+        published_at: new Date().toISOString(),
+        changes: {
+          events: 1,
+          people: 2,
+          sections: 0,
+          locations: 1,
+          resources: 0,
+          social_posts: 0,
+          announcements: 1,
+          markdown_pages: 0
+        },
+        file_url: 'https://example.com/test.json',
+        created_at: new Date().toISOString()
+      }] as VersionWithRelations[],
       isLoading: false,
       rollbackVersion: defaultMutationResult
     }),

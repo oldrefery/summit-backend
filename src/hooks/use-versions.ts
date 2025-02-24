@@ -2,18 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/supabase';
 import { useToastContext } from '@/components/providers/toast-provider';
-
-export interface Version {
-  id: number;
-  version: string;
-  created_at: string;
-  published_at: string;
-  changes: {
-    pages: number;
-    events: number;
-  };
-  file_url: string;
-}
+import type { Version } from '@/types/versions';
 
 export type VersionWithRelations = Version;
 
@@ -34,7 +23,7 @@ export function useVersions() {
   });
 
   const rollbackVersion = useMutation({
-    mutationFn: api.versions.rollback,
+    mutationFn: (version: string) => api.versions.rollback(version),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['versions'] });
       showSuccess('Version rollback successful');
