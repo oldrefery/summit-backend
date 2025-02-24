@@ -6,6 +6,10 @@ import { format } from 'date-fns';
 class EventsApiTest extends BaseApiTest {
     public static async runTests() {
         describe('Events API Tests', () => {
+            beforeEach(async () => {
+                await this.cleanup();
+            });
+
             describe('CRUD Operations', () => {
                 describe('getAll()', () => {
                     it('should return empty list when no events exist', async () => {
@@ -169,7 +173,11 @@ class EventsApiTest extends BaseApiTest {
                     it('should create event with all fields including location', async () => {
                         // Create test data
                         const section = await this.createTestSection();
+                        this.trackTestRecord('sections', section.id);
+
                         const location = await this.createTestLocation();
+                        this.trackTestRecord('locations', location.id);
+
                         const eventData = this.generateEventData(section.id, location.id);
 
                         const { data, error } = await this.getAuthenticatedClient()
@@ -608,6 +616,242 @@ class EventsApiTest extends BaseApiTest {
                             .single(),
                         400
                     );
+                });
+            });
+
+            describe('Error Handling', () => {
+                it('should handle concurrent modifications gracefully', async () => {
+                    const event = await this.createTestEvent();
+
+                    // Попытка одновременного обновления
+                    const updates1 = { title: `Updated Title 1 ${Date.now()}` };
+                    const updates2 = { title: `Updated Title 2 ${Date.now()}` };
+
+                    const [{ error: error1 }, { error: error2 }] = await Promise.all([
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .update(updates1)
+                            .eq('id', event.id),
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .update(updates2)
+                            .eq('id', event.id)
+                    ]);
+
+                    // Одно из обновлений должно пройти успешно
+                    expect(error1 === null || error2 === null).toBe(true);
+                });
+
+                it('should handle invalid date combinations', async () => {
+                    const section = await this.createTestSection();
+                    const date = format(new Date(), 'yyyy-MM-dd');
+
+                    // Попытка создать событие с датой, не соответствующей времени
+                    const eventData = {
+                        ...this.generateEventData(section.id),
+                        date: date,
+                        start_time: `${format(new Date(Date.now() + 86400000), 'yyyy-MM-dd')}T09:00:00+00:00`,
+                        end_time: `${format(new Date(Date.now() + 86400000), 'yyyy-MM-dd')}T10:00:00+00:00`
+                    };
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .insert([eventData])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
+                it('should handle invalid section changes', async () => {
+                    const event = await this.createTestEvent();
+                    const nonExistentSectionId = 999999;
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .update({ section_id: nonExistentSectionId })
+                            .eq('id', event.id)
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+            });
+
+            describe('Anonymous Access', () => {
+                it('should not allow anonymous read', async () => {
+                    await this.expectSupabaseError(
+                        this.getAnonymousClient()
+                            .from('events')
+                            .select(),
+                        401
+                    );
+                });
+
+                it('should not allow anonymous create', async () => {
+                    const section = await this.createTestSection();
+                    const eventData = this.generateEventData(section.id);
+
+                    await this.expectSupabaseError(
+                        this.getAnonymousClient()
+                            .from('events')
+                            .insert([eventData])
+                            .select()
+                            .single(),
+                        401
+                    );
+                });
+
+                it('should not allow anonymous update', async () => {
+                    const event = await this.createTestEvent();
+
+                    await this.expectSupabaseError(
+                        this.getAnonymousClient()
+                            .from('events')
+                            .update({ title: 'Updated Title' })
+                            .eq('id', event.id),
+                        401
+                    );
+                });
+
+                it('should not allow anonymous delete', async () => {
+                    const event = await this.createTestEvent();
+
+                    await this.expectSupabaseError(
+                        this.getAnonymousClient()
+                            .from('events')
+                            .delete()
+                            .eq('id', event.id),
+                        401
+                    );
+                });
+            });
+
+            describe('Integration Scenarios', () => {
+                it('should handle section deletion constraints', async () => {
+                    const section = await this.createTestSection();
+                    await this.createTestEvent(section.id);
+
+                    // Попытка удалить секцию с существующими событиями
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('sections')
+                            .delete()
+                            .eq('id', section.id),
+                        400
+                    );
+                });
+
+                it('should handle location deletion constraints', async () => {
+                    const section = await this.createTestSection();
+                    const location = await this.createTestLocation();
+                    await this.createTestEvent(section.id, location.id);
+
+                    // Попытка удалить локацию с существующими событиями
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('locations')
+                            .delete()
+                            .eq('id', location.id),
+                        400
+                    );
+                });
+
+                it('should handle speaker deletion constraints', async () => {
+                    const event = await this.createTestEvent();
+                    const speaker = await this.createTestPerson('speaker');
+                    await this.assignSpeakerToEvent(event.id, speaker.id);
+
+                    // Попытка удалить спикера, привязанного к событию
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('people')
+                            .delete()
+                            .eq('id', speaker.id),
+                        400
+                    );
+                });
+
+                it('should cascade delete event_people on event deletion', async () => {
+                    const event = await this.createTestEvent();
+                    const speaker = await this.createTestPerson('speaker');
+                    const eventPerson = await this.assignSpeakerToEvent(event.id, speaker.id);
+
+                    // Удаляем событие
+                    await this.getAuthenticatedClient()
+                        .from('events')
+                        .delete()
+                        .eq('id', event.id);
+
+                    // Проверяем, что связь event_people тоже удалена
+                    const { data: checkData } = await this.getAuthenticatedClient()
+                        .from('event_people')
+                        .select()
+                        .eq('id', eventPerson.id);
+
+                    expect(checkData).toHaveLength(0);
+                });
+
+                it('should handle complex event updates with speakers and location', async () => {
+                    // Создаем начальные данные
+                    const section = await this.createTestSection();
+                    const location1 = await this.createTestLocation();
+                    const location2 = await this.createTestLocation();
+                    const speaker1 = await this.createTestPerson('speaker');
+                    const speaker2 = await this.createTestPerson('speaker');
+
+                    // Создаем событие с первой локацией и первым спикером
+                    const event = await this.createTestEvent(section.id, location1.id);
+                    await this.assignSpeakerToEvent(event.id, speaker1.id);
+
+                    // Обновляем событие: меняем локацию и спикера
+                    const { data: updatedEvent, error: updateError } = await this.getAuthenticatedClient()
+                        .from('events')
+                        .update({ location_id: location2.id })
+                        .eq('id', event.id)
+                        .select()
+                        .single();
+
+                    expect(updateError).toBeNull();
+                    expect(updatedEvent).toBeDefined();
+                    expect(updatedEvent!.location_id).toBe(location2.id);
+
+                    // Обновляем спикера
+                    const { error: removeError } = await this.getAuthenticatedClient()
+                        .from('event_people')
+                        .delete()
+                        .eq('event_id', event.id);
+
+                    expect(removeError).toBeNull();
+
+                    const { error: addError } = await this.getAuthenticatedClient()
+                        .from('event_people')
+                        .insert({
+                            event_id: event.id,
+                            person_id: speaker2.id,
+                            role: 'speaker'
+                        });
+
+                    expect(addError).toBeNull();
+
+                    // Проверяем финальное состояние
+                    const { data: finalEvent } = await this.getAuthenticatedClient()
+                        .from('events')
+                        .select(`
+                            *,
+                            location:locations(*),
+                            event_people:event_people(
+                                person:people(*)
+                            )
+                        `)
+                        .eq('id', event.id)
+                        .single();
+
+                    expect(finalEvent).toBeDefined();
+                    expect(finalEvent!.location!.id).toBe(location2.id);
+                    expect(finalEvent!.event_people![0].person!.id).toBe(speaker2.id);
                 });
             });
         });

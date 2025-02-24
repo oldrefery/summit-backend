@@ -83,31 +83,27 @@
       - Basic deletion
       - With speakers cleanup
       - Non-existent event
-  - 🚧 Validation Tests
+  - ✅ Validation Tests
     - Required fields validation
     - Date and time format validation
     - Time range validation
     - Duration format validation
     - Overlapping events validation
     - Foreign key constraints
-  - ⏳ Error Handling
+  - ✅ Error Handling
     - Invalid input handling
     - Concurrent modification handling
     - Resource conflict handling
-  - ⏳ Anonymous Access
+  - ✅ Anonymous Access
     - Create restriction
     - Read restriction
     - Update restriction
     - Delete restriction
-  - ⏳ Integration Scenarios
+  - ✅ Integration Scenarios
     - Section integration
     - Location integration
     - Speakers integration
     - Cascade deletions
-  - ⏳ RLS Tests (Phase 8)
-    - Authentication checks
-    - Authorization rules
-    - User-specific access control
 
 - ✅ Social Feed API Tests
   - CRUD operations
@@ -174,7 +170,6 @@
 - ✅ Security Tests
   - Authentication flows
   - Authorization rules
-  - RLS policy validation
   - Input sanitization
   - Rate limiting
 
@@ -192,19 +187,6 @@
   - Empty/null handling
   - Maximum limits
   - Date/time edge cases
-
-### Phase 8: RLS and Security Tests (Moved to last phase)
-- ⏳ Row Level Security Tests
-  - Authentication requirements
-  - Authorization rules
-  - User-specific data access
-  - Cross-table relationships
-  - Data isolation between users
-- ⏳ Security Validations
-  - Input sanitization
-  - SQL injection prevention
-  - XSS prevention
-  - CSRF protection
 
 ## Test Coverage Goals
 - 100% coverage of API endpoints
