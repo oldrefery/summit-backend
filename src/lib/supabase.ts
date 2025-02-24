@@ -279,6 +279,10 @@ export const api = {
     },
 
     async create(eventForm: EventFormData) {
+      if (!eventForm.section_id) {
+        throw new Error('Section is required for event');
+      }
+
       const { speaker_ids, ...eventData } = eventForm;
 
       // Start a transaction

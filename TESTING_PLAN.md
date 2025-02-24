@@ -58,41 +58,56 @@
   - Edge cases
 
 - 🚧 Events API Tests
-  - CRUD Operations
-    - getAll() tests
+  - ✅ CRUD Operations
+    - ✅ getAll() tests
       - Empty list
       - Single event
       - Multiple events
       - Related data (location, section, event_people)
-    - getById() tests
+    - ✅ getById() tests
       - Existing event
       - Non-existent event
       - Related data validation
-    - create() tests
+    - ✅ create() tests
       - Minimal fields
       - All fields with location
       - With speakers
       - Invalid section/location/speakers
       - Invalid time range
-    - update() tests
+    - ✅ update() tests
       - Basic fields
       - Location update
       - Speakers update
       - Invalid updates handling
-    - delete() tests
+    - ✅ delete() tests
       - Basic deletion
       - With speakers cleanup
       - Non-existent event
-  - Anonymous Access (RLS)
+  - 🚧 Validation Tests
+    - Required fields validation
+    - Date and time format validation
+    - Time range validation
+    - Duration format validation
+    - Overlapping events validation
+    - Foreign key constraints
+  - ⏳ Error Handling
+    - Invalid input handling
+    - Concurrent modification handling
+    - Resource conflict handling
+  - ⏳ Anonymous Access
     - Create restriction
     - Read restriction
     - Update restriction
     - Delete restriction
-  - Integration Scenarios
+  - ⏳ Integration Scenarios
     - Section integration
     - Location integration
     - Speakers integration
     - Cascade deletions
+  - ⏳ RLS Tests (Phase 8)
+    - Authentication checks
+    - Authorization rules
+    - User-specific access control
 
 - ✅ Social Feed API Tests
   - CRUD operations
@@ -178,16 +193,18 @@
   - Maximum limits
   - Date/time edge cases
 
-### Phase 8: Uniqueness Constraints
-- Проверки уникальности по таблицам:
-  - ✅ `sections` - уникальность комбинации (name, date)
-  - ✅ `locations` - уникальность name
-  - ✅ `resources` - уникальность name
-  - ✅ `people` - уникальность email
-  - ✅ `markdown_pages` - уникальность slug
-  - ✅ `json_versions` - уникальность комбинации (file_path, version)
-  - ✅ `event_people` - уникальность комбинации (event_id, person_id)
-  - ✅ `app_user_settings` - уникальность device_id
+### Phase 8: RLS and Security Tests (Moved to last phase)
+- ⏳ Row Level Security Tests
+  - Authentication requirements
+  - Authorization rules
+  - User-specific data access
+  - Cross-table relationships
+  - Data isolation between users
+- ⏳ Security Validations
+  - Input sanitization
+  - SQL injection prevention
+  - XSS prevention
+  - CSRF protection
 
 ## Test Coverage Goals
 - 100% coverage of API endpoints

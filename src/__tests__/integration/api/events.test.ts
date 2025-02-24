@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BaseApiTest } from './base-api-test';
 import type { Event, Section, Location, Person } from '@/types';
+import { format } from 'date-fns';
 
 class EventsApiTest extends BaseApiTest {
     public static async runTests() {
@@ -432,6 +433,181 @@ class EventsApiTest extends BaseApiTest {
 
                         expect(error).toBeNull(); // Supabase не возвращает ошибку при удалении несуществующей записи
                     });
+                });
+            });
+
+            describe('Validation', () => {
+                it('should require section_id field', async () => {
+                    const date = format(new Date(), 'yyyy-MM-dd');
+                    const eventData = {
+                        title: `Test Event ${Date.now()}`,
+                        date,
+                        start_time: `${date}T09:00:00+00:00`,
+                        end_time: `${date}T10:00:00+00:00`,
+                    };
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .insert([eventData])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
+                it('should require title field', async () => {
+                    const section = await this.createTestSection();
+                    const eventData = this.generateEventData(section.id);
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    const { title: _title, ...dataWithoutTitle } = eventData;
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .insert([dataWithoutTitle])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
+                it('should validate date format', async () => {
+                    const section = await this.createTestSection();
+                    const eventData = {
+                        ...this.generateEventData(section.id),
+                        date: 'invalid-date'
+                    };
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .insert([eventData])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
+                it('should validate time format', async () => {
+                    const section = await this.createTestSection();
+                    const eventData = {
+                        ...this.generateEventData(section.id),
+                        start_time: 'invalid-time',
+                        end_time: 'invalid-time'
+                    };
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .insert([eventData])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
+                it('should validate end_time is after start_time', async () => {
+                    const section = await this.createTestSection();
+                    const date = format(new Date(), 'yyyy-MM-dd');
+                    const eventData = {
+                        ...this.generateEventData(section.id),
+                        start_time: `${date}T10:00:00+00:00`,
+                        end_time: `${date}T09:00:00+00:00` // Конец раньше начала
+                    };
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .insert([eventData])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
+                it('should validate duration format', async () => {
+                    const section = await this.createTestSection();
+                    const eventData = {
+                        ...this.generateEventData(section.id),
+                        duration: 'invalid-duration'
+                    };
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .insert([eventData])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
+                it('should not allow events with overlapping times in same location', async () => {
+                    const section = await this.createTestSection();
+                    const location = await this.createTestLocation();
+                    const date = format(new Date(), 'yyyy-MM-dd');
+
+                    // Создаем первое событие
+                    const event1Data = {
+                        ...this.generateEventData(section.id, location.id),
+                        start_time: `${date}T09:00:00+00:00`,
+                        end_time: `${date}T10:00:00+00:00`
+                    };
+
+                    const { data: event1 } = await this.getAuthenticatedClient()
+                        .from('events')
+                        .insert([event1Data])
+                        .select()
+                        .single();
+
+                    expect(event1).toBeDefined();
+                    if (event1) this.trackTestRecord('events', event1.id);
+
+                    // Пытаемся создать второе событие с пересекающимся временем
+                    const event2Data = {
+                        ...this.generateEventData(section.id, location.id),
+                        start_time: `${date}T09:30:00+00:00`, // Пересекается с первым событием
+                        end_time: `${date}T10:30:00+00:00`
+                    };
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .insert([event2Data])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
+                it('should validate section exists', async () => {
+                    const nonExistentSectionId = 999999;
+                    const eventData = this.generateEventData(nonExistentSectionId);
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .insert([eventData])
+                            .select()
+                            .single(),
+                        400
+                    );
+                });
+
+                it('should validate location exists when provided', async () => {
+                    const section = await this.createTestSection();
+                    const nonExistentLocationId = 999999;
+                    const eventData = this.generateEventData(section.id, nonExistentLocationId);
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('events')
+                            .insert([eventData])
+                            .select()
+                            .single(),
+                        400
+                    );
                 });
             });
         });

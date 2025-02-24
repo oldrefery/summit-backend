@@ -20,37 +20,55 @@ class PeopleApiTest extends BaseApiTest {
                 let testPerson: Person;
 
                 it('should get all people', async () => {
-                    // Create two test persons
+                    // Create two test people with unique data
                     const person1Data = this.generatePersonData('speaker');
                     const person2Data = this.generatePersonData('attendee');
 
-                    const { data: p1 } = await this.getAuthenticatedClient()
+                    const { data: p1, error: error1 } = await this.getAuthenticatedClient()
                         .from('people')
                         .insert([person1Data])
                         .select()
                         .single();
 
-                    if (p1) this.trackTestRecord('people', p1.id);
+                    expect(error1).toBeNull();
+                    expect(p1).toBeDefined();
+                    if (!p1) throw new Error('Failed to create first test person');
+                    this.trackTestRecord('people', p1.id);
 
-                    const { data: p2 } = await this.getAuthenticatedClient()
+                    const { data: p2, error: error2 } = await this.getAuthenticatedClient()
                         .from('people')
                         .insert([person2Data])
                         .select()
                         .single();
 
-                    if (p2) this.trackTestRecord('people', p2.id);
+                    expect(error2).toBeNull();
+                    expect(p2).toBeDefined();
+                    if (!p2) throw new Error('Failed to create second test person');
+                    this.trackTestRecord('people', p2.id);
 
+                    // Get all people
                     const { data, error } = await this.getAuthenticatedClient()
                         .from('people')
                         .select('*')
-                        .order('name');
+                        .order('created_at', { ascending: false });
 
                     expect(error).toBeNull();
                     expect(data).toBeDefined();
                     expect(Array.isArray(data)).toBe(true);
                     expect(data!.length).toBeGreaterThanOrEqual(2);
-                    expect(data!.some(p => p.id === p1.id)).toBe(true);
-                    expect(data!.some(p => p.id === p2.id)).toBe(true);
+
+                    // Verify both test records are present
+                    const foundPerson1 = data!.find(p => p.id === p1.id);
+                    const foundPerson2 = data!.find(p => p.id === p2.id);
+
+                    expect(foundPerson1).toBeDefined();
+                    expect(foundPerson2).toBeDefined();
+
+                    // Verify data matches
+                    expect(foundPerson1!.name).toBe(person1Data.name);
+                    expect(foundPerson1!.role).toBe(person1Data.role);
+                    expect(foundPerson2!.name).toBe(person2Data.name);
+                    expect(foundPerson2!.role).toBe(person2Data.role);
                 });
 
                 it('should not delete person with related event_people records', async () => {
