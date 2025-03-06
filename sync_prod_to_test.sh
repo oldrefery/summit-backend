@@ -45,27 +45,50 @@ echo "=== Step 5) Connecting to TEST project (only for using storage)"
 # Using input redirection to pass an empty password
 npx supabase link --project-ref "$TEST_PROJECT" <<< ""
 
+# Get the region from the Supabase URL
+REGION=$(echo $NEXT_PUBLIC_SUPABASE_URL | grep -o -E 'eu-west-[0-9]|us-east-[0-9]|ap-southeast-[0-9]' || echo "eu-central-1")
+
+# Determine the correct host based on the new Supabase connection format
+# Try direct connection first
 echo "=== Step 6) Cleaning TEST DB: deleting the public schema"
 PGPASSWORD="$TEST_DB_PASS" psql \
-  --host="$TEST_DB_HOST" \
+  --host="db.$TEST_PROJECT.supabase.co" \
   --port="$TEST_DB_PORT" \
   --username="$TEST_DB_USER" \
+  --dbname="$TEST_DB_NAME" \
+  --command="$CLEANUP_SQL" || \
+PGPASSWORD="$TEST_DB_PASS" psql \
+  --host="aws-0-$REGION.pooler.supabase.com" \
+  --port="5432" \
+  --username="postgres.$TEST_PROJECT" \
   --dbname="$TEST_DB_NAME" \
   --command="$CLEANUP_SQL"
 
 echo "=== Step 7) Applying the SCHEMA dump to TEST DB"
 PGPASSWORD="$TEST_DB_PASS" psql \
-  --host="$TEST_DB_HOST" \
+  --host="db.$TEST_PROJECT.supabase.co" \
   --port="$TEST_DB_PORT" \
   --username="$TEST_DB_USER" \
+  --dbname="$TEST_DB_NAME" \
+  --file="$SCHEMA_FILE" || \
+PGPASSWORD="$TEST_DB_PASS" psql \
+  --host="aws-0-$REGION.pooler.supabase.com" \
+  --port="5432" \
+  --username="postgres.$TEST_PROJECT" \
   --dbname="$TEST_DB_NAME" \
   --file="$SCHEMA_FILE"
 
 echo "=== Step 8) Applying the DATA dump to TEST DB"
 PGPASSWORD="$TEST_DB_PASS" psql \
-  --host="$TEST_DB_HOST" \
+  --host="db.$TEST_PROJECT.supabase.co" \
   --port="$TEST_DB_PORT" \
   --username="$TEST_DB_USER" \
+  --dbname="$TEST_DB_NAME" \
+  --file="$DATA_FILE" || \
+PGPASSWORD="$TEST_DB_PASS" psql \
+  --host="aws-0-$REGION.pooler.supabase.com" \
+  --port="5432" \
+  --username="postgres.$TEST_PROJECT" \
   --dbname="$TEST_DB_NAME" \
   --file="$DATA_FILE"
 

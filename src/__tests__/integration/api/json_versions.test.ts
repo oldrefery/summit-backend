@@ -10,9 +10,9 @@ class JsonVersionsApiTest extends BaseApiTest {
 
                 it('should get all versions', async () => {
                     // Create two test versions with unique combinations
-                    const version1Data = {
-                        ...this.generateJsonVersionData(),
-                        changes: {
+                    const { data: v1, error: error1 } = await this.getAuthenticatedClient()
+                        .from('json_versions')
+                        .insert([this.generateJsonVersionData({
                             events: 1,
                             people: 2,
                             sections: 0,
@@ -21,26 +21,7 @@ class JsonVersionsApiTest extends BaseApiTest {
                             social_posts: 0,
                             announcements: 1,
                             markdown_pages: 0
-                        }
-                    };
-
-                    const version2Data = {
-                        ...this.generateJsonVersionData(),
-                        changes: {
-                            events: 0,
-                            people: 1,
-                            sections: 1,
-                            locations: 0,
-                            resources: 2,
-                            social_posts: 1,
-                            announcements: 0,
-                            markdown_pages: 1
-                        }
-                    };
-
-                    const { data: v1, error: error1 } = await this.getAuthenticatedClient()
-                        .from('json_versions')
-                        .insert([version1Data])
+                        })])
                         .select()
                         .single();
 
@@ -50,7 +31,16 @@ class JsonVersionsApiTest extends BaseApiTest {
 
                     const { data: v2, error: error2 } = await this.getAuthenticatedClient()
                         .from('json_versions')
-                        .insert([version2Data])
+                        .insert([this.generateJsonVersionData({
+                            events: 0,
+                            people: 1,
+                            sections: 1,
+                            locations: 0,
+                            resources: 2,
+                            social_posts: 1,
+                            announcements: 0,
+                            markdown_pages: 1
+                        })])
                         .select()
                         .single();
 
@@ -244,6 +234,31 @@ class JsonVersionsApiTest extends BaseApiTest {
                             .select()
                             .single(),
                         400
+                    );
+                });
+
+                it('should enforce unique file_path and version combination constraint', async () => {
+                    // Создаем первую версию
+                    const versionData = this.generateJsonVersionData();
+                    const { data: firstVersion, error: firstError } = await this.getAuthenticatedClient()
+                        .from('json_versions')
+                        .insert([versionData])
+                        .select()
+                        .single();
+
+                    expect(firstError).toBeNull();
+                    expect(firstVersion).toBeDefined();
+                    if (firstVersion) this.trackTestRecord('json_versions', firstVersion.id);
+
+                    // Пытаемся создать вторую версию с теми же file_path и version
+                    const duplicateData = this.generateJsonVersionData();
+                    duplicateData.file_path = versionData.file_path;
+                    duplicateData.version = versionData.version;
+
+                    await this.expectSupabaseError(
+                        this.getAuthenticatedClient()
+                            .from('json_versions')
+                            .insert([duplicateData])
                     );
                 });
             });

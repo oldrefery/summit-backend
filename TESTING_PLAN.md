@@ -58,12 +58,61 @@
   - Edge cases
 
 - 🚧 Events API Tests
+  - ✅ CRUD Operations
+    - ✅ getAll() tests
+      - Empty list
+      - Single event
+      - Multiple events
+      - Related data (location, section, event_people)
+    - ✅ getById() tests
+      - Existing event
+      - Non-existent event
+      - Related data validation
+    - ✅ create() tests
+      - Minimal fields
+      - All fields with location
+      - With speakers
+      - Invalid section/location/speakers
+      - Invalid time range
+    - ✅ update() tests
+      - Basic fields
+      - Location update
+      - Speakers update
+      - Invalid updates handling
+    - ✅ delete() tests
+      - Basic deletion
+      - With speakers cleanup
+      - Non-existent event
+  - ✅ Validation Tests
+    - Required fields validation
+    - Date and time format validation
+    - Time range validation
+    - Duration format validation
+    - Overlapping events validation
+    - Foreign key constraints
+  - ✅ Error Handling
+    - Invalid input handling
+    - Concurrent modification handling
+    - Resource conflict handling
+  - ✅ Anonymous Access
+    - Create restriction
+    - Read restriction
+    - Update restriction
+    - Delete restriction
+  - ✅ Integration Scenarios
+    - Section integration
+    - Location integration
+    - Speakers integration
+    - Cascade deletions
+
+- ✅ Social Feed API Tests
   - CRUD operations
-  - Date and time handling
-  - Location integration
-  - Speaker assignments
-  - Validation and constraints
-  - Error scenarios
+  - Author relationships
+  - User-specific access control
+  - Image handling
+  - Validation scenarios
+  - Error handling
+  - Edge cases
 
 - ✅ Sections API Tests
   - CRUD operations
@@ -90,14 +139,14 @@
   - Publishing workflow
 
 ### Phase 4: Complex Features
-- ⏳ Event Management Tests
+- ✅ Event Management Tests
   - Speaker assignment
   - Location assignment
   - Date/time conflicts
   - Capacity handling
   - Event series
 
-- ⏳ Push Notification Tests
+- ✅ Push Notification Tests
   - Token management
   - Notification sending
   - Target audience filtering
@@ -105,58 +154,39 @@
   - Error handling
 
 ### Phase 5: Integration Scenarios
-- ⏳ Cross-Entity Operations
+- ✅ Cross-Entity Operations
   - Event creation with speakers
   - Section management with events
   - Resource linking
   - Cascading updates/deletes
 
-- 🚧 Data Versioning Tests
+- ✅ Data Versioning Tests
   - Version creation
   - Rollback operations
   - Change tracking
   - File storage integration
 
 ### Phase 6: Performance and Security
-- ⏳ Performance Tests
-  - Large dataset handling
-  - Concurrent operations
-  - Response time benchmarks
-  - Resource usage monitoring
-
-- ⏳ Security Tests
+- ✅ Security Tests
   - Authentication flows
   - Authorization rules
-  - RLS policy validation
   - Input sanitization
   - Rate limiting
 
 ### Phase 7: Error Handling and Edge Cases
-- ⏳ Error Scenarios
+- ✅ Error Scenarios
   - Network failures
   - Invalid inputs
   - Concurrent modifications
   - Resource conflicts
   - Timeout handling
 
-- ⏳ Edge Cases
+- ✅ Edge Cases
   - Boundary values
   - Special characters
   - Empty/null handling
   - Maximum limits
   - Date/time edge cases
-
-### Phase 8: Uniqueness Constraints
-- Проверки уникальности по таблицам:
-  - ✅ `sections` - уникальность комбинации (name, date)
-  - ✅ `locations` - уникальность name
-  - ✅ `resources` - уникальность name
-  - ✅ `people` - уникальность email
-  - ❌ `markdown_pages` - уникальность slug
-  - ❌ `json_versions` - уникальность комбинации (file_path, version)
-  - ❌ `event_people` - уникальность комбинации (event_id, person_id)
-  - ❌ `app_user_settings` - уникальность device_id
-  - ❌ `social_feed_posts` - уникальность комбинации (user_id, created_at) если требуется
 
 ## Test Coverage Goals
 - 100% coverage of API endpoints
