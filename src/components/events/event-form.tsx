@@ -31,6 +31,7 @@ import type { EventFormData } from '@/types';
 import type { EventWithRelations } from '@/hooks/use-events';
 import { useToastContext } from '@/components/providers/toast-provider';
 import { Skeleton } from '@/components/ui/skeleton';
+import { extractTimeForForm, createUTCTimeString } from '@/utils/date-utils';
 
 interface EventFormProps {
   initialData?: EventWithRelations;
@@ -62,20 +63,25 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   const { createEvent, updateEvent } = useEvents();
   const [isDirty, setIsDirty] = useState(false);
 
-  const [formData, setFormData] = useState<FormData>(() => ({
-    section_id: initialData?.section_id || 0,
-    date: initialData?.date || format(new Date(), 'yyyy-MM-dd'),
-    title: initialData?.title || '',
-    description: initialData?.description || '',
-    start_time: initialData?.start_time
-      ? format(new Date(initialData.start_time), 'HH:mm')
-      : '09:00',
-    end_time: initialData?.end_time
-      ? format(new Date(initialData.end_time), 'HH:mm')
-      : '10:00',
-    location_id: initialData?.location_id || undefined,
-    duration: initialData?.duration || '',
-  }));
+  const [formData, setFormData] = useState<FormData>(() => {
+    const formattedStartTime = initialData?.start_time
+      ? extractTimeForForm(initialData.start_time)
+      : '09:00';
+    const formattedEndTime = initialData?.end_time
+      ? extractTimeForForm(initialData.end_time)
+      : '10:00';
+
+    return {
+      section_id: initialData?.section_id || 0,
+      date: initialData?.date || format(new Date(), 'yyyy-MM-dd'),
+      title: initialData?.title || '',
+      description: initialData?.description || '',
+      start_time: formattedStartTime,
+      end_time: formattedEndTime,
+      location_id: initialData?.location_id || undefined,
+      duration: initialData?.duration || '',
+    };
+  });
 
   const [selectedSpeakerIds, setSelectedSpeakerIds] = useState<string[]>(
     initialData?.event_people
@@ -135,16 +141,17 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
     }
 
     try {
-      const start_timestamp = `${formData.date}T${formData.start_time}:00Z`;
-      const end_timestamp = `${formData.date}T${formData.end_time}:00Z`;
+      // Create UTC time strings
+      const startTimeUTC = createUTCTimeString(formData.date, formData.start_time);
+      const endTimeUTC = createUTCTimeString(formData.date, formData.end_time);
 
       const eventApiData: EventFormData = {
         section_id: Number(formData.section_id),
         date: formData.date,
         title: formData.title,
         description: formData.description || null,
-        start_time: start_timestamp,
-        end_time: end_timestamp,
+        start_time: startTimeUTC,
+        end_time: endTimeUTC,
         location_id: formData.location_id ? Number(formData.location_id) : null,
         duration: formData.duration || null,
         speaker_ids: selectedSpeakerIds.map(id => Number(id))
