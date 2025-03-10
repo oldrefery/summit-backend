@@ -241,6 +241,29 @@ describe('EventForm', () => {
     expect(dateInput.value).toBe('2024-03-11');
   });
 
+  it('automatically adjusts end time when start time changes to maintain duration', () => {
+    renderEventForm();
+
+    // Set initial times
+    const startTimeInput = screen.getByLabelText('Start Time');
+    const endTimeInput = screen.getByLabelText('End Time');
+
+    fireEvent.change(startTimeInput, { target: { value: '10:00' } });
+    fireEvent.change(endTimeInput, { target: { value: '10:30' } });
+
+    // Change start time and check if end time is adjusted
+    fireEvent.change(startTimeInput, { target: { value: '11:00' } });
+
+    // End time should be adjusted to maintain 30 min duration
+    expect((endTimeInput as HTMLInputElement).value).toBe('11:30');
+
+    // Try another change
+    fireEvent.change(startTimeInput, { target: { value: '14:45' } });
+
+    // End time should be adjusted to maintain 30 min duration
+    expect((endTimeInput as HTMLInputElement).value).toBe('15:15');
+  });
+
   it('allows changing date after section selection', async () => {
     // Mock the validation to always pass
     vi.spyOn(Date, 'now').mockImplementation(() => new Date('2024-01-01').getTime());

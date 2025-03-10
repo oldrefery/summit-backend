@@ -208,7 +208,38 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+
+    if (name === 'start_time' && formData.end_time) {
+      // Calculate current duration in minutes
+      const [startHours, startMinutes] = formData.start_time.split(':').map(Number);
+      const [endHours, endMinutes] = formData.end_time.split(':').map(Number);
+
+      const startTotalMinutes = startHours * 60 + startMinutes;
+      const endTotalMinutes = endHours * 60 + endMinutes;
+      const durationMinutes = endTotalMinutes - startTotalMinutes;
+
+      // Calculate new end time based on new start time and current duration
+      const [newStartHours, newStartMinutes] = value.split(':').map(Number);
+      const newStartTotalMinutes = newStartHours * 60 + newStartMinutes;
+      const newEndTotalMinutes = newStartTotalMinutes + durationMinutes;
+
+      const newEndHours = Math.floor(newEndTotalMinutes / 60);
+      const newEndMinutes = newEndTotalMinutes % 60;
+
+      // Format the new end time
+      const formattedEndHours = newEndHours.toString().padStart(2, '0');
+      const formattedEndMinutes = newEndMinutes.toString().padStart(2, '0');
+      const newEndTime = `${formattedEndHours}:${formattedEndMinutes}`;
+
+      // Update both start_time and end_time
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        end_time: newEndTime
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleLocationChange = (value: string) => {
