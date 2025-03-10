@@ -13,6 +13,7 @@ import {
   MapPinIcon,
   Users,
   Layers,
+  Clock,
 } from 'lucide-react';
 import type { Event, EventPerson, Person } from '@/types';
 import { formatTime } from '@/utils/date-utils';
@@ -71,6 +72,11 @@ export function EventsTable({ events, onDeleteAction }: EventsTableProps) {
                     {formatTime(event.start_time)} -{' '}
                     {formatTime(event.end_time)}
                   </span>
+                </div>
+
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4 mr-2" />
+                  <span>{event.duration}</span>
                 </div>
 
                 {event.location && (

@@ -116,10 +116,13 @@ describe('EventForm', () => {
         expect.objectContaining({
           title: 'Test Event',
           description: null,
-          duration: null,
+          duration: '1 hrs',
           location_id: null,
           section_id: 1,
           speaker_ids: [],
+          start_time: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T10:00:00\+00:00$/),
+          end_time: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T11:00:00\+00:00$/),
+          date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
         })
       );
     });

@@ -59,4 +59,43 @@ export function extractTimeForForm(utcTime: string | null | undefined): string {
     }
 
     return formatTime(utcTime);
+}
+
+/**
+ * Calculates duration between start and end time
+ * @param startTime - Start time in ISO format
+ * @param endTime - End time in ISO format
+ * @returns Formatted duration string (e.g. "2 hrs", "30 mins", "2 hrs 30 mins", "0 mins")
+ */
+export function calculateDuration(startTime: string | null | undefined, endTime: string | null | undefined): string {
+    if (!startTime || !endTime) {
+        return '';
+    }
+
+    try {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return '';
+        }
+
+        const diffMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+
+        if (diffMinutes === 0) {
+            return '0 mins';
+        }
+
+        const hours = Math.floor(Math.abs(diffMinutes) / 60);
+        const minutes = Math.abs(diffMinutes) % 60;
+
+        if (hours > 0) {
+            return minutes > 0 ? `${hours} hrs ${minutes} mins` : `${hours} hrs`;
+        } else {
+            return `${minutes} mins`;
+        }
+    } catch (error) {
+        console.error('Error calculating duration:', error);
+        return '';
+    }
 } 
