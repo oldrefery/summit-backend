@@ -31,7 +31,7 @@ import type { EventFormData } from '@/types';
 import type { EventWithRelations } from '@/hooks/use-events';
 import { useToastContext } from '@/components/providers/toast-provider';
 import { Skeleton } from '@/components/ui/skeleton';
-import { extractTimeForForm, createUTCTimeString } from '@/utils/date-utils';
+import { extractTimeForForm, createUTCTimeString, calculateDuration } from '@/utils/date-utils';
 
 interface EventFormProps {
   initialData?: EventWithRelations;
@@ -113,6 +113,19 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
+  useEffect(() => {
+    if (formData.date && formData.start_time && formData.end_time) {
+      const startTimeUTC = createUTCTimeString(formData.date, formData.start_time);
+      const endTimeUTC = createUTCTimeString(formData.date, formData.end_time);
+      const calculatedDuration = calculateDuration(startTimeUTC, endTimeUTC);
+
+      setFormData(prev => ({
+        ...prev,
+        duration: calculatedDuration
+      }));
+    }
+  }, [formData.date, formData.start_time, formData.end_time]);
+
   const availableSpeakers =
     allPeople?.filter(person => person.role === 'speaker') || [];
 
@@ -153,7 +166,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
         start_time: startTimeUTC,
         end_time: endTimeUTC,
         location_id: formData.location_id ? Number(formData.location_id) : null,
-        duration: formData.duration || null,
+        duration: calculateDuration(startTimeUTC, endTimeUTC),
         speaker_ids: selectedSpeakerIds.map(id => Number(id))
       };
 
@@ -287,7 +300,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
               <Input
@@ -334,6 +347,10 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
                   {errors.end_time}
                 </p>
               )}
+            </div>
+            <div className="space-y-2">
+              <Label>Duration</Label>
+              <p className="text-sm text-muted-foreground h-10 flex items-center">{formData.duration}</p>
             </div>
           </div>
 
