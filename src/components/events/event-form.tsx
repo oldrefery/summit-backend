@@ -1,7 +1,7 @@
 // src/components/events/event-form.tsx
 'use client';
 
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import {
@@ -62,6 +62,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   const { data: allPeople, isLoading: isPeopleLoading } = usePeople();
   const { createEvent, updateEvent } = useEvents();
   const [isDirty, setIsDirty] = useState(false);
+  const [initialFormState, setInitialFormState] = useState<string>('');
 
   const [formData, setFormData] = useState<FormData>(() => {
     const formattedStartTime = initialData?.start_time
@@ -92,11 +93,25 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Save initial form state for comparison - using a ref to avoid dependency issues
+  const initialFormDataRef = useRef(formData);
+  const initialSpeakerIdsRef = useRef(selectedSpeakerIds);
+
+  useEffect(() => {
+    const initialState = {
+      ...initialFormDataRef.current,
+      speaker_ids: initialSpeakerIdsRef.current
+    };
+    setInitialFormState(JSON.stringify(initialState));
+  }, []);
+
   useEffect(() => {
     if (sections?.length && formData.section_id === 0) {
+      const firstSection = sections[0];
       setFormData(prev => ({
         ...prev,
-        section_id: sections[0].id
+        section_id: firstSection.id,
+        date: firstSection.date || prev.date
       }));
     }
   }, [sections, formData.section_id]);
@@ -157,6 +172,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
       // Create UTC time strings
       const startTimeUTC = createUTCTimeString(formData.date, formData.start_time);
       const endTimeUTC = createUTCTimeString(formData.date, formData.end_time);
+      const calculatedDuration = calculateDuration(startTimeUTC, endTimeUTC);
 
       const eventApiData: EventFormData = {
         section_id: Number(formData.section_id),
@@ -166,7 +182,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
         start_time: startTimeUTC,
         end_time: endTimeUTC,
         location_id: formData.location_id ? Number(formData.location_id) : null,
-        duration: calculateDuration(startTimeUTC, endTimeUTC),
+        duration: calculatedDuration,
         speaker_ids: selectedSpeakerIds.map(id => Number(id))
       };
 
@@ -181,9 +197,8 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
         showSuccess('Event created successfully');
       }
 
-      setIsDirty(false);
-      onSuccess?.();
       router.push('/events');
+      onSuccess?.();
     } catch (error) {
       showError(error);
     }
@@ -194,8 +209,37 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   ) => {
     const { name, value } = e.target;
 
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setIsDirty(true);
+    if (name === 'start_time' && formData.end_time) {
+      // Calculate current duration in minutes
+      const [startHours, startMinutes] = formData.start_time.split(':').map(Number);
+      const [endHours, endMinutes] = formData.end_time.split(':').map(Number);
+
+      const startTotalMinutes = startHours * 60 + startMinutes;
+      const endTotalMinutes = endHours * 60 + endMinutes;
+      const durationMinutes = endTotalMinutes - startTotalMinutes;
+
+      // Calculate new end time based on new start time and current duration
+      const [newStartHours, newStartMinutes] = value.split(':').map(Number);
+      const newStartTotalMinutes = newStartHours * 60 + newStartMinutes;
+      const newEndTotalMinutes = newStartTotalMinutes + durationMinutes;
+
+      const newEndHours = Math.floor(newEndTotalMinutes / 60);
+      const newEndMinutes = newEndTotalMinutes % 60;
+
+      // Format the new end time
+      const formattedEndHours = newEndHours.toString().padStart(2, '0');
+      const formattedEndMinutes = newEndMinutes.toString().padStart(2, '0');
+      const newEndTime = `${formattedEndHours}:${formattedEndMinutes}`;
+
+      // Update both start_time and end_time
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        end_time: newEndTime
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleLocationChange = (value: string) => {
@@ -205,13 +249,26 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
     }));
   };
 
+  const handleSectionChange = (value: string) => {
+    const selectedSection = sections.find(s => s.id === Number(value));
+    setFormData(prev => ({
+      ...prev,
+      section_id: Number(value),
+      date: selectedSection?.date || prev.date
+    }));
+  };
+
   const handleCancel = () => {
-    if (isDirty) {
-      if (
-        window.confirm(
-          'You have unsaved changes. Are you sure you want to leave?'
-        )
-      ) {
+    const currentFormState = JSON.stringify({
+      ...formData,
+      speaker_ids: selectedSpeakerIds
+    });
+
+    // Only show confirmation if there are actual changes
+    const hasChanges = currentFormState !== initialFormState;
+
+    if (hasChanges) {
+      if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
         router.push('/events');
       }
     } else {
@@ -251,13 +308,13 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} role="form">
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {initialData ? 'Edit Event' : 'Create New Event'}
-          </CardTitle>
-        </CardHeader>
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          {initialData ? 'Edit Event' : 'Create New Event'}
+        </CardTitle>
+      </CardHeader>
+      <form role="form" onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -269,10 +326,9 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
                 onChange={handleInputChange}
                 required
                 aria-invalid={!!errors.title}
-                aria-errormessage={errors.title}
               />
               {errors.title && (
-                <p className="text-sm text-destructive" role="alert">
+                <p role="alert" className="text-sm text-destructive">
                   {errors.title}
                 </p>
               )}
@@ -280,18 +336,20 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
             <div className="space-y-2">
               <Label htmlFor="section">Section</Label>
               <Select
-                value={formData.section_id?.toString()}
-                onValueChange={value =>
-                  setFormData(prev => ({ ...prev, section_id: Number(value) }))
-                }
+                value={formData.section_id.toString()}
+                onValueChange={handleSectionChange}
                 required
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select section" />
+                <SelectTrigger aria-label="Section">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {sections?.map(section => (
-                    <SelectItem key={section.id} value={section.id.toString()}>
+                  {sections.map(section => (
+                    <SelectItem
+                      key={section.id}
+                      value={section.id.toString()}
+                      data-testid={`section-option-${section.id}`}
+                    >
                       {section.name}
                     </SelectItem>
                   ))}
@@ -419,7 +477,7 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
             {initialData ? 'Update Event' : 'Create Event'}
           </Button>
         </CardFooter>
-      </Card>
-    </form>
+      </form>
+    </Card>
   );
 }
