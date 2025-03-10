@@ -1,7 +1,7 @@
 // src/components/events/event-form.tsx
 'use client';
 
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import {
@@ -93,6 +93,18 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Save initial form state for comparison - using a ref to avoid dependency issues
+  const initialFormDataRef = useRef(formData);
+  const initialSpeakerIdsRef = useRef(selectedSpeakerIds);
+
+  useEffect(() => {
+    const initialState = {
+      ...initialFormDataRef.current,
+      speaker_ids: initialSpeakerIdsRef.current
+    };
+    setInitialFormState(JSON.stringify(initialState));
+  }, []);
+
   useEffect(() => {
     if (sections?.length && formData.section_id === 0) {
       const firstSection = sections[0];
@@ -103,15 +115,6 @@ export function EventForm({ initialData, onSuccess }: EventFormProps) {
       }));
     }
   }, [sections, formData.section_id]);
-
-  useEffect(() => {
-    // Save initial form state for comparison
-    const initialState = {
-      ...formData,
-      speaker_ids: selectedSpeakerIds
-    };
-    setInitialFormState(JSON.stringify(initialState));
-  }, []);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
