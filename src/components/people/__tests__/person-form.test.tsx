@@ -269,4 +269,45 @@ describe('PersonForm', () => {
 
         expect(confirmSpy).toHaveBeenCalledWith('You have unsaved changes. Are you sure you want to leave?');
     });
+
+    it('renders bio field and allows editing it', async () => {
+        const person = {
+            id: 1,
+            name: 'John Doe',
+            email: 'john@example.com',
+            role: 'speaker' as const,
+            bio: 'Initial bio text',
+        };
+
+        render(
+            <PersonForm
+                person={person}
+                open={true}
+                onOpenChangeAction={mockOnOpenChangeAction}
+                onSuccess={mockOnSuccess}
+            />
+        );
+
+        // Check if bio field exists and has the correct initial value
+        const bioInput = screen.getByLabelText(/bio/i);
+        expect(bioInput).toBeInTheDocument();
+        expect(bioInput).toHaveValue('Initial bio text');
+
+        // Change bio value
+        fireEvent.change(bioInput, { target: { name: 'bio', value: 'Updated bio information' } });
+        expect(bioInput).toHaveValue('Updated bio information');
+
+        // Submit the form and check if bio is included in the update
+        const submitButton = screen.getByRole('button', { name: /update/i });
+        fireEvent.click(submitButton);
+
+        await waitFor(() => {
+            expect(mockUpdatePerson.mutateAsync).toHaveBeenCalledWith({
+                id: 1,
+                data: expect.objectContaining({
+                    bio: 'Updated bio information',
+                }),
+            });
+        });
+    });
 }); 
