@@ -25,6 +25,7 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { storage } from '@/lib/supabase';
 import { Person, PersonRole } from '@/types';
 import { isToastActive } from '@/components/ui/use-toast';
+import { Textarea } from '@/components/ui/textarea';
 
 interface PersonFormProps {
   person?: Partial<Person>;
@@ -254,7 +255,7 @@ export function PersonForm({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-white text-black">
+      <DialogContent className="bg-white text-black max-w-3xl">
         <DialogHeader>
           <DialogTitle>{person?.id ? 'Edit Person' : 'Add Person'}</DialogTitle>
           <DialogDescription className="text-gray-600">
@@ -265,89 +266,110 @@ export function PersonForm({
         </DialogHeader>
         <form role="form" onSubmit={handleSubmit}>
           <div className="space-y-4">
-            <ImageUpload
-              onChange={handlePhotoChange}
-              value={person?.photo_url}
-              className="mb-4"
-            />
-            <div>
-              <Label htmlFor="name">
-                Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                required
-              />
+            <div className="flex flex-col md:flex-row gap-4">
+              <div>
+                <ImageUpload
+                  onChange={handlePhotoChange}
+                  value={person?.photo_url}
+                />
+              </div>
+              <div className="flex-1 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="country">Country</Label>
+                    <Input
+                      id="country"
+                      name="country"
+                      value={formData.country}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="role">Role</Label>
+                    <select
+                      id="role"
+                      name="role"
+                      className="w-full rounded-md border p-2 mt-1"
+                      value={formData.role}
+                      onChange={handleInputChange}
+                    >
+                      <option value="attendee">Attendee</option>
+                      <option value="speaker">Speaker</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="name">
+                    Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+              </div>
             </div>
-            <div>
-              <Label htmlFor="role">Role</Label>
-              <select
-                id="role"
-                name="role"
-                className="w-full rounded-md border p-2 mt-1"
-                value={formData.role}
-                onChange={handleInputChange}
-              >
-                <option value="attendee">Attendee</option>
-                <option value="speaker">Speaker</option>
-              </select>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="company">Company</Label>
+                <Input
+                  id="company"
+                  name="company"
+                  value={formData.company}
+                  onChange={handleInputChange}
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                className="mt-1"
-              />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className={emailError ? 'border-red-500' : ''}
+                />
+                {emailError && (
+                  <p className="text-sm text-red-500 mt-1">{emailError}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="mobile">Mobile</Label>
+                <Input
+                  id="mobile"
+                  name="mobile"
+                  value={formData.mobile}
+                  onChange={handleInputChange}
+                  placeholder="+1234567890"
+                />
+              </div>
             </div>
+
             <div>
-              <Label htmlFor="company">Company</Label>
-              <Input
-                id="company"
-                name="company"
-                value={formData.company}
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea
+                id="bio"
+                name="bio"
+                value={formData.bio}
                 onChange={handleInputChange}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="country">Country</Label>
-              <Input
-                id="country"
-                name="country"
-                value={formData.country}
-                onChange={handleInputChange}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className={`mt-1 ${emailError ? 'border-red-500' : ''}`}
-              />
-              {emailError && (
-                <p className="text-sm text-red-500 mt-1">{emailError}</p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="mobile">Mobile</Label>
-              <Input
-                id="mobile"
-                name="mobile"
-                value={formData.mobile}
-                onChange={handleInputChange}
-                className="mt-1"
-                placeholder="+1234567890"
+                rows={4}
               />
             </div>
           </div>
