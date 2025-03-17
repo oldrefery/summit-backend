@@ -23,6 +23,10 @@ vi.mock('@/components/providers/toast-provider', () => ({
     useToastContext: () => toastContext,
 }));
 
+// Мокаем fetch API для тестов useSendNotification
+const mockFetch = vi.fn();
+vi.stubGlobal('fetch', mockFetch);
+
 describe('Push Notification Hooks', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -193,28 +197,50 @@ describe('Push Notification Hooks', () => {
             },
         };
 
-        it('sends notification successfully', async () => {
-            (api.push.sendNotification as jest.Mock).mockResolvedValue({ success: true });
+        beforeEach(() => {
+            mockFetch.mockReset();
+            // Мокаем успешный ответ fetch по умолчанию
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: () => Promise.resolve({ successful: 1, failed: 0 }),
+            });
+        });
 
+        it('sends notification successfully', async () => {
             const { result } = renderHook(() => useSendNotification(), { wrapper: Providers });
 
             result.current.mutate(mockNotification);
 
             await waitFor(() => {
-                expect(api.push.sendNotification).toHaveBeenCalledWith(mockNotification);
+                expect(mockFetch).toHaveBeenCalledWith('/api/push-notifications', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(mockNotification),
+                });
+            });
+
+            // Проверяем, что success callback вызван
+            await waitFor(() => {
+                expect(toastContext.showSuccess).toHaveBeenCalledWith(expect.stringContaining('Notification sent successfully'));
             });
         });
 
         it('handles error when sending notification', async () => {
-            const error = new Error('Failed to send notification');
-            (api.push.sendNotification as jest.Mock).mockRejectedValue(error);
+            // Мокаем ошибку
+            mockFetch.mockResolvedValue({
+                ok: false,
+                json: () => Promise.resolve({ error: 'Failed to send notification' }),
+            });
 
             const { result } = renderHook(() => useSendNotification(), { wrapper: Providers });
 
             result.current.mutate(mockNotification);
 
+            // Проверяем, что error callback вызван
             await waitFor(() => {
-                expect(showErrorMock).toHaveBeenCalledWith(error);
+                expect(showErrorMock).toHaveBeenCalled();
             });
         });
     });

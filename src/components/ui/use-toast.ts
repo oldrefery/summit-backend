@@ -1,4 +1,6 @@
 // src/components/ui/use-toast.ts
+'use client';
+
 import type { ToastActionElement, ToastProps } from '@/components/ui/toast';
 import { ReactNode, useEffect, useState } from 'react';
 
@@ -21,21 +23,21 @@ function genId() {
 
 type Action =
   | {
-      type: 'ADD_TOAST';
-      toast: ToasterToast;
-    }
+    type: 'ADD_TOAST';
+    toast: ToasterToast;
+  }
   | {
-      type: 'UPDATE_TOAST';
-      toast: Partial<ToasterToast>;
-    }
+    type: 'UPDATE_TOAST';
+    toast: Partial<ToasterToast>;
+  }
   | {
-      type: 'DISMISS_TOAST';
-      toastId?: ToasterToast['id'];
-    }
+    type: 'DISMISS_TOAST';
+    toastId?: ToasterToast['id'];
+  }
   | {
-      type: 'REMOVE_TOAST';
-      toastId?: ToasterToast['id'];
-    };
+    type: 'REMOVE_TOAST';
+    toastId?: ToasterToast['id'];
+  };
 
 interface State {
   toasts: ToasterToast[];
@@ -91,9 +93,9 @@ export const reducer = (state: State, action: Action): State => {
         toasts: state.toasts.map(t =>
           t.id === toastId || toastId === undefined
             ? {
-                ...t,
-                open: false,
-              }
+              ...t,
+              open: false,
+            }
             : t
         ),
       };

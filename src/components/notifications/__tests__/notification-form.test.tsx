@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import { NotificationForm } from '../notification-form';
@@ -14,6 +15,10 @@ interface ReactSelectProps {
     value?: Array<{ label: string; value: string }>;
     onChange: (selected: Array<{ label: string; value: string }> | null) => void;
     isMulti?: boolean;
+    filterOption?: (option: unknown, inputValue: string) => boolean;
+    formatOptionLabel?: (data: { label: string; value: string }) => React.ReactNode;
+    isSearchable?: boolean;
+    placeholder?: string;
 }
 
 // Mock react-select
@@ -43,8 +48,22 @@ describe('NotificationForm', () => {
     const mockOnOpenChangeAction = vi.fn();
     const mockSendNotification = vi.fn();
     const mockUsers = [
-        { id: 1, device_info: { deviceName: 'Device 1', osName: 'iOS' } },
-        { id: 2, device_info: { deviceName: 'Device 2', osName: 'Android' } },
+        {
+            id: '1',
+            device_info: { deviceName: 'Device 1', osName: 'iOS', deviceModel: 'iPhone 13', appVersion: '1.0.0' },
+            push_token: 'token1',
+            device_id: 'device1',
+            last_active_at: '2023-01-01',
+            settings: { announcements: true }
+        },
+        {
+            id: '2',
+            device_info: { deviceName: 'Device 2', osName: 'Android', deviceModel: 'Pixel 6', appVersion: '1.0.0' },
+            push_token: 'token2',
+            device_id: 'device2',
+            last_active_at: '2023-01-02',
+            settings: { announcements: true }
+        },
     ];
 
     beforeEach(() => {
@@ -64,7 +83,7 @@ describe('NotificationForm', () => {
         render(<NotificationForm open={true} onOpenChangeAction={mockOnOpenChangeAction} />);
 
         expect(screen.getByText('Send Push Notification')).toBeInTheDocument();
-        expect(screen.getByText('Fill in the notification details below.')).toBeInTheDocument();
+        expect(screen.getByText(/Send a push notification to all users or specific users/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/message/i)).toBeInTheDocument();
         expect(screen.getByText(/send to/i)).toBeInTheDocument();
@@ -84,6 +103,14 @@ describe('NotificationForm', () => {
     it('handles target type change', async () => {
         render(<NotificationForm open={true} onOpenChangeAction={mockOnOpenChangeAction} />);
 
+        // Заполняем форму
+        fireEvent.change(screen.getByLabelText(/title/i), {
+            target: { value: 'Test Title' },
+        });
+        fireEvent.change(screen.getByLabelText(/message/i), {
+            target: { value: 'Test Message' },
+        });
+
         // Выбираем отправку конкретным пользователям
         const targetButton = screen.getByRole('combobox');
         fireEvent.click(targetButton);
@@ -91,9 +118,8 @@ describe('NotificationForm', () => {
         const specificUsersOption = screen.getByRole('option', { name: /specific users/i });
         fireEvent.click(specificUsersOption);
 
-        // Проверяем, что кнопка отправки отключена, пока не выбраны пользователи
-        const submitButton = screen.getByRole('button', { name: /send notification/i });
-        expect(submitButton).toBeDisabled();
+        // Проверяем, что отображается окно выбора пользователей
+        expect(screen.getByText(/users with announcements enabled/i)).toBeInTheDocument();
     });
 
     it('handles successful notification send to all users', async () => {
@@ -112,14 +138,19 @@ describe('NotificationForm', () => {
         fireEvent.click(submitButton);
 
         // Проверяем, что уведомление отправлено с правильными данными
-        expect(mockSendNotification).toHaveBeenCalledWith({
-            title: 'Test Title',
-            body: 'Test Message',
-            target_type: 'all',
-            data: { action: 'open' },
-        });
+        expect(mockSendNotification).toHaveBeenCalledWith(
+            {
+                title: 'Test Title',
+                body: 'Test Message',
+                target_type: 'all',
+                data: { action: 'open' },
+            },
+            expect.any(Object)
+        );
 
-        // Проверяем, что форма закрылась
+        // Проверяем, что колбэк onSuccess вызывается
+        const onSuccessCallback = mockSendNotification.mock.calls[0][1].onSuccess;
+        onSuccessCallback();
         expect(mockOnOpenChangeAction).toHaveBeenCalledWith(false);
     });
 

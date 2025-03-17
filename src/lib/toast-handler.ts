@@ -1,4 +1,5 @@
 // src/lib/toast-handler.ts
+'use client';
 
 import { toast } from '@/components/ui/use-toast';
 import { FORM } from '@/app/constants';
