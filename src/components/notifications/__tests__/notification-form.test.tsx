@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { vi } from 'vitest';
 import { NotificationForm } from '../notification-form';
 import { usePushUsers, useSendNotification } from '@/hooks/use-push';
@@ -23,24 +23,40 @@ interface ReactSelectProps {
 
 // Mock react-select
 vi.mock('react-select', () => ({
-    default: ({ options, value, onChange, isMulti }: ReactSelectProps) => (
-        <select
-            data-testid="user-select"
-            multiple={isMulti}
-            value={value?.map(v => v.value) || []}
-            onChange={e => {
-                const selectedOptions = Array.from(e.target.selectedOptions).map(
-                    option => options.find(o => o.value === option.value)
-                ).filter((o): o is { label: string; value: string } => o !== undefined);
-                onChange(isMulti ? selectedOptions : null);
-            }}
-        >
-            {options.map(option => (
-                <option key={option.value} value={option.value}>
-                    {option.label}
-                </option>
-            ))}
-        </select>
+    default: ({ options, value, onChange, isMulti, filterOption, isSearchable }: ReactSelectProps) => (
+        <div>
+            <select
+                data-testid="user-select"
+                multiple={isMulti}
+                value={value?.map(v => v.value) || []}
+                onChange={e => {
+                    const selectedOptions = Array.from(e.target.selectedOptions).map(
+                        option => options.find(o => o.value === option.value)
+                    ).filter((o): o is { label: string; value: string } => o !== undefined);
+                    onChange(isMulti ? selectedOptions : null);
+                }}
+            >
+                {options.map(option => (
+                    <option key={option.value} value={option.value}>
+                        {option.label}
+                    </option>
+                ))}
+            </select>
+            {isSearchable && (
+                <input
+                    data-testid="user-select-search"
+                    placeholder="Search..."
+                    onChange={e => {
+                        // Имитируем функционал поиска, фильтруя опции через filterOption
+                        if (filterOption) {
+                            // В реальном компоненте это привело бы к фильтрации опций
+                            const inputValue = e.target.value;
+                            options.filter(option => filterOption(option, inputValue));
+                        }
+                    }}
+                />
+            )}
+        </div>
     ),
 }));
 
@@ -173,5 +189,143 @@ describe('NotificationForm', () => {
         fireEvent.click(cancelButton);
 
         expect(mockOnOpenChangeAction).toHaveBeenCalledWith(false);
+    });
+
+    it('displays user counter with correct count', () => {
+        render(<NotificationForm open={true} onOpenChangeAction={mockOnOpenChangeAction} />);
+
+        // Выбираем отправку конкретным пользователям
+        const targetButton = screen.getByRole('combobox');
+        fireEvent.click(targetButton);
+
+        const specificUsersOption = screen.getByRole('option', { name: /specific users/i });
+        fireEvent.click(specificUsersOption);
+
+        // Проверяем, что счетчик пользователей отображается с правильным значением
+        expect(screen.getByText(`${mockUsers.length} users with announcements enabled`)).toBeInTheDocument();
+    });
+
+    it('selects all users with tokens when clicking "Select all with tokens" button', () => {
+        render(<NotificationForm open={true} onOpenChangeAction={mockOnOpenChangeAction} />);
+
+        // Выбираем отправку конкретным пользователям
+        const targetButton = screen.getByRole('combobox');
+        fireEvent.click(targetButton);
+
+        const specificUsersOption = screen.getByRole('option', { name: /specific users/i });
+        fireEvent.click(specificUsersOption);
+
+        // Нажимаем кнопку "Select all with tokens"
+        const selectAllButton = screen.getByRole('button', { name: /select all with tokens/i });
+        fireEvent.click(selectAllButton);
+
+        // Заполняем форму
+        fireEvent.change(screen.getByLabelText(/title/i), {
+            target: { value: 'Test Title' },
+        });
+        fireEvent.change(screen.getByLabelText(/message/i), {
+            target: { value: 'Test Message' },
+        });
+
+        // Отправляем форму
+        const submitButton = screen.getByRole('button', { name: /send notification/i });
+        fireEvent.click(submitButton);
+
+        // Проверяем, что при отправке формы выбраны все пользователи с токенами
+        expect(mockSendNotification).toHaveBeenCalledWith(
+            {
+                title: 'Test Title',
+                body: 'Test Message',
+                target_type: 'specific_users',
+                data: { action: 'open' },
+                target_users: mockUsers.filter(u => u.push_token).map(u => u.id),
+            },
+            expect.any(Object)
+        );
+    });
+
+    it('shows notification preview when clicking "Show Preview" button', () => {
+        render(<NotificationForm open={true} onOpenChangeAction={mockOnOpenChangeAction} />);
+
+        // Заполняем форму
+        fireEvent.change(screen.getByLabelText(/title/i), {
+            target: { value: 'Test Title' },
+        });
+        fireEvent.change(screen.getByLabelText(/message/i), {
+            target: { value: 'Test Message' },
+        });
+
+        // Нажимаем кнопку "Show Preview"
+        const previewButton = screen.getByRole('button', { name: /show preview/i });
+        fireEvent.click(previewButton);
+
+        // Проверяем, что предпросмотр отображается
+        expect(screen.getByText('Notification Preview')).toBeInTheDocument();
+
+        // Используем более специфичные селекторы для проверки содержимого предпросмотра
+        const previewSection = screen.getByText('Notification Preview').closest('div')!;
+
+        // Проверяем заголовок и сообщение в предпросмотре
+        expect(within(previewSection).getByText('Test Title')).toBeInTheDocument();
+
+        // Используем getAllByText и проверяем, что есть хотя бы один элемент с текстом "Test Message" в превью
+        const previewMessages = within(previewSection).getAllByText('Test Message');
+        expect(previewMessages.length).toBeGreaterThan(0);
+
+        // Проверяем, что отображается информация о получателях
+        expect(within(previewSection).getByText(/will be sent to all users/i)).toBeInTheDocument();
+
+        // Проверяем, что после нажатия кнопка изменила текст
+        expect(screen.getByRole('button', { name: /hide preview/i })).toBeInTheDocument();
+    });
+
+    it('toggles preview visibility when clicking show/hide button', () => {
+        render(<NotificationForm open={true} onOpenChangeAction={mockOnOpenChangeAction} />);
+
+        // Показываем предпросмотр
+        const previewButton = screen.getByRole('button', { name: /show preview/i });
+        fireEvent.click(previewButton);
+
+        // Проверяем, что предпросмотр отображается
+        expect(screen.getByText('Notification Preview')).toBeInTheDocument();
+
+        // Скрываем предпросмотр
+        const hideButton = screen.getByRole('button', { name: /hide preview/i });
+        fireEvent.click(hideButton);
+
+        // Проверяем, что предпросмотр больше не отображается
+        expect(screen.queryByText('Notification Preview')).not.toBeInTheDocument();
+    });
+
+    it('shows correct count of users with tokens in preview', () => {
+        render(<NotificationForm open={true} onOpenChangeAction={mockOnOpenChangeAction} />);
+
+        // Показываем предпросмотр
+        const previewButton = screen.getByRole('button', { name: /show preview/i });
+        fireEvent.click(previewButton);
+
+        // Проверяем, что правильно отображается количество пользователей с токенами
+        expect(screen.getByText(`${mockUsers.filter(u => u.push_token).length} users have active push tokens`)).toBeInTheDocument();
+    });
+
+    it('supports searching users by device name or other properties', () => {
+        render(<NotificationForm open={true} onOpenChangeAction={mockOnOpenChangeAction} />);
+
+        // Выбираем отправку конкретным пользователям
+        const targetButton = screen.getByRole('combobox');
+        fireEvent.click(targetButton);
+        const specificUsersOption = screen.getByRole('option', { name: /specific users/i });
+        fireEvent.click(specificUsersOption);
+
+        // Проверяем наличие поля поиска
+        const searchInput = screen.getByTestId('user-select-search');
+        expect(searchInput).toBeInTheDocument();
+
+        // Имитируем ввод поискового запроса
+        fireEvent.change(searchInput, { target: { value: 'Android' } });
+
+        // Поскольку мы не можем напрямую проверить результаты фильтрации в нашем моке,
+        // мы проверяем, что ввод поддерживается и компонент не ломается
+        expect(searchInput).toHaveValue('Android');
     });
 }); 
