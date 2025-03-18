@@ -13,7 +13,7 @@ export class BaseIntegrationTest {
             return;
         }
 
-        // Проверяем, что мы используем тестовую базу данных
+        // Verify that we're using the test database
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -21,12 +21,12 @@ export class BaseIntegrationTest {
             throw new Error('Supabase environment variables are not set');
         }
 
-        // Проверяем, что это тестовая база данных
+        // Verify this is the test database
         if (!supabaseUrl.includes('vupwomxxfqjmwtbptkfu')) {
             throw new Error('Tests must run against test database only');
         }
 
-        // Создаем клиент с автоматическим обновлением сессии
+        // Create client with automatic session refresh
         this.supabase = createClient(supabaseUrl, supabaseAnonKey, {
             auth: {
                 autoRefreshToken: true,
