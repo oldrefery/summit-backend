@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { Expo } from 'expo-server-sdk';
 import { supabase } from '@/lib/supabase-server';
 import { POST } from '../route';
@@ -42,7 +42,7 @@ vi.mock('expo-server-sdk', () => {
 const originalConsole = { ...console };
 
 // Функция для создания мок-запроса
-function createMockRequest(body: any): NextRequest {
+function createMockRequest(body: unknown): NextRequest {
     return new NextRequest('http://localhost/api/push-notifications', {
         method: 'POST',
         body: typeof body === 'string' ? body : JSON.stringify(body),
@@ -71,7 +71,7 @@ describe('Push Notifications API', () => {
         vi.clearAllMocks();
 
         // Добавляем статический метод к Expo
-        // @ts-ignore - игнорируем типы для теста
+        // @ts-expect-error - игнорируем типы для теста
         Expo.isExpoPushToken = vi.fn((token) =>
             typeof token === 'string' && token.startsWith('ExponentPushToken')
         );
@@ -87,7 +87,7 @@ describe('Push Notifications API', () => {
             ],
         };
 
-        // @ts-ignore - игнорируем типы для теста
+        // @ts-expect-error - игнорируем типы для теста
         vi.mocked(supabase.from).mockImplementation((table: string) => {
             if (table === 'app_user_settings') {
                 return {
@@ -145,7 +145,7 @@ describe('Push Notifications API', () => {
 
     it('should handle case with no valid tokens', async () => {
         // Меняем мок на пустой массив токенов
-        // @ts-ignore - игнорируем типы для теста
+        // @ts-expect-error - игнорируем типы для теста
         vi.mocked(supabase.from).mockImplementationOnce((table: string) => {
             if (table === 'app_user_settings') {
                 return {
@@ -172,7 +172,7 @@ describe('Push Notifications API', () => {
 
     it('should filter out invalid tokens', async () => {
         // Добавляем невалидный токен
-        // @ts-ignore - игнорируем типы для теста
+        // @ts-expect-error - игнорируем типы для теста
         vi.mocked(supabase.from).mockImplementationOnce((table: string) => {
             if (table === 'app_user_settings') {
                 return {
@@ -209,8 +209,8 @@ describe('Push Notifications API', () => {
     it('should handle error when sending notification chunks', async () => {
         // Подготавливаем экземпляр Expo для ошибки
         const expoMock = new Expo();
-        // @ts-ignore - игнорируем типы для теста
-        vi.mocked(expoMock.sendPushNotificationsAsync).mockRejectedValueOnce(
+        // Мокируем метод экземпляра Expo с ошибкой
+        vi.spyOn(expoMock, 'sendPushNotificationsAsync').mockRejectedValueOnce(
             new Error('Failed to send push notifications')
         );
 
@@ -232,8 +232,8 @@ describe('Push Notifications API', () => {
     it('should handle DeviceNotRegistered errors', async () => {
         // Подготавливаем экземпляр Expo для ошибки DeviceNotRegistered
         const expoMock = new Expo();
-        // @ts-ignore - игнорируем типы для теста
-        vi.mocked(expoMock.sendPushNotificationsAsync).mockResolvedValueOnce([
+        // Мокируем метод экземпляра Expo с ответом о незарегистрированном устройстве
+        vi.spyOn(expoMock, 'sendPushNotificationsAsync').mockResolvedValueOnce([
             {
                 status: 'error',
                 message: 'DeviceNotRegistered',
@@ -285,7 +285,7 @@ describe('Push Notifications API', () => {
 
     it('should handle error when saving notification history', async () => {
         // Имитируем ошибку при вставке в notification_history
-        // @ts-ignore - игнорируем типы для теста
+        // @ts-expect-error - игнорируем типы для теста
         vi.mocked(supabase.from).mockImplementationOnce((table: string) => {
             if (table === 'notification_history') {
                 return {
@@ -319,7 +319,7 @@ describe('Push Notifications API', () => {
 
     it('should handle error when updating invalid token', async () => {
         // Имитируем ошибку при обновлении токена
-        // @ts-ignore - игнорируем типы для теста
+        // @ts-expect-error - игнорируем типы для теста
         vi.mocked(supabase.from).mockImplementationOnce((table: string) => {
             if (table === 'app_user_settings') {
                 return {
@@ -343,8 +343,8 @@ describe('Push Notifications API', () => {
 
         // Подготавливаем экземпляр Expo для ошибки DeviceNotRegistered
         const expoMock = new Expo();
-        // @ts-ignore - игнорируем типы для теста
-        vi.mocked(expoMock.sendPushNotificationsAsync).mockResolvedValueOnce([
+        // Мокируем метод экземпляра Expo с ответом о незарегистрированном устройстве
+        vi.spyOn(expoMock, 'sendPushNotificationsAsync').mockResolvedValueOnce([
             {
                 status: 'error',
                 message: 'DeviceNotRegistered',
