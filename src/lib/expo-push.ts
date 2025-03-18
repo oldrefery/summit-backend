@@ -16,6 +16,9 @@ interface ExpoPushResponse {
     status: 'ok' | 'error';
     id: string;
     message?: string;
+    details?: {
+      error: string;
+    };
   }[];
 }
 
@@ -37,7 +40,7 @@ export async function sendPushNotifications(
 
   for (const chunk of chunks) {
     try {
-      const response = await fetch(API.EXPO.PUSH_URL, {
+      const response = await fetch(`${API.EXPO.PUSH_URL}/--/api/v2/push/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

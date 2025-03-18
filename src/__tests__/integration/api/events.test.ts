@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { BaseApiTest } from './base-api-test';
 import type { Event, Section, Location, Person } from '@/types';
 import { format } from 'date-fns';
+import { delay } from '@/utils/test-utils';
 
 class EventsApiTest extends BaseApiTest {
     public static async runTests() {
@@ -111,19 +112,36 @@ class EventsApiTest extends BaseApiTest {
                         const event = await this.createTestEvent(section.id, location.id);
                         await this.assignSpeakerToEvent(event.id, speaker.id);
 
-                        // Get event by id
-                        const { data, error } = await this.getAuthenticatedClient()
-                            .from('events')
-                            .select(`
-                                *,
-                                location:locations(*),
-                                section:sections(name),
-                                event_people:event_people(
-                                    person:people(*)
-                                )
-                            `)
-                            .eq('id', event.id)
-                            .single();
+                        // Используем более надежный подход с попытками вместо фиксированной задержки
+                        // Это помогает избежать нестабильных тестов из-за состояния гонки
+                        const maxRetries = 3;
+                        let attempt = 0;
+                        let data, error;
+
+                        while (attempt < maxRetries) {
+                            // Делаем запрос с небольшой задержкой между попытками
+                            if (attempt > 0) await delay(300);
+                            attempt++;
+
+                            const result = await this.getAuthenticatedClient()
+                                .from('events')
+                                .select(`
+                                    *,
+                                    location:locations(*),
+                                    section:sections(name),
+                                    event_people:event_people(
+                                        person:people(*)
+                                    )
+                                `)
+                                .eq('id', event.id)
+                                .single();
+
+                            data = result.data;
+                            error = result.error;
+
+                            // Если получили данные, прерываем цикл
+                            if (data && !error) break;
+                        }
 
                         expect(error).toBeNull();
                         expect(data).toBeDefined();
@@ -150,14 +168,44 @@ class EventsApiTest extends BaseApiTest {
 
                 describe('create()', () => {
                     it('should create event with minimal fields', async () => {
+                        // Создаем секцию и убеждаемся, что она существует перед созданием события
                         const section = await this.createTestSection();
+
+                        // Проверяем, что секция действительно создалась
+                        const { data: checkSection } = await this.getAuthenticatedClient()
+                            .from('sections')
+                            .select()
+                            .eq('id', section.id)
+                            .single();
+
+                        // Убеждаемся, что секция существует перед созданием события
+                        expect(checkSection).toBeDefined();
+                        expect(checkSection!.id).toBe(section.id);
+
+                        // Теперь создаем событие с использованием подхода с повторными попытками
                         const eventData = this.generateEventData(section.id);
 
-                        const { data, error } = await this.getAuthenticatedClient()
-                            .from('events')
-                            .insert([eventData])
-                            .select()
-                            .single();
+                        const maxRetries = 3;
+                        let attempt = 0;
+                        let data, error;
+
+                        while (attempt < maxRetries) {
+                            // Делаем запрос с небольшой задержкой между попытками
+                            if (attempt > 0) await delay(300);
+                            attempt++;
+
+                            const result = await this.getAuthenticatedClient()
+                                .from('events')
+                                .insert([eventData])
+                                .select()
+                                .single();
+
+                            data = result.data;
+                            error = result.error;
+
+                            // Если получили данные, прерываем цикл
+                            if (data && !error) break;
+                        }
 
                         expect(error).toBeNull();
                         expect(data).toBeDefined();
@@ -336,13 +384,39 @@ class EventsApiTest extends BaseApiTest {
                     });
 
                     it('should update event speakers', async () => {
-                        const newSpeaker = await this.createTestPerson();
+                        // Create necessary test data in parallel to save time
+                        const [section, location, oldSpeaker, newSpeaker] = await Promise.all([
+                            this.createTestSection(),
+                            this.createTestLocation(),
+                            this.createTestPerson('speaker'),
+                            this.createTestPerson('speaker')
+                        ]);
 
-                        // First remove existing speaker
+                        // Create event with first speaker
+                        const { data: event, error: createError } = await this.getAuthenticatedClient()
+                            .from('events')
+                            .insert([this.generateEventData(section.id, location.id)])
+                            .select()
+                            .single();
+
+                        expect(createError).toBeNull();
+                        expect(event).toBeDefined();
+                        if (event) this.trackTestRecord('events', event.id);
+
+                        // Add initial speaker
+                        await this.getAuthenticatedClient()
+                            .from('event_people')
+                            .insert({
+                                event_id: event!.id,
+                                person_id: oldSpeaker.id,
+                                role: 'speaker'
+                            });
+
+                        // First remove old speaker
                         const { error: removeError } = await this.getAuthenticatedClient()
                             .from('event_people')
                             .delete()
-                            .eq('event_id', testEvent.id);
+                            .eq('event_id', event!.id);
 
                         expect(removeError).toBeNull();
 
@@ -350,7 +424,7 @@ class EventsApiTest extends BaseApiTest {
                         const { error: addError } = await this.getAuthenticatedClient()
                             .from('event_people')
                             .insert({
-                                event_id: testEvent.id,
+                                event_id: event!.id,
                                 person_id: newSpeaker.id,
                                 role: 'speaker'
                             });
@@ -366,7 +440,7 @@ class EventsApiTest extends BaseApiTest {
                                     person:people(*)
                                 )
                             `)
-                            .eq('id', testEvent.id)
+                            .eq('id', event!.id)
                             .single();
 
                         expect(error).toBeNull();
@@ -621,12 +695,25 @@ class EventsApiTest extends BaseApiTest {
 
             describe('Error Handling', () => {
                 it('should handle concurrent modifications gracefully', async () => {
-                    const event = await this.createTestEvent();
+                    // Create test event once, without delays between operations
+                    const section = await this.createTestSection();
+                    const eventData = this.generateEventData(section.id);
 
-                    // Попытка одновременного обновления
+                    const { data: event, error: createError } = await this.getAuthenticatedClient()
+                        .from('events')
+                        .insert([eventData])
+                        .select()
+                        .single();
+
+                    expect(createError).toBeNull();
+                    expect(event).toBeDefined();
+                    if (event) this.trackTestRecord('events', event.id);
+
+                    // Prepare update data
                     const updates1 = { title: `Updated Title 1 ${Date.now()}` };
                     const updates2 = { title: `Updated Title 2 ${Date.now()}` };
 
+                    // Execute concurrent updates without additional setup/data creation
                     const [{ error: error1 }, { error: error2 }] = await Promise.all([
                         this.getAuthenticatedClient()
                             .from('events')

@@ -1,10 +1,10 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { usePushStatistics, useNotificationHistory, usePushUsers, useSendNotification } from '../use-push';
 import { api } from '@/lib/supabase';
 import { showErrorMock, toastContext } from '@/__mocks__/providers-mock';
 import { TEST_DATA } from '@/__mocks__/test-constants';
-import { Providers } from '@/__mocks__/test-wrapper';
+import { Providers, queryClient } from '@/__mocks__/test-wrapper';
 
 // Мокаем API
 vi.mock('@/lib/supabase', () => ({
@@ -22,6 +22,10 @@ vi.mock('@/lib/supabase', () => ({
 vi.mock('@/components/providers/toast-provider', () => ({
     useToastContext: () => toastContext,
 }));
+
+// Мокаем fetch API для тестов useSendNotification
+const mockFetch = vi.fn();
+vi.stubGlobal('fetch', mockFetch);
 
 describe('Push Notification Hooks', () => {
     beforeEach(() => {
@@ -183,38 +187,154 @@ describe('Push Notification Hooks', () => {
         });
     });
 
-    describe('useSendNotification', () => {
+    describe('useSendNotification hook', () => {
         const mockNotification = {
-            title: 'Test Title',
-            body: 'Test Body',
-            target_type: 'all' as const,
-            data: {
-                action: 'open' as const,
-            },
+            title: 'Test Notification',
+            body: 'Test message',
+            target_type: 'all' as 'all' | 'specific_users',
+            data: { action: 'open' } as Record<string, unknown>,
         };
 
-        it('sends notification successfully', async () => {
-            (api.push.sendNotification as jest.Mock).mockResolvedValue({ success: true });
+        const successResponse = {
+            successful: 2,
+            failed: 0
+        };
 
+        beforeEach(() => {
+            // Reset all mocks
+            vi.clearAllMocks();
+            // Mock fetch для всех тестов
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: () => Promise.resolve(successResponse),
+            });
+            // Мокаем метод invalidateQueries у queryClient
+            queryClient.invalidateQueries = vi.fn();
+        });
+
+        it('sends notification successfully', async () => {
             const { result } = renderHook(() => useSendNotification(), { wrapper: Providers });
 
             result.current.mutate(mockNotification);
 
+            // Проверяем, что fetch был вызван с правильными аргументами
             await waitFor(() => {
-                expect(api.push.sendNotification).toHaveBeenCalledWith(mockNotification);
+                expect(mockFetch).toHaveBeenCalledWith('/api/push-notifications', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(mockNotification),
+                });
+            });
+
+            // Проверяем, что успешный ответ обрабатывается правильно
+            await waitFor(() => {
+                expect(toastContext.showSuccess).toHaveBeenCalledWith(
+                    `Notification sent successfully to ${successResponse.successful} devices. Failed: ${successResponse.failed}`
+                );
+            });
+
+            // Проверяем, что данные были инвалидированы
+            await waitFor(() => {
+                expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+                    queryKey: ['push_notifications']
+                });
+                expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+                    queryKey: ['push_statistics']
+                });
             });
         });
 
         it('handles error when sending notification', async () => {
-            const error = new Error('Failed to send notification');
-            (api.push.sendNotification as jest.Mock).mockRejectedValue(error);
+            // Мокаем ошибку со стороны API
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                json: () => Promise.resolve({ error: 'Failed to send notification' }),
+            });
 
             const { result } = renderHook(() => useSendNotification(), { wrapper: Providers });
 
             result.current.mutate(mockNotification);
 
+            // Проверяем, что error callback вызван с правильной ошибкой
             await waitFor(() => {
-                expect(showErrorMock).toHaveBeenCalledWith(error);
+                expect(showErrorMock).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Failed to send notification'
+                    })
+                );
+            });
+        });
+
+        it('handles network error when sending notification', async () => {
+            // Мокаем ошибку сети
+            const networkError = new Error('Network error');
+            mockFetch.mockRejectedValueOnce(networkError);
+
+            const { result } = renderHook(() => useSendNotification(), { wrapper: Providers });
+
+            result.current.mutate({
+                title: 'Test Notification',
+                body: 'Network Test',
+                target_type: 'all' as 'all' | 'specific_users',
+                data: { screen: 'home' } as Record<string, unknown>,
+            });
+
+            // Проверяем, что error callback вызван с сетевой ошибкой
+            await waitFor(() => {
+                expect(showErrorMock).toHaveBeenCalledWith(networkError);
+            });
+        });
+
+        it('sends notification to specific users', async () => {
+            const { result } = renderHook(() => useSendNotification(), { wrapper: Providers });
+
+            const targetedNotification = {
+                title: 'Targeted Notification',
+                body: 'For specific users',
+                target_type: 'specific_users' as 'all' | 'specific_users',
+                data: { screen: 'profile' } as Record<string, unknown>,
+                target_users: ['user1', 'user2'],
+            };
+
+            result.current.mutate(targetedNotification);
+
+            // Проверяем, что fetch был вызван с правильными данными для конкретных пользователей
+            await waitFor(() => {
+                expect(mockFetch).toHaveBeenCalledWith('/api/push-notifications', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(targetedNotification),
+                });
+            });
+        });
+
+        it('handles JSON parsing error', async () => {
+            // Мокаем ошибку парсинга JSON
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: () => Promise.reject(new Error('Invalid JSON')),
+            });
+
+            const { result } = renderHook(() => useSendNotification(), { wrapper: Providers });
+
+            result.current.mutate({
+                title: 'JSON Error Test',
+                body: 'Testing JSON error',
+                target_type: 'all' as 'all' | 'specific_users',
+                data: { action: 'test' } as Record<string, unknown>,
+            });
+
+            // Проверяем, что error callback вызван с ошибкой парсинга JSON
+            await waitFor(() => {
+                expect(showErrorMock).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Invalid JSON'
+                    })
+                );
             });
         });
     });

@@ -20,15 +20,22 @@ export interface PushNotification {
 }
 
 export interface PushUser {
-  id: number;
-  token: string;
-  platform: 'ios' | 'android';
-  created_at: string;
-  last_active: string;
+  id: string;
+  device_id: string;
   device_info: {
     deviceName: string;
     osName: string;
+    osVersion: string;
+    deviceModel: string;
+    appVersion: string;
+    buildNumber: string;
   };
+  push_token?: string;
+  settings: {
+    social_feed: boolean;
+    announcements: boolean;
+  };
+  last_active_at: string;
 }
 
 export interface NotificationHistory {
@@ -125,11 +132,32 @@ export function useSendNotification() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (notification: NotificationFormData) => api.push.sendNotification(notification),
-    onSuccess: async () => {
+    mutationFn: async (notification: NotificationFormData) => {
+      try {
+        // Use the API route instead of direct function call
+        const response = await fetch('/api/push-notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(notification),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to send notification');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Error sending notification:', error);
+        throw error;
+      }
+    },
+    onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ['push_notifications'] });
       await queryClient.invalidateQueries({ queryKey: ['push_statistics'] });
-      showSuccess('Notification sent successfully');
+      showSuccess(`Notification sent successfully to ${result.successful} devices. Failed: ${result.failed}`);
     },
     onError: error => {
       showError(error);

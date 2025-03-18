@@ -892,7 +892,7 @@ export const api = {
   push: {
     async getUsers() {
       const { data, error } = await supabase
-        .from('app_users')
+        .from('app_user_settings')
         .select('*')
         .order('last_active_at', { ascending: false });
 
@@ -902,9 +902,9 @@ export const api = {
 
     async getTokens() {
       const { data, error } = await supabase
-        .from('push_tokens')
-        .select('*, app_users(*)')
-        .eq('is_active', true);
+        .from('app_user_settings')
+        .select('*')
+        .not('push_token', 'is', null);
 
       if (error) throw error;
       return data;
@@ -921,23 +921,53 @@ export const api = {
     },
 
     async sendNotification(notification: NotificationFormData) {
-      const { data, error } = await supabase.rpc('send_push_notification', {
-        p_title: notification.title,
-        p_body: notification.body,
-        p_data: notification.data || {},
-        p_target_type: notification.target_type,
-        p_target_users: notification.target_users || [],
+      // Use the API route instead of importing the function
+      const response = await fetch('/api/push-notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(notification),
       });
 
-      if (error) throw error;
-      return data;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send notification');
+      }
+
+      return await response.json();
     },
 
     async getStatistics() {
-      const { data, error } = await supabase.rpc('get_push_statistics');
+      try {
+        // Get all users
+        const { data: allUsers, error: allUsersError } = await supabase
+          .from('app_user_settings')
+          .select('id, push_token, last_active_at');
 
-      if (error) throw error;
-      return data as PushStatistics;
+        if (allUsersError) throw allUsersError;
+
+        // Calculate statistics
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        const totalUsers = allUsers.length;
+        const activeUsers = allUsers.filter(user =>
+          new Date(user.last_active_at) > thirtyDaysAgo
+        ).length;
+        const activeTokens = allUsers.filter(user =>
+          user.push_token && new Date(user.last_active_at) > thirtyDaysAgo
+        ).length;
+
+        return {
+          total_users: totalUsers,
+          active_users: activeUsers,
+          active_tokens: activeTokens
+        } as PushStatistics;
+      } catch (error) {
+        console.error('Error getting push statistics:', error);
+        throw error;
+      }
     },
   },
 

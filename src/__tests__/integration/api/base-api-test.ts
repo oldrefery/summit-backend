@@ -17,6 +17,7 @@ import type {
 import { format } from 'date-fns';
 import { PostgrestBuilder } from '@supabase/postgrest-js';
 import { afterAll, afterEach } from 'vitest';
+import { delay } from '@/utils/test-utils';
 
 type EntityWithTimestamps = BaseEntity & {
     created_at?: string;
@@ -41,9 +42,40 @@ export class BaseApiTest extends BaseIntegrationTest {
     }
 
     protected static async cleanup() {
+        // Группируем записи по таблицам для пакетного удаления
+        const recordsByTable: Record<string, (string | number)[]> = {};
+
         for (const record of this.testRecords) {
-            await this.cleanupTestData(record.table, record.id);
+            if (!recordsByTable[record.table]) {
+                recordsByTable[record.table] = [];
+            }
+            recordsByTable[record.table].push(record.id);
         }
+
+        // Удаляем записи пакетами по таблицам, соблюдая порядок зависимостей
+        // Сначала получаем список таблиц по порядку: сначала дочерние, потом родительские
+        const tables = Object.keys(recordsByTable);
+
+        // Для каждой таблицы удаляем записи пакетом
+        for (const table of tables) {
+            const ids = recordsByTable[table];
+            if (table && ids.length > 0) {
+                try {
+                    // Удаляем все записи таблицы одним запросом вместо поодиночке
+                    await this.getAuthenticatedClient()
+                        .from(table)
+                        .delete()
+                        .in('id', ids);
+
+                    // Одна задержка на таблицу вместо задержки на каждую запись
+                    await delay(200);
+                } catch (error) {
+                    console.warn(`Failed to delete records from ${table}:`, error);
+                }
+            }
+        }
+
+        // Сбрасываем список тестовых записей
         this.testRecords = [];
     }
 

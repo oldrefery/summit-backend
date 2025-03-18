@@ -12,7 +12,7 @@ export const API = {
         /** Maximum number of notifications that can be sent in a single request */
         BATCH_SIZE: 100,
         /** Base URL for Expo Push Notification service */
-        PUSH_URL: 'https://exp.host/--/api/v2/push/send',
+        PUSH_URL: 'https://exp.host',
     },
 } as const;
 
