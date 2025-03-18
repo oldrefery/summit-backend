@@ -28,7 +28,7 @@ vi.mock('expo-server-sdk', () => {
         },
         ExpoPushReceipt: vi.fn(),
     };
-}));
+});
 
 // Добавляем статический метод после мока
 vi.stubGlobal('Expo', {
@@ -38,8 +38,10 @@ vi.stubGlobal('Expo', {
 });
 
 // Используем any для мокинга сложных типов Supabase
+// @ts-ignore - игнорируем ошибки типов для Supabase мока
 vi.mock('@/lib/supabase-server', () => ({
     supabase: {
+        // @ts-ignore - сложная типизация PostgrestQueryBuilder
         from: vi.fn((table: string): any => {
             // Мокаем app_user_settings table
             if (table === 'app_user_settings') {
