@@ -6,7 +6,7 @@ import { showErrorMock, toastContext } from '@/__mocks__/providers-mock';
 import { TEST_DATA } from '@/__mocks__/test-constants';
 import { Providers, queryClient } from '@/__mocks__/test-wrapper';
 
-// Мокаем API
+// Mock API
 vi.mock('@/lib/supabase', () => ({
     api: {
         push: {
@@ -18,12 +18,12 @@ vi.mock('@/lib/supabase', () => ({
     },
 }));
 
-// Мокаем toast-provider
+// Mock toast-provider
 vi.mock('@/components/providers/toast-provider', () => ({
     useToastContext: () => toastContext,
 }));
 
-// Мокаем fetch API для тестов useSendNotification
+// Mock fetch API for useSendNotification tests
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
@@ -203,12 +203,12 @@ describe('Push Notification Hooks', () => {
         beforeEach(() => {
             // Reset all mocks
             vi.clearAllMocks();
-            // Mock fetch для всех тестов
+            // Mock fetch for all tests
             mockFetch.mockResolvedValue({
                 ok: true,
                 json: () => Promise.resolve(successResponse),
             });
-            // Мокаем метод invalidateQueries у queryClient
+            // Mock invalidateQueries method of queryClient
             queryClient.invalidateQueries = vi.fn();
         });
 
@@ -217,7 +217,7 @@ describe('Push Notification Hooks', () => {
 
             result.current.mutate(mockNotification);
 
-            // Проверяем, что fetch был вызван с правильными аргументами
+            // Check that fetch was called with the correct arguments
             await waitFor(() => {
                 expect(mockFetch).toHaveBeenCalledWith('/api/push-notifications', {
                     method: 'POST',
@@ -228,14 +228,14 @@ describe('Push Notification Hooks', () => {
                 });
             });
 
-            // Проверяем, что успешный ответ обрабатывается правильно
+            // Check that the successful response is handled correctly
             await waitFor(() => {
                 expect(toastContext.showSuccess).toHaveBeenCalledWith(
                     `Notification sent successfully to ${successResponse.successful} devices. Failed: ${successResponse.failed}`
                 );
             });
 
-            // Проверяем, что данные были инвалидированы
+            // Check that the data was invalidated
             await waitFor(() => {
                 expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
                     queryKey: ['push_notifications']
@@ -247,7 +247,7 @@ describe('Push Notification Hooks', () => {
         });
 
         it('handles error when sending notification', async () => {
-            // Мокаем ошибку со стороны API
+            // Mock API error
             mockFetch.mockResolvedValueOnce({
                 ok: false,
                 json: () => Promise.resolve({ error: 'Failed to send notification' }),
@@ -257,7 +257,7 @@ describe('Push Notification Hooks', () => {
 
             result.current.mutate(mockNotification);
 
-            // Проверяем, что error callback вызван с правильной ошибкой
+            // Check that error callback was called with the correct error
             await waitFor(() => {
                 expect(showErrorMock).toHaveBeenCalledWith(
                     expect.objectContaining({
@@ -268,7 +268,7 @@ describe('Push Notification Hooks', () => {
         });
 
         it('handles network error when sending notification', async () => {
-            // Мокаем ошибку сети
+            // Mock network error
             const networkError = new Error('Network error');
             mockFetch.mockRejectedValueOnce(networkError);
 
@@ -281,7 +281,7 @@ describe('Push Notification Hooks', () => {
                 data: { screen: 'home' } as Record<string, unknown>,
             });
 
-            // Проверяем, что error callback вызван с сетевой ошибкой
+            // Check that error callback was called with network error
             await waitFor(() => {
                 expect(showErrorMock).toHaveBeenCalledWith(networkError);
             });
@@ -300,7 +300,7 @@ describe('Push Notification Hooks', () => {
 
             result.current.mutate(targetedNotification);
 
-            // Проверяем, что fetch был вызван с правильными данными для конкретных пользователей
+            // Check that fetch was called with the correct data for specific users
             await waitFor(() => {
                 expect(mockFetch).toHaveBeenCalledWith('/api/push-notifications', {
                     method: 'POST',
@@ -313,7 +313,7 @@ describe('Push Notification Hooks', () => {
         });
 
         it('handles JSON parsing error', async () => {
-            // Мокаем ошибку парсинга JSON
+            // Mock JSON parsing error
             mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: () => Promise.reject(new Error('Invalid JSON')),
@@ -328,7 +328,7 @@ describe('Push Notification Hooks', () => {
                 data: { action: 'test' } as Record<string, unknown>,
             });
 
-            // Проверяем, что error callback вызван с ошибкой парсинга JSON
+            // Check that error callback was called with JSON parsing error
             await waitFor(() => {
                 expect(showErrorMock).toHaveBeenCalledWith(
                     expect.objectContaining({
