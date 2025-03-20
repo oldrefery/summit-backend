@@ -121,7 +121,7 @@ function createMockQueryBuilder(): MockQueryBuilder {
         upsert: vi.fn().mockReturnThis(),
     };
 
-    // Настраиваем моки для возврата данных
+    // Setting up mocks to return data
     mockChain.order.mockImplementation(() => ({ data: [mockPerson], error: null }));
     mockChain.single.mockImplementation(() => ({ data: mockPerson, error: null }));
     mockChain.eq.mockImplementation(() => ({ data: null, error: null }));

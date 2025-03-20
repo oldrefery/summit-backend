@@ -12,7 +12,7 @@ export class RateLimiter {
     const attempt = this.attempts.get(key);
     if (!attempt) return false;
 
-    // Если время окна истекло, сбрасываем счетчик
+    // If window time has expired, reset the counter
     if (Date.now() - attempt.timestamp > this.windowMs) {
       this.attempts.delete(key);
       return false;

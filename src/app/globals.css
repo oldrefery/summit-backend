@@ -147,7 +147,7 @@
     color: hsl(var(--accent-foreground));
   }
 
-  /* Стили для react-select */
+  /* Styles for react-select */
   .react-select-container .react-select__control {
     background-color: hsl(var(--secondary));
     border-color: hsl(var(--border));

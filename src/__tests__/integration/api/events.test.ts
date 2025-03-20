@@ -112,14 +112,14 @@ class EventsApiTest extends BaseApiTest {
                         const event = await this.createTestEvent(section.id, location.id);
                         await this.assignSpeakerToEvent(event.id, speaker.id);
 
-                        // Используем более надежный подход с попытками вместо фиксированной задержки
-                        // Это помогает избежать нестабильных тестов из-за состояния гонки
+                        // Using a more reliable approach with retries instead of fixed delay
+                        // This helps avoid flaky tests due to race conditions
                         const maxRetries = 3;
                         let attempt = 0;
                         let data, error;
 
                         while (attempt < maxRetries) {
-                            // Делаем запрос с небольшой задержкой между попытками
+                            // Making request with a small delay between attempts
                             if (attempt > 0) await delay(300);
                             attempt++;
 
@@ -139,7 +139,7 @@ class EventsApiTest extends BaseApiTest {
                             data = result.data;
                             error = result.error;
 
-                            // Если получили данные, прерываем цикл
+                            // If we got the data, break the loop
                             if (data && !error) break;
                         }
 
@@ -168,21 +168,21 @@ class EventsApiTest extends BaseApiTest {
 
                 describe('create()', () => {
                     it('should create event with minimal fields', async () => {
-                        // Создаем секцию и убеждаемся, что она существует перед созданием события
+                        // Creating a section and making sure it exists before creating the event
                         const section = await this.createTestSection();
 
-                        // Проверяем, что секция действительно создалась
+                        // Checking that the section was actually created
                         const { data: checkSection } = await this.getAuthenticatedClient()
                             .from('sections')
                             .select()
                             .eq('id', section.id)
                             .single();
 
-                        // Убеждаемся, что секция существует перед созданием события
+                        // Making sure the section exists before creating the event
                         expect(checkSection).toBeDefined();
                         expect(checkSection!.id).toBe(section.id);
 
-                        // Теперь создаем событие с использованием подхода с повторными попытками
+                        // Now creating the event using the retry approach
                         const eventData = this.generateEventData(section.id);
 
                         const maxRetries = 3;
@@ -190,7 +190,7 @@ class EventsApiTest extends BaseApiTest {
                         let data, error;
 
                         while (attempt < maxRetries) {
-                            // Делаем запрос с небольшой задержкой между попытками
+                            // Making request with a small delay between attempts
                             if (attempt > 0) await delay(300);
                             attempt++;
 
@@ -203,7 +203,7 @@ class EventsApiTest extends BaseApiTest {
                             data = result.data;
                             error = result.error;
 
-                            // Если получили данные, прерываем цикл
+                            // If we got the data, break the loop
                             if (data && !error) break;
                         }
 
@@ -595,7 +595,7 @@ class EventsApiTest extends BaseApiTest {
                     const eventData = {
                         ...this.generateEventData(section.id),
                         start_time: `${date}T10:00:00+00:00`,
-                        end_time: `${date}T09:00:00+00:00` // Конец раньше начала
+                        end_time: `${date}T09:00:00+00:00` // End time before start time
                     };
 
                     await this.expectSupabaseError(
@@ -630,7 +630,7 @@ class EventsApiTest extends BaseApiTest {
                     const location = await this.createTestLocation();
                     const date = format(new Date(), 'yyyy-MM-dd');
 
-                    // Создаем первое событие
+                    // Create first event
                     const event1Data = {
                         ...this.generateEventData(section.id, location.id),
                         start_time: `${date}T09:00:00+00:00`,
@@ -646,10 +646,10 @@ class EventsApiTest extends BaseApiTest {
                     expect(event1).toBeDefined();
                     if (event1) this.trackTestRecord('events', event1.id);
 
-                    // Пытаемся создать второе событие с пересекающимся временем
+                    // Trying to create a second event with overlapping time
                     const event2Data = {
                         ...this.generateEventData(section.id, location.id),
-                        start_time: `${date}T09:30:00+00:00`, // Пересекается с первым событием
+                        start_time: `${date}T09:30:00+00:00`, // Overlaps with first event
                         end_time: `${date}T10:30:00+00:00`
                     };
 
@@ -725,7 +725,7 @@ class EventsApiTest extends BaseApiTest {
                             .eq('id', event.id)
                     ]);
 
-                    // Одно из обновлений должно пройти успешно
+                    // One of the updates should succeed
                     expect(error1 === null || error2 === null).toBe(true);
                 });
 
@@ -733,7 +733,7 @@ class EventsApiTest extends BaseApiTest {
                     const section = await this.createTestSection();
                     const date = format(new Date(), 'yyyy-MM-dd');
 
-                    // Попытка создать событие с датой, не соответствующей времени
+                    // Attempt to create event with date not matching the time
                     const eventData = {
                         ...this.generateEventData(section.id),
                         date: date,
@@ -821,7 +821,7 @@ class EventsApiTest extends BaseApiTest {
                     const section = await this.createTestSection();
                     await this.createTestEvent(section.id);
 
-                    // Попытка удалить секцию с существующими событиями
+                    // Attempt to delete section with existing events
                     await this.expectSupabaseError(
                         this.getAuthenticatedClient()
                             .from('sections')
@@ -836,7 +836,7 @@ class EventsApiTest extends BaseApiTest {
                     const location = await this.createTestLocation();
                     await this.createTestEvent(section.id, location.id);
 
-                    // Попытка удалить локацию с существующими событиями
+                    // Attempt to delete location with existing events
                     await this.expectSupabaseError(
                         this.getAuthenticatedClient()
                             .from('locations')
@@ -851,7 +851,7 @@ class EventsApiTest extends BaseApiTest {
                     const speaker = await this.createTestPerson('speaker');
                     await this.assignSpeakerToEvent(event.id, speaker.id);
 
-                    // Попытка удалить спикера, привязанного к событию
+                    // Attempt to delete speaker attached to event
                     await this.expectSupabaseError(
                         this.getAuthenticatedClient()
                             .from('people')
@@ -866,13 +866,13 @@ class EventsApiTest extends BaseApiTest {
                     const speaker = await this.createTestPerson('speaker');
                     const eventPerson = await this.assignSpeakerToEvent(event.id, speaker.id);
 
-                    // Удаляем событие
+                    // Delete event
                     await this.getAuthenticatedClient()
                         .from('events')
                         .delete()
                         .eq('id', event.id);
 
-                    // Проверяем, что связь event_people тоже удалена
+                    // Verify event_people cleanup
                     const { data: checkData } = await this.getAuthenticatedClient()
                         .from('event_people')
                         .select()
@@ -882,18 +882,18 @@ class EventsApiTest extends BaseApiTest {
                 });
 
                 it('should handle complex event updates with speakers and location', async () => {
-                    // Создаем начальные данные
+                    // Create initial data
                     const section = await this.createTestSection();
                     const location1 = await this.createTestLocation();
                     const location2 = await this.createTestLocation();
                     const speaker1 = await this.createTestPerson('speaker');
                     const speaker2 = await this.createTestPerson('speaker');
 
-                    // Создаем событие с первой локацией и первым спикером
+                    // Create event with first location and first speaker
                     const event = await this.createTestEvent(section.id, location1.id);
                     await this.assignSpeakerToEvent(event.id, speaker1.id);
 
-                    // Обновляем событие: меняем локацию и спикера
+                    // Update event: change location and speaker
                     const { data: updatedEvent, error: updateError } = await this.getAuthenticatedClient()
                         .from('events')
                         .update({ location_id: location2.id })
@@ -905,7 +905,7 @@ class EventsApiTest extends BaseApiTest {
                     expect(updatedEvent).toBeDefined();
                     expect(updatedEvent!.location_id).toBe(location2.id);
 
-                    // Обновляем спикера
+                    // Update speaker
                     const { error: removeError } = await this.getAuthenticatedClient()
                         .from('event_people')
                         .delete()
@@ -923,7 +923,7 @@ class EventsApiTest extends BaseApiTest {
 
                     expect(addError).toBeNull();
 
-                    // Проверяем финальное состояние
+                    // Verify final state
                     const { data: finalEvent } = await this.getAuthenticatedClient()
                         .from('events')
                         .select(`

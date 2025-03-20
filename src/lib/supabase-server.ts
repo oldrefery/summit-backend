@@ -1,5 +1,5 @@
 // src/lib/supabase-server.ts
-// Серверная версия supabase.ts без использования тостов
+// Server version of supabase.ts without using toasts
 
 import { createClient } from '@supabase/supabase-js';
 import type {
@@ -24,7 +24,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     },
 });
 
-// Сервисный клиент с повышенными привилегиями для обхода RLS
+// Service client with elevated privileges to bypass RLS
 export const supabaseAdmin = supabaseServiceKey
     ? createClient(supabaseUrl, supabaseServiceKey, {
         auth: {
@@ -32,7 +32,7 @@ export const supabaseAdmin = supabaseServiceKey
             persistSession: true,
         },
     })
-    : supabase; // Fallback на обычный клиент, если сервисный ключ не задан
+    : supabase; // Fallback to regular client if service key is not set
 
 export async function ensureAuthenticated() {
     const email = supabaseAnonEmail;
@@ -55,17 +55,17 @@ export async function ensureAuthenticated() {
     }
 }
 
-// Неиспользуемая функция - закомментирована для будущего использования
+// Unused function - commented for future use
 // function getPublicFileUrl(bucketName: string, fileName: string) {
 //    return `${supabaseUrl}/storage/v1/object/public/${bucketName}/${fileName}`;
 // }
 
-// Неиспользуемая функция - закомментирована для будущего использования
+// Unused function - commented for future use
 // function logError(message: string) {
 //    console.error(`[Server Error]: ${message}`);
 // }
 
-// Серверная функция для сохранения истории уведомлений
+// Server function to save notification history
 export async function saveNotificationHistoryDirectly(
     notification: NotificationFormData,
     successCount: number,
@@ -73,7 +73,7 @@ export async function saveNotificationHistoryDirectly(
     sentBy: string = 'system'
 ) {
     try {
-        // Используем RPC вызов для обхода RLS
+        // Using RPC call to bypass RLS
         const { error } = await supabase.rpc('insert_notification_history', {
             p_title: notification.title,
             p_body: notification.body,
@@ -89,7 +89,7 @@ export async function saveNotificationHistoryDirectly(
         if (error) {
             console.error('Error in saveNotificationHistoryDirectly (RPC):', error);
 
-            // Если RPC не сработал, пробуем прямую вставку
+            // If RPC failed, try direct insertion
             const { error: insertError } = await supabase
                 .from('notification_history')
                 .insert({

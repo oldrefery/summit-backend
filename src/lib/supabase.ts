@@ -831,17 +831,23 @@ export const api = {
         throw rpcError;
       }
 
-      // Upload JSON file to storage
-      const { error: uploadError } = await supabase.storage
-        .from('app-data')
-        .upload('app-data.json', JSON.stringify(data.data), {
-          upsert: true,
-          contentType: 'application/json',
-        });
+      // Make sure data.data includes notifications field
+      if (data && data.data) {
+        // Upload JSON file to storage with full data including notifications
+        const { error: uploadError } = await supabase.storage
+          .from('app-data')
+          .upload('app-data.json', JSON.stringify(data.data), {
+            upsert: true,
+            contentType: 'application/json',
+          });
 
-      if (uploadError) {
-        console.error('Failed to upload file:', uploadError);
-        throw uploadError;
+        if (uploadError) {
+          console.error('Failed to upload file:', uploadError);
+          throw uploadError;
+        }
+      } else {
+        console.error('Invalid data format from publish_new_version');
+        throw new Error('Invalid data format from publish_new_version');
       }
 
       return data;

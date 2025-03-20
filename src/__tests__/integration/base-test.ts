@@ -67,7 +67,7 @@ export class BaseIntegrationTest {
         tableName: string,
         data: Partial<T>
     ): Promise<T> {
-        // Эффективное создание тестовых данных с обработкой ошибок
+        // Efficient creation of test data with error handling
         const { data: createdData, error } = await this.getAuthenticatedClient()
             .from(tableName)
             .insert([data])
@@ -80,7 +80,7 @@ export class BaseIntegrationTest {
         }
         if (!createdData) throw new Error(`Failed to create test data in ${tableName}`);
 
-        // Уменьшенная задержка для более быстрых тестов
+        // Reduced delay for faster tests
         await delay(200);
         return createdData as T;
     }
@@ -97,11 +97,11 @@ export class BaseIntegrationTest {
                 .delete()
                 .eq('id', id);
 
-            // Уменьшенная задержка для более быстрых тестов
+            // Reduced delay for faster tests
             await delay(200);
         } catch (error) {
             console.warn(`Failed to clean up test data in ${tableName}, id=${id}:`, error);
-            // Не выбрасываем ошибку, чтобы процесс очистки мог продолжаться
+            // Don't throw error to allow the cleanup process to continue
         }
     }
 }
