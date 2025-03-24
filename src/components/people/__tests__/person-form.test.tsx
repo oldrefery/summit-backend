@@ -5,6 +5,15 @@ import { usePeople } from '@/hooks/use-people';
 import { useToastContext } from '@/components/providers/toast-provider';
 import { storage } from '@/lib/supabase';
 
+// Mock ResizeObserver
+class ResizeObserverMock {
+    observe() { }
+    unobserve() { }
+    disconnect() { }
+}
+
+global.ResizeObserver = ResizeObserverMock;
+
 // Mock the hooks and services
 vi.mock('@/hooks/use-people', () => ({
     usePeople: vi.fn(),
@@ -178,6 +187,7 @@ describe('PersonForm', () => {
             expect(mockCreatePerson.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({
                 name: 'John Doe',
                 email: 'john@example.com',
+                hidden: false,
             }));
             expect(mockOnOpenChangeAction).toHaveBeenCalledWith(false);
             expect(mockOnSuccess).toHaveBeenCalled();
@@ -308,6 +318,36 @@ describe('PersonForm', () => {
                     bio: 'Updated bio information',
                 }),
             });
+        });
+    });
+
+    it('toggles hidden status correctly', async () => {
+        render(
+            <PersonForm
+                open={true}
+                onOpenChangeAction={mockOnOpenChangeAction}
+                onSuccess={mockOnSuccess}
+            />
+        );
+
+        const nameInput = screen.getByLabelText(/name/i);
+        fireEvent.change(nameInput, { target: { name: 'name', value: 'John Doe' } });
+
+        // Find the hidden toggle by looking for the label text
+        const hiddenLabel = screen.getByText('Hidden');
+        const hiddenSwitch = hiddenLabel.closest('div')?.parentElement?.querySelector('button');
+        if (hiddenSwitch) {
+            fireEvent.click(hiddenSwitch);
+        }
+
+        const submitButton = screen.getByRole('button', { name: /create/i });
+        fireEvent.click(submitButton);
+
+        await waitFor(() => {
+            expect(mockCreatePerson.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({
+                name: 'John Doe',
+                hidden: true,
+            }));
         });
     });
 }); 

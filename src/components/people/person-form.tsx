@@ -26,6 +26,7 @@ import { storage } from '@/lib/supabase';
 import { Person, PersonRole } from '@/types';
 import { isToastActive } from '@/components/ui/use-toast';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 
 interface PersonFormProps {
   person?: Partial<Person>;
@@ -56,6 +57,7 @@ export function PersonForm({
     mobile: string;
     bio: string;
     photo_url: string;
+    hidden: boolean;
   }>({
     name: '',
     title: '',
@@ -66,6 +68,7 @@ export function PersonForm({
     mobile: '',
     bio: '',
     photo_url: '',
+    hidden: false,
   });
   const [emailError, setEmailError] = useState('');
   const [photoFile, setPhotoFile] = useState<FileImage>(undefined);
@@ -94,6 +97,7 @@ export function PersonForm({
         mobile: person.mobile || '',
         bio: person.bio || '',
         photo_url: person.photo_url || '',
+        hidden: person.hidden || false,
       });
       setPhotoFile(undefined);
     } else {
@@ -107,6 +111,7 @@ export function PersonForm({
         mobile: '',
         bio: '',
         photo_url: '',
+        hidden: false,
       });
       setPhotoFile(undefined);
     }
@@ -371,6 +376,27 @@ export function PersonForm({
                 onChange={handleInputChange}
                 rows={4}
               />
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-4 bg-gray-50">
+              <div className="space-y-0.5">
+                <Label className="text-base font-semibold">Hidden</Label>
+                <p className="text-sm text-muted-foreground">
+                  Hide this person from the list in the mobile app
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-500">
+                  {formData.hidden ? 'Yes' : 'No'}
+                </span>
+                <Switch
+                  checked={formData.hidden}
+                  onCheckedChange={(checked: boolean) => {
+                    setFormData(prev => ({ ...prev, hidden: checked }));
+                    setIsDirty(true);
+                  }}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter className="mt-6">
