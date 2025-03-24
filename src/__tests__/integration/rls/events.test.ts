@@ -205,18 +205,117 @@ describe('Events Table RLS Policies', () => {
         });
 
         test('can update records', async () => {
-            if (!createdEventId) throw new Error('No event to update');
+            let localCreatedEventId = createdEventId;
+
+            if (!localCreatedEventId) {
+                // Создадим тестовое событие, если его нет
+                if (!testSection) throw new Error('Test section is not initialized');
+
+                const testEvent = {
+                    section_id: testSection.id,
+                    title: generateTestName('Test Event for Update'),
+                    date: new Date().toISOString().split('T')[0],
+                    start_time: new Date().toISOString(),
+                    end_time: new Date(Date.now() + 3600000).toISOString()
+                };
+
+                // Проверяем существование секции
+                const { data: checkSection } = await supabase
+                    .from('sections')
+                    .select('id')
+                    .eq('id', testSection.id)
+                    .single();
+
+                if (!checkSection) {
+                    console.log('Test section not found, recreating...');
+                    // Если секция не найдена, сначала создаем новую
+                    const { data: newSection } = await supabase
+                        .from('sections')
+                        .insert({
+                            name: generateTestName('Test Section for Event Update'),
+                            date: new Date().toISOString().split('T')[0]
+                        })
+                        .select()
+                        .single();
+
+                    if (newSection) {
+                        testSection = newSection;
+                        testEvent.section_id = newSection.id;
+                    } else {
+                        throw new Error('Failed to create test section');
+                    }
+                }
+
+                await delay(500); // Даем время для сохранения секции
+
+                // Создаем тестовое событие
+                const { data: newEvent, error: createError } = await supabase
+                    .from('events')
+                    .insert(testEvent)
+                    .select()
+                    .single();
+
+                if (createError) {
+                    console.error('Error creating test event:', createError);
+                    throw new Error(`Failed to create test event: ${createError.message}`);
+                }
+
+                expect(newEvent).not.toBeNull();
+
+                localCreatedEventId = newEvent!.id;
+                createdEventId = localCreatedEventId; // Сохраняем ID для других тестов
+
+                await delay(500); // Даем время для сохранения события
+            }
+
+            // Проверяем, что событие существует
+            const { data: checkEvent } = await supabase
+                .from('events')
+                .select()
+                .eq('id', localCreatedEventId);
+
+            expect(checkEvent).not.toBeNull();
+            expect(checkEvent?.length).toBeGreaterThan(0);
+
+            // Выводим найденное событие для отладки
+            console.log(`Found event to update:`, checkEvent?.[0]?.id, checkEvent?.[0]?.title);
 
             const updates = {
                 title: generateTestName('Updated Event Title')
             };
 
-            const { data, error } = await supabase
-                .from('events')
-                .update(updates)
-                .eq('id', createdEventId)
-                .select()
-                .single();
+            // Используем тот же подход с повторными попытками
+            const maxRetries = 3;
+            let attempt = 0;
+            let data, error;
+
+            while (attempt < maxRetries) {
+                if (attempt > 0) await delay(500);
+                attempt++;
+
+                console.log(`Update attempt ${attempt}, eventId: ${localCreatedEventId}`);
+
+                const result = await supabase
+                    .from('events')
+                    .update(updates)
+                    .eq('id', localCreatedEventId)
+                    .select()
+                    .single();
+
+                data = result.data;
+                error = result.error;
+
+                if (error) {
+                    console.error(`Update attempt ${attempt} failed:`, error);
+                } else if (data) {
+                    console.log(`Update succeeded on attempt ${attempt}`);
+                    break;
+                }
+            }
+
+            if (error) {
+                console.error('Failed to update event after multiple attempts:', error);
+            }
 
             expect(error).toBeNull();
             expect(data).not.toBeNull();

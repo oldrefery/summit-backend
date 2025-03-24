@@ -101,6 +101,7 @@ export class BaseApiTest extends BaseIntegrationTest {
             country: 'Test Country',
             email: `test.${timestamp}@example.com`,
             mobile: `+1234567${timestamp.toString().slice(-4)}`,
+            hidden: false,
         };
     }
 
