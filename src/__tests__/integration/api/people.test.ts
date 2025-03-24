@@ -385,6 +385,103 @@ class PeopleApiTest extends BaseApiTest {
                     if (data) this.trackTestRecord('people', data.id);
                 });
             });
+
+            describe('Hidden Field', () => {
+                it('should create a person with hidden field set to false by default', async () => {
+                    const personData = this.generatePersonData('attendee');
+                    delete personData.hidden; // Ensure hidden is not explicitly set
+
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([personData])
+                        .select()
+                        .single();
+
+                    expect(error).toBeNull();
+                    expect(data).not.toBeNull();
+                    if (data) this.trackTestRecord('people', data.id);
+
+                    // Check default value is false
+                    expect(data?.hidden).toBe(false);
+                });
+
+                it('should create a person with hidden field explicitly set', async () => {
+                    const personData = this.generatePersonData('speaker');
+                    personData.hidden = true;
+
+                    const { data, error } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([personData])
+                        .select()
+                        .single();
+
+                    expect(error).toBeNull();
+                    expect(data).not.toBeNull();
+                    if (data) this.trackTestRecord('people', data.id);
+
+                    // Check explicit value is preserved
+                    expect(data?.hidden).toBe(true);
+                });
+
+                it('should update a person\'s hidden field', async () => {
+                    // Create a person first
+                    const personData = this.generatePersonData('attendee');
+                    personData.hidden = false;
+
+                    const { data: createData, error: createError } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([personData])
+                        .select()
+                        .single();
+
+                    expect(createError).toBeNull();
+                    expect(createData).not.toBeNull();
+                    if (!createData) throw new Error('Failed to create test person');
+                    this.trackTestRecord('people', createData.id);
+
+                    // Update the hidden field
+                    const { data: updateData, error: updateError } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .update({ hidden: true })
+                        .eq('id', createData.id)
+                        .select()
+                        .single();
+
+                    expect(updateError).toBeNull();
+                    expect(updateData).not.toBeNull();
+                    expect(updateData?.hidden).toBe(true);
+                });
+
+                it('should include hidden field in published JSON data', async () => {
+                    // Create a person with hidden = true
+                    const personData = this.generatePersonData('attendee');
+                    personData.hidden = true;
+
+                    const { data: createData, error: createError } = await this.getAuthenticatedClient()
+                        .from('people')
+                        .insert([personData])
+                        .select()
+                        .single();
+
+                    expect(createError).toBeNull();
+                    if (!createData) throw new Error('Failed to create test person');
+                    this.trackTestRecord('people', createData.id);
+
+                    // Call publish_new_version to generate JSON
+                    const { data: publishData, error: publishError } = await this.getAuthenticatedClient()
+                        .rpc('publish_new_version');
+
+                    expect(publishError).toBeNull();
+                    expect(publishData).not.toBeNull();
+
+                    // Find the person in the published data
+                    const publishedPeople = publishData?.data?.data?.people || [];
+                    const publishedPerson = publishedPeople.find((p: { id: string }) => p.id === createData.id);
+
+                    expect(publishedPerson).toBeDefined();
+                    expect(publishedPerson?.hidden).toBe(true);
+                });
+            });
         });
     }
 }

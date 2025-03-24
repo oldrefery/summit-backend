@@ -14,6 +14,7 @@ export interface Person extends BaseEntity {
   country?: string | null;
   email?: string | null;
   mobile?: string | null;
+  hidden?: boolean;
 }
 
 export interface Event extends BaseEntity {

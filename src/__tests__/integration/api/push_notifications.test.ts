@@ -25,7 +25,7 @@ class PushNotificationsApiTest extends BaseApiTest {
                     expect(typeof data).toBe('number');
                     expect(data).toBeGreaterThan(0);
 
-                    // Проверяем запись в истории
+                    // Check entry in history
                     const { data: historyData } = await this.getAuthenticatedClient()
                         .from('notification_history')
                         .select('*')
@@ -55,7 +55,7 @@ class PushNotificationsApiTest extends BaseApiTest {
                     expect(typeof data).toBe('number');
                     expect(data).toBeGreaterThan(0);
 
-                    // Проверяем запись в истории
+                    // Check entry in history
                     const { data: historyData } = await this.getAuthenticatedClient()
                         .from('notification_history')
                         .select('*')
@@ -83,7 +83,7 @@ class PushNotificationsApiTest extends BaseApiTest {
                     expect(typeof data).toBe('number');
                     expect(data).toBeGreaterThan(0);
 
-                    // Проверяем запись в истории
+                    // Check entry in history
                     const { data: historyData } = await this.getAuthenticatedClient()
                         .from('notification_history')
                         .select('*')
@@ -99,11 +99,11 @@ class PushNotificationsApiTest extends BaseApiTest {
                 it('should record notification in history', async () => {
                     const device = await this.createTestAppUserSettings();
 
-                    // Отправляем уведомление
+                    // Send notification
                     await this.getAuthenticatedClient().rpc(
                         'send_push_notification',
                         {
-                            p_title: 'Test Notification',
+                            p_title: 'Test RPC Notification',
                             p_body: 'Test message',
                             p_data: { type: 'test' },
                             p_target_type: 'specific_users',
@@ -111,7 +111,7 @@ class PushNotificationsApiTest extends BaseApiTest {
                         }
                     );
 
-                    // Проверяем запись в истории
+                    // Check history record
                     const { data, error } = await this.getAuthenticatedClient()
                         .from('notification_history')
                         .select('*')
@@ -121,7 +121,7 @@ class PushNotificationsApiTest extends BaseApiTest {
 
                     expect(error).toBeNull();
                     expect(data).toBeDefined();
-                    expect(data.title).toBe('Test Notification');
+                    expect(data.title).toBe('Test RPC Notification');
                     expect(data.body).toBe('Test message');
                     expect(data.target_type).toBe('specific_users');
                     expect(data.target_users).toContain(device.device_id);
@@ -141,7 +141,7 @@ class PushNotificationsApiTest extends BaseApiTest {
                     expect(data[0]).toHaveProperty('total_tokens');
                     expect(data[0]).toHaveProperty('active_tokens');
 
-                    // Проверяем типы данных
+                    // Check data types
                     expect(typeof data[0].total_users).toBe('number');
                     expect(typeof data[0].active_users).toBe('number');
                     expect(typeof data[0].total_tokens).toBe('number');
@@ -155,7 +155,7 @@ class PushNotificationsApiTest extends BaseApiTest {
                         this.getAuthenticatedClient().rpc(
                             'send_push_notification',
                             {
-                                p_title: '', // пустой заголовок
+                                p_title: '', // empty title
                                 p_body: 'Test message',
                                 p_data: {},
                                 p_target_type: 'all',
@@ -169,7 +169,7 @@ class PushNotificationsApiTest extends BaseApiTest {
                             'send_push_notification',
                             {
                                 p_title: 'Test',
-                                p_body: '', // пустое сообщение
+                                p_body: '', // empty message
                                 p_data: {},
                                 p_target_type: 'all',
                                 p_target_users: []
@@ -186,7 +186,7 @@ class PushNotificationsApiTest extends BaseApiTest {
                                 p_title: 'Test',
                                 p_body: 'Test message',
                                 p_data: {},
-                                p_target_type: 'invalid', // неверный тип
+                                p_target_type: 'invalid', // invalid type
                                 p_target_users: []
                             }
                         )
@@ -202,7 +202,7 @@ class PushNotificationsApiTest extends BaseApiTest {
                                 p_body: 'Test message',
                                 p_data: {},
                                 p_target_type: 'specific_users',
-                                p_target_devices: [] // пустой список устройств
+                                p_target_devices: [] // empty device list
                             }
                         )
                     );

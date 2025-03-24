@@ -20,7 +20,7 @@ import { ConfirmDelete } from '@/components/ui/confirm-delete';
 import { useToastContext } from '@/components/providers/toast-provider';
 import { debounce } from 'lodash';
 import Link from 'next/link';
-import { ArrowLeft, Users } from 'lucide-react';
+import { ArrowLeft, Users, EyeOff, Eye } from 'lucide-react';
 import Image from 'next/image';
 import { ImportDialog } from '@/components/people/import-dialog';
 
@@ -35,6 +35,7 @@ export default function PeoplePage() {
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
 
   const handleFormOpenChange = useCallback((open: boolean) => {
     setIsFormOpen(open);
@@ -46,6 +47,11 @@ export default function PeoplePage() {
   const filteredPeople = people.filter(person => {
     // Role filter
     if (selectedRole && person.role !== selectedRole) {
+      return false;
+    }
+
+    // Hidden filter
+    if (!showHidden && person.hidden) {
       return false;
     }
 
@@ -133,6 +139,23 @@ export default function PeoplePage() {
               onClick={() => setSelectedRole('attendee')}
             >
               Attendees
+            </Button>
+            <Button
+              variant={showHidden ? 'default' : 'outline'}
+              onClick={() => setShowHidden(!showHidden)}
+              className="flex items-center gap-2"
+            >
+              {showHidden ? (
+                <>
+                  <Eye className="h-4 w-4" />
+                  <span>Show Hidden</span>
+                </>
+              ) : (
+                <>
+                  <EyeOff className="h-4 w-4" />
+                  <span>Hide Hidden</span>
+                </>
+              )}
             </Button>
           </div>
 
