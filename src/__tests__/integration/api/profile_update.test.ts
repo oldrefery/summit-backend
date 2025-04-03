@@ -22,11 +22,11 @@ class ProfileUpdateApiTest extends BaseApiTest {
                     // Call RPC function to update bio
                     const { data, error } = await this.getAuthenticatedClient()
                         .rpc('update_profile_by_id', {
-                            person_id: person.id,
-                            bio: newBio,
-                            email: null,
-                            mobile: null,
-                            photo_url: null
+                            user_id: person.id,
+                            user_bio: newBio,
+                            user_email: null,
+                            user_mobile: null,
+                            user_photo_url: null
                         });
 
                     expect(error).toBeNull();
@@ -61,11 +61,11 @@ class ProfileUpdateApiTest extends BaseApiTest {
                     // Call RPC function to update email and phone
                     const { data, error } = await this.getAuthenticatedClient()
                         .rpc('update_profile_by_id', {
-                            person_id: person.id,
-                            bio: null,
-                            email: newEmail,
-                            mobile: newPhone,
-                            photo_url: null
+                            user_id: person.id,
+                            user_bio: null,
+                            user_email: newEmail,
+                            user_mobile: newPhone,
+                            user_photo_url: null
                         });
 
                     expect(error).toBeNull();
@@ -100,11 +100,11 @@ class ProfileUpdateApiTest extends BaseApiTest {
                     // Call RPC function to update avatar URL
                     const { data, error } = await this.getAuthenticatedClient()
                         .rpc('update_profile_by_id', {
-                            person_id: person.id,
-                            bio: null,
-                            email: null,
-                            mobile: null,
-                            photo_url: newAvatarUrl
+                            user_id: person.id,
+                            user_bio: null,
+                            user_email: null,
+                            user_mobile: null,
+                            user_photo_url: newAvatarUrl
                         });
 
                     expect(error).toBeNull();
@@ -127,11 +127,11 @@ class ProfileUpdateApiTest extends BaseApiTest {
                     // Try to update non-existent person
                     const { data, error } = await this.getAuthenticatedClient()
                         .rpc('update_profile_by_id', {
-                            person_id: nonExistentId,
-                            bio: 'This should fail',
-                            email: null,
-                            mobile: null,
-                            photo_url: null
+                            user_id: nonExistentId,
+                            user_bio: 'This should fail',
+                            user_email: null,
+                            user_mobile: null,
+                            user_photo_url: null
                         });
 
                     // Check that there's no error but operation was successful
@@ -158,11 +158,11 @@ class ProfileUpdateApiTest extends BaseApiTest {
                     // Update the person's profile
                     const { data, error } = await this.getAuthenticatedClient()
                         .rpc('update_profile_by_id', {
-                            person_id: person.id,
-                            bio: 'Updated bio for testing',
-                            email: null,
-                            mobile: null,
-                            photo_url: null
+                            user_id: person.id,
+                            user_bio: 'Updated bio for testing',
+                            user_email: null,
+                            user_mobile: null,
+                            user_photo_url: null
                         });
 
                     // Check request success
@@ -197,11 +197,11 @@ class ProfileUpdateApiTest extends BaseApiTest {
                     // Try to update with anonymous client
                     await this.expectSupabaseError(
                         this.getAnonymousClient().rpc('update_profile_by_id', {
-                            person_id: person.id,
-                            bio: 'This should fail',
-                            email: null,
-                            mobile: null,
-                            photo_url: null
+                            user_id: person.id,
+                            user_bio: 'This should fail',
+                            user_email: null,
+                            user_mobile: null,
+                            user_photo_url: null
                         }),
                         401 // Expect Unauthorized error
                     );
