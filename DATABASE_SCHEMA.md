@@ -33,7 +33,14 @@ The database contains the following schemas:
    - Logs: debug_logs with headers, JWT claims, and device_id
    - Logic: Checks if device_id exists in app_users table
 
-3. `get_device_user_id(device_id text)`
+3. `check_device_id()`
+   - Returns: boolean
+   - Security: SECURITY DEFINER
+   - Purpose: Validates device_id from request headers
+   - Logs: debug_logs with headers, JWT claims, and device_id
+   - Logic: Checks if device_id from headers exists in app_users table
+
+4. `get_device_user_id(device_id text)`
    - Returns: uuid
    - Security: SECURITY DEFINER
    - Purpose: Retrieves user_id associated with device_id
@@ -67,6 +74,11 @@ The database contains the following schemas:
    - Purpose: Removes inactive push tokens
    - Default threshold: 30 days
    - Logic: Deletes tokens not used within threshold period
+
+4. `deactivate_old_token_for_device()`
+   - Returns: trigger
+   - Purpose: Deactivates old push tokens for the same device
+   - Logic: Sets is_active=false for older tokens when a new one is added
 
 ### Version Management
 1. `publish_new_version()`
@@ -111,6 +123,14 @@ The database contains the following schemas:
      - Total tokens
      - Active tokens
 
+3. `update_profile_by_id(user_id bigint, user_bio text, user_email text, user_mobile text, user_photo_url text, user_hidden boolean, user_title text, user_company text, user_country text)`
+   - Returns: jsonb
+   - Purpose: Updates user profile information
+   - Features:
+     - Updates only non-null parameters
+     - Triggers JSON regeneration after update
+     - Returns success status and updated data
+
 ### Utility Functions
 1. `get_app_data_url()`
    - Returns: text (URL)
@@ -128,19 +148,48 @@ The database contains the following schemas:
    - Purpose: Updates updated_at column
    - Used by: Most tables
 
-2. `log_deletion()`
+2. `update_updated_at_column()`
+   - Returns: trigger
+   - Purpose: Updates updated_at column (special version for markdown_pages)
+   - Used by: markdown_pages table
+
+3. `log_deletion()`
    - Returns: trigger
    - Security: SECURITY DEFINER
    - Purpose: Logs record deletions
    - Logs to: deletions_log table
 
-3. `set_social_feed_post_user_id()`
+4. `set_social_feed_post_user_id()`
    - Returns: trigger
    - Security: SECURITY DEFINER
    - Purpose: Sets user_id for social feed posts
    - Logic: Uses auth.uid() if not set
 
-4. `update_last_active_timestamp()`
+5. `set_app_settings_user_id()`
+   - Returns: trigger
+   - Security: SECURITY DEFINER
+   - Purpose: Sets user_id for app settings
+   - Logic: Uses auth.uid() or looks up by device_id
+
+6. `set_event_user_id()`
+   - Returns: trigger
+   - Security: SECURITY DEFINER
+   - Purpose: Sets user_id for events
+   - Logic: Uses auth.uid()
+
+7. `set_sections_user_id()`
+   - Returns: trigger
+   - Security: SECURITY DEFINER
+   - Purpose: Sets user_id for sections
+   - Logic: Uses auth.uid()
+
+8. `set_push_token_user_id()`
+   - Returns: trigger
+   - Security: SECURITY DEFINER
+   - Purpose: Sets user_id for push tokens
+   - Logic: Uses auth.uid()
+
+9. `update_last_active_timestamp()`
    - Returns: trigger
    - Purpose: Updates last_active_at
    - Used by: app_user_settings
@@ -161,6 +210,7 @@ The database contains the following schemas:
    - Event: DELETE
    - Timing: BEFORE
    - Function: log_deletion()
+   - Naming pattern: log_[table_name]_deletion (e.g., log_events_deletion)
 
 ### Special Triggers
 1. `markdown_pages`:
@@ -176,7 +226,11 @@ The database contains the following schemas:
      - Event: INSERT
      - Timing: BEFORE
      - Function: set_social_feed_post_user_id()
-     - Note: Trigger is duplicated (set_social_feed_post_user_id and set_social_feed_posts_user_id)
+   - `set_social_feed_posts_user_id` (duplicate of above)
+     - Purpose: Same as set_social_feed_post_user_id
+     - Event: INSERT
+     - Timing: BEFORE
+     - Function: set_social_feed_post_user_id()
 
 ### Trigger Characteristics
 1. Execution Timing:
@@ -271,6 +325,9 @@ All tables have a primary key on the `id` column:
 5. `social_feed_posts`:
    - `idx_social_feed_posts_user_id` - INDEX USING btree (user_id)
 
+6. `people`:
+   - `idx_people_hidden` - INDEX USING btree (hidden)
+
 ### Index Characteristics
 1. Index Types:
    - All indexes use B-tree implementation
@@ -291,9 +348,8 @@ All tables have a primary key on the `id` column:
    - This may be optimization for different query types
 
 4. Missing Indexes:
-   - No indexes on foreign keys (except user_id)
-   - No indexes on frequently searched fields
-   - No indexes on sorting fields
+   - Limited indexes on foreign keys
+   - `idx_people_hidden` is used for filtering hidden people
 
 ## Table Relationships
 
@@ -352,10 +408,12 @@ The following tables have no foreign keys:
 
 ### Foreign Key Schemas
 1. Internal relationships (public -> public):
-   - `announcements` -> `people`
-   - `event_people` -> `events`, `people`
-   - `events` -> `locations`, `sections`
-   - `social_feed_posts` -> `people`
+   - `announcements` -> `people` (NO ACTION on update/delete)
+   - `event_people` -> `events` (NO ACTION on update, CASCADE on delete)
+   - `event_people` -> `people` (NO ACTION on update/delete)
+   - `events` -> `locations` (NO ACTION on update/delete)
+   - `events` -> `sections` (NO ACTION on update/delete)
+   - `social_feed_posts` -> `people` (NO ACTION on update, RESTRICT on delete)
 
 2. Auth schema relationships (public -> auth):
    - `json_versions` -> `auth.users`
@@ -363,8 +421,10 @@ The following tables have no foreign keys:
    - `social_feed_posts` -> `auth.users`
 
 ### Relationship Characteristics
-1. All foreign keys use CASCADE for updates and deletions
-2. All relationships are mandatory (NOT NULL)
+1. Most foreign keys use NO ACTION for updates and deletes
+2. Some exceptions:
+   - CASCADE delete for event_people when an event is deleted
+   - RESTRICT delete for social_feed_posts to prevent orphaned posts
 3. Schema separation:
    - Most relationships within public schema
    - User relationships in auth schema
@@ -408,7 +468,6 @@ Tables using this pattern:
 - announcements
 - event_people
 - events
-- json_versions
 - locations
 - markdown_pages
 - notification_history
@@ -451,6 +510,30 @@ Two separate policies:
    - Qualifier: true
    - With Check: null
    - Permissive: Yes
+
+#### json_versions
+Three separate policies:
+1. `allow_anon_access`
+   - Roles: anon
+   - Commands: ALL
+   - Qualifier: true
+   - With Check: true
+   - Permissive: Yes
+
+2. `allow_auth_access`
+   - Roles: authenticated
+   - Commands: ALL
+   - Qualifier: true
+   - With Check: null
+   - Permissive: Yes
+
+3. `deny_anon_access`
+   - Roles: anon
+   - Commands: ALL
+   - Qualifier: false
+   - With Check: null
+   - Permissive: Yes
+- Note: Conflicting policies for anonymous users
 
 #### social_feed_posts
 Five separate policies for fine-grained control:
@@ -499,6 +582,7 @@ Five separate policies for fine-grained control:
    - app_user_settings: public access
    - debug_logs: authenticated only
    - deletions_log: anonymous inserts and public reads
+   - json_versions: conflicting policies for anonymous users
 
 ## All Tables
 
@@ -521,6 +605,14 @@ Five separate policies for fine-grained control:
   - push_token (text, nullable)
   - settings (jsonb, not null, default '{"social_feed": true, "announcements": true}')
   - last_active_at (timestamp with timezone, not null, default now())
+
+### app_users
+- Not documented in original schema
+- Referenced by:
+  - check_app_settings_access()
+  - check_device_id()
+  - get_device_user_id()
+- Contains device_id and user associations
 
 ### debug_logs
 - PK: id (integer, auto-increment)
@@ -623,6 +715,7 @@ Five separate policies for fine-grained control:
   - role (text, not null, default 'attendee')
   - email (text, nullable)
   - mobile (text, nullable)
+  - hidden (boolean, nullable, indexed)
 
 ### resources
 - PK: id (bigint)
@@ -660,23 +753,34 @@ Five separate policies for fine-grained control:
    - Most tables use simple auth/anon split
    - Only `social_feed_posts` uses user-specific checks
    - `app_user_settings` and `deletions_log` have unique patterns
+   - `json_versions` has conflicting policies
+
 2. All tables have RLS enabled
+
 3. Most tables use `bigint` for primary keys, except:
    - `app_user_settings`, `json_versions`, `deletions_log` use UUID
    - `debug_logs` uses integer
+
 4. Common timestamp fields:
    - created_at
    - updated_at
    - deleted_at (in deletions_log)
    - published_at (in json_versions)
    - sent_at (in notification_history)
+
 5. JSON fields:
    - app_user_settings: device_info, settings
    - notification_history: data
    - json_versions: changes
+
 6. Array fields:
    - notification_history: target_users (uuid[])
    - social_feed_posts: image_urls (array)
+
+7. Foreign key behaviors:
+   - Most use NO ACTION for updates and deletes
+   - event_people -> events uses CASCADE for deletes
+   - social_feed_posts -> people uses RESTRICT for deletes
 
 ## References
 - Original SQL query: `src/__tests__/integration/rls/sql/show_schema.sql`

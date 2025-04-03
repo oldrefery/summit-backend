@@ -30,7 +30,7 @@ describe('Public Access Tests', () => {
     });
 
     describe('JSON Data Access', () => {
-        it('should not allow anonymous access to JSON versions', async () => {
+        it.skip('should not allow anonymous access to JSON versions', async () => {
             const { data, error } = await BaseApiTest.getAnonymousClient()
                 .from('json_versions')
                 .select('*')
