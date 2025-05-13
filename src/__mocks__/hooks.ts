@@ -25,6 +25,22 @@ const defaultMutationResult = {
 };
 
 export const mockHooks = () => {
+  // Mock for api.feature (feature flag)
+  vi.mock('@/lib/supabase', async () => {
+    const original = await vi.importActual<unknown>('@/lib/supabase');
+    const originalTyped = original as Record<string, unknown>;
+    return {
+      ...originalTyped,
+      api: {
+        ...((originalTyped.api || {}) as Record<string, unknown>),
+        feature: {
+          get: vi.fn().mockResolvedValue(true),
+          set: vi.fn().mockResolvedValue(undefined),
+        },
+      },
+    };
+  });
+
   vi.mock('@/hooks/use-people', () => ({
     usePeople: () => ({
       data: [createTestData.person()] as PersonWithRelations[],
@@ -182,6 +198,14 @@ export const mockHooks = () => {
       }] as VersionWithRelations[],
       isLoading: false,
       rollbackVersion: defaultMutationResult
+    }),
+  }));
+
+  vi.mock('@/hooks/use-feature-flag', () => ({
+    useFeatureFlag: () => ({
+      value: true,
+      loading: false,
+      setValue: vi.fn(),
     }),
   }));
 };
