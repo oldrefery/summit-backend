@@ -1055,4 +1055,31 @@ export const api = {
       }
     }
   },
+
+  feature: {
+    async get(feature: string): Promise<boolean> {
+      await ensureAuthenticated();
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('value')
+        .eq('feature', feature)
+        .single();
+      if (error) {
+        console.error('Feature flag get error:', error);
+        throw error;
+      }
+      return !!data?.value;
+    },
+    async set(feature: string, value: boolean): Promise<void> {
+      await ensureAuthenticated();
+      const { error } = await supabase
+        .from('admin_settings')
+        .update({ value })
+        .eq('feature', feature);
+      if (error) {
+        console.error('Feature flag set error:', error);
+        throw error;
+      }
+    },
+  },
 };

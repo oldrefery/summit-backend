@@ -26,6 +26,9 @@ import { useChanges } from '@/hooks/use-changes';
 import { Badge } from '@/components/ui/badge';
 import { Bell } from 'lucide-react';
 import { usePushStatistics } from '@/hooks/use-push';
+import { Switch } from '@/components/ui/switch';
+import { useToastContext } from '@/components/providers/toast-provider';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 
 const getUpcomingEventsCount = (events: Event[] = []) => {
   return events.filter(e => new Date(e.date) > new Date()).length;
@@ -45,6 +48,19 @@ export default function DashboardPage() {
     publishVersion,
   } = useChanges();
   const { data: pushStats, isLoading: pushStatsLoading } = usePushStatistics();
+  const { value: profileEditingEnabled, loading: flagLoading, setValue: setProfileEditingEnabled } = useFeatureFlag('profile_editing_enabled');
+  const { showSuccess, showError } = useToastContext();
+
+  const handleToggle = async () => {
+    if (profileEditingEnabled === null) return;
+    if (!window.confirm(`Are you sure you want to ${profileEditingEnabled ? 'disable' : 'enable'} profile editing for all users?`)) return;
+    try {
+      await setProfileEditingEnabled(!profileEditingEnabled);
+      showSuccess(`Profile editing ${!profileEditingEnabled ? 'enabled' : 'disabled'} successfully`);
+    } catch {
+      showError('Failed to update profile editing status');
+    }
+  };
 
   const stats: StatItem[] = [
     {
@@ -109,7 +125,26 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <div className="flex items-center gap-3">
+          <span
+            style={{
+              color: profileEditingEnabled ? '#22c55e' : '#ef4444',
+              fontWeight: 600,
+              fontSize: '1rem',
+              transition: 'color 0.2s',
+            }}
+          >
+            Profile Editing {profileEditingEnabled ? 'Enabled' : 'Disabled'}
+          </span>
+          <Switch
+            checked={!!profileEditingEnabled}
+            onCheckedChange={handleToggle}
+            disabled={profileEditingEnabled === null || flagLoading}
+          />
+        </div>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {stats.map(stat => {
