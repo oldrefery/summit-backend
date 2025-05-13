@@ -1,9 +1,36 @@
 import { BaseApiTest } from './base-api-test';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 class ProfileUpdateApiTest extends BaseApiTest {
+    static originalFlag: boolean | null = null;
+
     public static async runTests() {
         describe('Profile Update API Tests', () => {
+            beforeAll(async () => {
+                // Сохраняем исходное значение флага
+                const { data: flagDataBefore } = await this.getAuthenticatedClient()
+                    .from('admin_settings')
+                    .select('value')
+                    .eq('feature', 'profile_editing_enabled')
+                    .single();
+                ProfileUpdateApiTest.originalFlag = flagDataBefore?.value ?? true;
+                // Включаем флаг для всех тестов
+                await this.getAuthenticatedClient()
+                    .from('admin_settings')
+                    .update({ value: true })
+                    .eq('feature', 'profile_editing_enabled');
+            });
+
+            afterAll(async () => {
+                // Возвращаем исходное значение флага
+                if (ProfileUpdateApiTest.originalFlag !== null) {
+                    await this.getAuthenticatedClient()
+                        .from('admin_settings')
+                        .update({ value: ProfileUpdateApiTest.originalFlag })
+                        .eq('feature', 'profile_editing_enabled');
+                }
+            });
+
             describe('update_profile_by_id RPC', () => {
                 it('should update a person\'s bio by ID', async () => {
                     // Create a test person
@@ -205,6 +232,58 @@ class ProfileUpdateApiTest extends BaseApiTest {
                         }),
                         401 // Expect Unauthorized error
                     );
+                });
+
+                it('should not allow profile update when feature flag is disabled', async () => {
+                    // Сохраняем текущее значение флага
+                    const { data: flagDataBefore, error: flagReadError } = await this.getAuthenticatedClient()
+                        .from('admin_settings')
+                        .select('value')
+                        .eq('feature', 'profile_editing_enabled')
+                        .single();
+                    expect(flagReadError).toBeNull();
+                    expect(flagDataBefore).not.toBeNull();
+                    const originalFlag = flagDataBefore?.value;
+
+                    // Отключаем флаг
+                    const { error: flagUpdateError } = await this.getAuthenticatedClient()
+                        .from('admin_settings')
+                        .update({ value: false })
+                        .eq('feature', 'profile_editing_enabled');
+                    expect(flagUpdateError).toBeNull();
+
+                    try {
+                        // Создаём тестового пользователя
+                        const { data: person } = await this.getAuthenticatedClient()
+                            .from('people')
+                            .insert([this.generatePersonData()])
+                            .select()
+                            .single();
+                        expect(person).not.toBeNull();
+                        if (!person) throw new Error('Failed to create test person');
+                        this.trackTestRecord('people', person.id);
+
+                        // Пытаемся обновить профиль
+                        const { data, error } = await this.getAuthenticatedClient()
+                            .rpc('update_profile_by_id', {
+                                user_id: person.id,
+                                user_bio: 'Should not update',
+                                user_email: null,
+                                user_mobile: null,
+                                user_photo_url: null
+                            });
+
+                        expect(error).toBeNull();
+                        expect(data).toBeTruthy();
+                        expect(data.success).toBe(false);
+                        expect(data.message).toContain('Profile editing is currently disabled by the administrator.');
+                    } finally {
+                        // Возвращаем флаг в исходное состояние
+                        await this.getAuthenticatedClient()
+                            .from('admin_settings')
+                            .update({ value: originalFlag })
+                            .eq('feature', 'profile_editing_enabled');
+                    }
                 });
             });
         });

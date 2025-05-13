@@ -24,8 +24,24 @@ describe('Admin Settings (Feature Flag) Integration Tests', () => {
             email: process.env.INTEGRATION_SUPABASE_USER_EMAIL!,
             password: process.env.INTEGRATION_SUPABASE_USER_PASSWORD!
         });
+        // Remove all old records with this feature
+        await supabase.from('admin_settings').delete().eq('feature', TEST_FEATURE);
         // Create test feature flag
-        await supabase.from('admin_settings').insert({ feature: TEST_FEATURE, value: false }).select().single();
+        await supabase.from('admin_settings').insert({ feature: TEST_FEATURE, value: false }).select().maybeSingle();
+        // Explicitly wait for the record to appear
+        let attempts = 0;
+        let found = false;
+        while (attempts < 5 && !found) {
+            const { data } = await supabase
+                .from('admin_settings')
+                .select('feature')
+                .eq('feature', TEST_FEATURE)
+                .maybeSingle();
+            if (data) found = true;
+            else await new Promise(res => setTimeout(res, 200));
+            attempts++;
+        }
+        if (!found) throw new Error('Test feature flag was not created in admin_settings');
         await supabase.auth.signOut();
     });
 
@@ -48,13 +64,11 @@ describe('Admin Settings (Feature Flag) Integration Tests', () => {
             .from('admin_settings')
             .select('feature, value')
             .eq('feature', TEST_FEATURE)
-            .single();
+            .maybeSingle();
         expect(error).toBeNull();
-        expect(data).not.toBeNull();
-        if (data) {
-            expect(data.feature).toBe(TEST_FEATURE);
-            expect(data.value).toBe(false);
-        }
+        if (!data) throw new Error('Feature flag not found in admin_settings (read test)');
+        expect(data.feature).toBe(TEST_FEATURE);
+        expect(data.value).toBe(false);
         await supabase.auth.signOut();
     });
 
@@ -68,10 +82,10 @@ describe('Admin Settings (Feature Flag) Integration Tests', () => {
             .update({ value: true })
             .eq('feature', TEST_FEATURE)
             .select()
-            .single();
+            .maybeSingle();
         expect(error).toBeNull();
-        expect(data).not.toBeNull();
-        expect(data.value).toBe(true);
+        if (!data) throw new Error('Feature flag not found in admin_settings (update test)');
+        expect(data?.value).toBe(true);
         await supabase.auth.signOut();
     });
 
