@@ -475,15 +475,18 @@ class EventsApiTest extends BaseApiTest {
 
                     it('should create event with speakers', async () => {
                         const section = await this.createTestSection();
+                        const location = await this.createTestLocation();
                         const speaker = await this.createTestPerson();
 
-                        const { data: event } = await this.getAuthenticatedClient()
+                        const { data: event, error } = await this.getAuthenticatedClient()
                             .from('events')
                             .insert([{
-                                ...this.generateEventData(section.id)
+                                ...this.generateEventData(section.id, location.id)
                             }])
                             .select()
                             .single();
+
+                        if (error) console.error('Event insert error:', error);
 
                         expect(event).toBeDefined();
                         if (event) this.trackTestRecord('events', event.id);
