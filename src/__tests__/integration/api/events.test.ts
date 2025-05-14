@@ -486,20 +486,22 @@ class EventsApiTest extends BaseApiTest {
                             .select()
                             .single();
 
-                        if (error) console.error('Event insert error:', error);
+                        if (error || !event) {
+                            console.error('Event insert error:', error);
+                            expect(event).toBeDefined(); // fail the test if event is not created
+                            return;
+                        }
 
-                        expect(event).toBeDefined();
-                        if (event) this.trackTestRecord('events', event.id);
+                        this.trackTestRecord('events', event.id);
 
                         // Add speaker using event_people
                         const { error: speakerError } = await this.getAuthenticatedClient()
                             .from('event_people')
                             .insert({
-                                event_id: event!.id,
+                                event_id: event.id,
                                 person_id: speaker.id,
                                 role: 'speaker'
                             });
-
                         expect(speakerError).toBeNull();
 
                         // Verify speaker was added
@@ -511,7 +513,7 @@ class EventsApiTest extends BaseApiTest {
                                     person:people(*)
                                 )
                             `)
-                            .eq('id', event!.id)
+                            .eq('id', event.id)
                             .single();
 
                         expect(checkData).toBeDefined();
