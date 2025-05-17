@@ -1,3 +1,7 @@
+# admin-summit
+
+![CI](https://github.com/oldrefery/summit-backend/actions/workflows/tests.yml/badge.svg)
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
