@@ -58,8 +58,8 @@ export function NotificationForm({
       return dateB.getTime() - dateA.getTime();
     })
     .filter(user => {
-      // Ensure user has settings and announcements is not explicitly false
-      return user.settings?.announcements !== false;
+      // Only require push_token to be present
+      return !!user.push_token;
     })
     .map(user => {
       // Get last 5 characters of push token if available
@@ -203,7 +203,7 @@ export function NotificationForm({
                       onClick={() => {
                         // Select all users with active tokens
                         const usersWithTokens = (users as PushUser[])
-                          .filter(u => u.push_token && u.settings?.announcements !== false)
+                          .filter(u => u.push_token)
                           .map(u => u.id);
                         setSelectedUsers(usersWithTokens);
                       }}
